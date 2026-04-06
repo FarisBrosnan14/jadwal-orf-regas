@@ -110,7 +110,9 @@ with tab_kalender:
                         nama_i = str(row['Nama Lengkap Operator']).strip().lower()
                         pengganti = str(row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Pengganti'))).strip().title()
                         jenis_izin = row.get('Jenis Izin yang Diajukan', 'Izin')
-                        waktu_izin = row.get('Waktu Shift', '')
+                        
+                        # PERBAIKAN: Menyesuaikan dengan nama kolom 'Shift Izin'
+                        waktu_izin = row.get('Shift Izin', '')
                         
                         teks_shift = f" ({waktu_izin})" if waktu_izin else ""
                         hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {jenis_izin}{teks_shift} (Diganti: {pengganti})"
@@ -176,9 +178,10 @@ with tab_manager:
                 for idx, row in pending_df.iterrows():
                     nama_pemohon = row['Nama Lengkap Operator']
                     nama_pengganti = row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Tidak Ada'))
-                    alasan = row.get('Alasan Detail Pengajuan Izin', '-')
-                    # Menarik data Shift dari GForm yang baru Bapak tambahkan
-                    shift_izin = row.get('Waktu Shift', 'Tidak disebutkan')
+                    
+                    # PERBAIKAN: Menyesuaikan dengan nama kolom yang tertera di GSheets
+                    alasan = row.get('Alasan Izin', '-')
+                    shift_izin = row.get('Shift Izin', 'Tidak disebutkan')
                     
                     with st.container(border=True):
                         st.markdown(f"**{nama_pemohon}** mengajukan **{row.get('Jenis Izin yang Diajukan', 'Izin')}**")
