@@ -183,7 +183,7 @@ with tab_manager:
                         st.markdown(f"**{nama_pemohon}** mengajukan **{row['Jenis Izin yang Diajukan']}**")
                         st.write(f"📅 Tanggal: {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}")
                         st.write(f"🔄 Pengganti: **{nama_pengganti}**")
-                        st.write(f"📝 Alasan: {row['Alasan Izin']}")
+                        st.write(f"📝 Alasan: {row['Alasan Detail Pengajuan Izin']}")
                         
                         col_btn1, col_btn2 = st.columns([1, 4])
                         with col_btn1:
