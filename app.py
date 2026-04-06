@@ -20,7 +20,7 @@ LINK_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 # --- KONEKSI BACA (READ-ONLY) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=10) # Refresh data setiap 10 detik
+@st.cache_data(ttl=10)
 def load_data():
     try:
         df_j = conn.read(spreadsheet=URL_DATABASE, ttl="0")
@@ -98,7 +98,6 @@ with tab_kalender:
             hari_ini = df_jadwal[df_jadwal['Tgl_DT'] == tgl].copy()
             
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
-                # Anti-Error: Buang baris yang tidak ada namanya
                 df_izin_bersih = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 izin_sah = df_izin_bersih[df_izin_bersih['Status Approval'].astype(str).str.upper() == 'APPROVED']
                 
@@ -109,11 +108,12 @@ with tab_kalender:
                     
                     for _, row in sedang_izin.iterrows():
                         nama_i = str(row['Nama Lengkap Operator']).strip().lower()
-                        # Anti-Error: Menggunakan get() untuk toleransi perbedaan nama kolom
                         pengganti = str(row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Pengganti'))).strip().title()
                         jenis_izin = row.get('Jenis Izin yang Diajukan', 'Izin')
+                        waktu_izin = row.get('Waktu Shift', '')
                         
-                        hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {jenis_izin} (Diganti: {pengganti})"
+                        teks_shift = f" ({waktu_izin})" if waktu_izin else ""
+                        hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {jenis_izin}{teks_shift} (Diganti: {pengganti})"
 
             tampil = hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM']) | hari_ini[col_status].astype(str).str.contains('❌')]
             
@@ -169,21 +169,21 @@ with tab_manager:
             st.warning("⚠️ Mode API Key belum diaktifkan di Streamlit Secrets. Tombol Approve belum bisa digunakan.")
         
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            # Anti-Error: Bersihkan baris kosong agar tidak error 'nan'
             df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
-            
             pending_df = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending_df.empty:
                 for idx, row in pending_df.iterrows():
                     nama_pemohon = row['Nama Lengkap Operator']
-                    # Anti-Error: Flexibel dengan nama kolom
                     nama_pengganti = row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Tidak Ada'))
                     alasan = row.get('Alasan Detail Pengajuan Izin', '-')
+                    # Menarik data Shift dari GForm yang baru Bapak tambahkan
+                    shift_izin = row.get('Waktu Shift', 'Tidak disebutkan')
                     
                     with st.container(border=True):
                         st.markdown(f"**{nama_pemohon}** mengajukan **{row.get('Jenis Izin yang Diajukan', 'Izin')}**")
                         st.write(f"📅 Tanggal: {row.get('Tanggal Mulai Izin', '-')} s/d {row.get('Tanggal Selesai Izin', '-')}")
+                        st.write(f"⏰ Shift Izin: **{shift_izin}**")
                         st.write(f"🔄 Pengganti: **{nama_pengganti}**")
                         st.write(f"📝 Alasan: {alasan}")
                         
@@ -193,13 +193,11 @@ with tab_manager:
                                 if client:
                                     try:
                                         sheet_izin = client.open_by_key("1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU").sheet1
-                                        # Anti-Error: Cari posisi kolom Status Approval otomatis
                                         col_status_idx = df_izin.columns.get_loc('Status Approval') + 1
                                         baris_gsheets = int(idx) + 2 
                                         
                                         sheet_izin.update_cell(baris_gsheets, col_status_idx, "APPROVED")
                                         
-                                        # Anti-Error: Hapus cache agar data langsung terupdate tanpa delay
                                         load_data.clear() 
                                         st.success("Berhasil di-Approve!")
                                         st.rerun()
