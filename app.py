@@ -102,20 +102,24 @@ with tab_kalender:
                 izin_sah = df_izin_bersih[df_izin_bersih['Status Approval'].astype(str).str.upper() == 'APPROVED']
                 
                 if not izin_sah.empty:
-                    izin_sah['M_Izin'] = pd.to_datetime(izin_sah['Tanggal Mulai Izin'], errors='coerce').dt.date
-                    izin_sah['S_Izin'] = pd.to_datetime(izin_sah['Tanggal Selesai Izin'], errors='coerce').dt.date
+                    # Normalisasi pembacaan tanggal (mengantisipasi format DD/MM/YYYY)
+                    izin_sah['M_Izin'] = pd.to_datetime(izin_sah['Tanggal Mulai Izin'], dayfirst=True, errors='coerce').dt.date
+                    izin_sah['S_Izin'] = pd.to_datetime(izin_sah['Tanggal Selesai Izin'], dayfirst=True, errors='coerce').dt.date
                     sedang_izin = izin_sah[(izin_sah['M_Izin'] <= tgl) & (izin_sah['S_Izin'] >= tgl)]
                     
                     for _, row in sedang_izin.iterrows():
-                        nama_i = str(row['Nama Lengkap Operator']).strip().lower()
+                        # PERBAIKAN: Normalisasi Nama (Hapus titik, hapus spasi berlebih, huruf kecil semua)
+                        nama_i = str(row['Nama Lengkap Operator']).replace(".", "").strip().lower()
                         pengganti = str(row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Pengganti'))).strip().title()
                         jenis_izin = row.get('Jenis Izin yang Diajukan', 'Izin')
-                        
-                        # PERBAIKAN: Menyesuaikan dengan nama kolom 'Shift Izin'
                         waktu_izin = row.get('Shift Izin', '')
                         
                         teks_shift = f" ({waktu_izin})" if waktu_izin else ""
-                        hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {jenis_izin}{teks_shift} (Diganti: {pengganti})"
+                        
+                        # Pencocokan nama pintar di kalender
+                        match_idx = hari_ini[col_nama].astype(str).str.replace(".", "").str.strip().str.lower() == nama_i
+                        if match_idx.any():
+                            hari_ini.loc[match_idx, col_status] = f"❌ {jenis_izin}{teks_shift} (Ganti: {pengganti})"
 
             tampil = hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM']) | hari_ini[col_status].astype(str).str.contains('❌')]
             
@@ -142,8 +146,8 @@ with tab_operator:
         df_j_cek['Tgl_DT'] = pd.to_datetime(df_j_cek[col_tgl], errors='coerce').dt.date
         jadwal_tgl_itu = df_j_cek[df_j_cek['Tgl_DT'] == tgl_izin]
         
-        staf_jaga = set(jadwal_tgl_itu[jadwal_tgl_itu[col_status].astype(str).str.upper().isin(['PG', 'MLM'])][col_nama].str.strip())
-        semua_staf = set(df_jadwal[col_nama].dropna().unique()) - {"Belum ada data", None}
+        staf_jaga = set(jadwal_tgl_itu[jadwal_tgl_itu[col_status].astype(str).str.upper().isin(['PG', 'MLM'])][col_nama].astype(str).str.strip())
+        semua_staf = set(df_jadwal[col_nama].dropna().astype(str).unique()) - {"Belum ada data", "None"}
         
         tersedia = sorted(list(semua_staf - staf_jaga))
         
@@ -179,7 +183,6 @@ with tab_manager:
                     nama_pemohon = row['Nama Lengkap Operator']
                     nama_pengganti = row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Tidak Ada'))
                     
-                    # PERBAIKAN: Menyesuaikan dengan nama kolom yang tertera di GSheets
                     alasan = row.get('Alasan Izin', '-')
                     shift_izin = row.get('Shift Izin', 'Tidak disebutkan')
                     
