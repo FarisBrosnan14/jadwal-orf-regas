@@ -15,7 +15,9 @@ if 'selected_date' not in st.session_state:
 # --- LINK VIP (GID) ---
 URL_DATABASE = "https://docs.google.com/spreadsheets/d/1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0/edit?gid=172132710#gid=172132710" 
 URL_IZIN = "https://docs.google.com/spreadsheets/d/1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU/edit?gid=1951809577#gid=1951809577"
-LINK_GFORM = "https://forms.gle/zXzVwYvN1j1w7z9R9"
+
+# --- LINK GFORM ASLI ---
+LINK_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 
 # --- KONEKSI BACA (READ-ONLY) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -110,7 +112,7 @@ with tab_kalender:
                     
                     for _, row in sedang_izin.iterrows():
                         nama_i = str(row['Nama Lengkap Operator']).strip().lower()
-                        pengganti = str(row['Nama Operator Pengganti']).strip().title()
+                        pengganti = str(row.get('Nama Operator Pengganti', 'Pengganti')).strip().title()
                         hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {row['Jenis Izin yang Diajukan']} (Diganti: {pengganti})"
 
             tampil = hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM']) | hari_ini[col_status].astype(str).str.contains('❌')]
