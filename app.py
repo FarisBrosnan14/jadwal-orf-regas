@@ -12,11 +12,9 @@ st.set_page_config(page_title="Dashboard ORF Nusantara Regas", page_icon="⚓", 
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = datetime.now().date()
 
-# --- LINK VIP (GID) ---
+# --- LINK DATA ---
 URL_DATABASE = "https://docs.google.com/spreadsheets/d/1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0/edit?gid=172132710#gid=172132710" 
 URL_IZIN = "https://docs.google.com/spreadsheets/d/1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU/edit?gid=1951809577#gid=1951809577"
-
-# --- LINK GFORM ASLI ---
 LINK_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 
 # --- KONEKSI BACA (READ-ONLY) ---
@@ -36,7 +34,6 @@ df_jadwal, df_izin = load_data()
 # --- FUNGSI TULIS (WRITE) API KEY ---
 def get_gspread_client():
     try:
-        # Mengambil rahasia dari Streamlit Secrets
         kredensial = dict(st.secrets["gcp_service_account"])
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(kredensial, scopes=scope)
@@ -61,11 +58,10 @@ col_status = find_col(df_jadwal, ['Status', 'Kode'])
 st.title("⚓ Sistem Penjadwalan Terpadu ORF")
 st.caption("PT Nusantara Regas - Smart Dashboard")
 
-# Membuat 3 Tab Navigasi
 tab_kalender, tab_operator, tab_manager = st.tabs(["📅 Kalender Jadwal", "🧑‍🔧 Portal Operator", "👨‍💼 Manager Admin"])
 
 # ==========================================
-# TAB 1: KALENDER JADWAL (TAMPILAN UTAMA)
+# TAB 1: KALENDER JADWAL
 # ==========================================
 with tab_kalender:
     col_kiri, col_kanan = st.columns([1.5, 2])
@@ -101,10 +97,11 @@ with tab_kalender:
             df_jadwal['Tgl_DT'] = pd.to_datetime(df_jadwal[col_tgl], errors='coerce').dt.date
             hari_ini = df_jadwal[df_jadwal['Tgl_DT'] == tgl].copy()
             
-            # Cek Approval Izin
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
-                # Hanya tampilkan izin yang sudah "Approved"
-                izin_sah = df_izin[df_izin['Status Approval'].astype(str).str.upper() == 'APPROVED']
+                # Anti-Error: Buang baris yang tidak ada namanya
+                df_izin_bersih = df_izin.dropna(subset=['Nama Lengkap Operator'])
+                izin_sah = df_izin_bersih[df_izin_bersih['Status Approval'].astype(str).str.upper() == 'APPROVED']
+                
                 if not izin_sah.empty:
                     izin_sah['M_Izin'] = pd.to_datetime(izin_sah['Tanggal Mulai Izin'], errors='coerce').dt.date
                     izin_sah['S_Izin'] = pd.to_datetime(izin_sah['Tanggal Selesai Izin'], errors='coerce').dt.date
@@ -112,8 +109,11 @@ with tab_kalender:
                     
                     for _, row in sedang_izin.iterrows():
                         nama_i = str(row['Nama Lengkap Operator']).strip().lower()
-                        pengganti = str(row.get('Nama Operator Pengganti', 'Pengganti')).strip().title()
-                        hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {row['Jenis Izin yang Diajukan']} (Diganti: {pengganti})"
+                        # Anti-Error: Menggunakan get() untuk toleransi perbedaan nama kolom
+                        pengganti = str(row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Pengganti'))).strip().title()
+                        jenis_izin = row.get('Jenis Izin yang Diajukan', 'Izin')
+                        
+                        hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {jenis_izin} (Diganti: {pengganti})"
 
             tampil = hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM']) | hari_ini[col_status].astype(str).str.contains('❌')]
             
@@ -127,7 +127,7 @@ with tab_kalender:
             st.warning("Data jadwal belum tersedia.")
 
 # ==========================================
-# TAB 2: PORTAL OPERATOR (CARI PENGGANTI)
+# TAB 2: PORTAL OPERATOR
 # ==========================================
 with tab_operator:
     st.subheader("🔍 Cari Rekan Pengganti")
@@ -140,7 +140,6 @@ with tab_operator:
         df_j_cek['Tgl_DT'] = pd.to_datetime(df_j_cek[col_tgl], errors='coerce').dt.date
         jadwal_tgl_itu = df_j_cek[df_j_cek['Tgl_DT'] == tgl_izin]
         
-        # Cari yang statusnya bukan PG / MLM (Artinya sedang OFF)
         staf_jaga = set(jadwal_tgl_itu[jadwal_tgl_itu[col_status].astype(str).str.upper().isin(['PG', 'MLM'])][col_nama].str.strip())
         semua_staf = set(df_jadwal[col_nama].dropna().unique()) - {"Belum ada data", None}
         
@@ -155,7 +154,7 @@ with tab_operator:
             st.error("Semua personel sedang bertugas di tanggal tersebut. Silakan koordinasi dengan Manager.")
 
 # ==========================================
-# TAB 3: MANAGER ADMIN (APPROVAL)
+# TAB 3: MANAGER ADMIN
 # ==========================================
 with tab_manager:
     pin = st.text_input("Masukkan PIN Manager:", type="password", key="pin_mgr")
@@ -165,38 +164,44 @@ with tab_manager:
         
         st.subheader("🔔 Menunggu Persetujuan (Pending Approval)")
         
-        # Cek Koneksi API Key
         client = get_gspread_client()
         if client is None:
-            st.warning("⚠️ Mode API Key belum diaktifkan di Streamlit Secrets. Tombol Approve belum bisa digunakan untuk mengubah data asli.")
+            st.warning("⚠️ Mode API Key belum diaktifkan di Streamlit Secrets. Tombol Approve belum bisa digunakan.")
         
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            # Ambil yang statusnya masih kosong/NaN atau belum "Approved"/"Rejected"
-            pending_df = df_izin[df_izin['Status Approval'].isna() | (df_izin['Status Approval'] == "")]
+            # Anti-Error: Bersihkan baris kosong agar tidak error 'nan'
+            df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
+            
+            pending_df = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending_df.empty:
                 for idx, row in pending_df.iterrows():
                     nama_pemohon = row['Nama Lengkap Operator']
-                    nama_pengganti = row.get('Nama Operator Pengganti', 'Tidak Ada')
+                    # Anti-Error: Flexibel dengan nama kolom
+                    nama_pengganti = row.get('Nama Lengkap Operator Pengganti', row.get('Nama Operator Pengganti', 'Tidak Ada'))
+                    alasan = row.get('Alasan Detail Pengajuan Izin', '-')
                     
                     with st.container(border=True):
-                        st.markdown(f"**{nama_pemohon}** mengajukan **{row['Jenis Izin yang Diajukan']}**")
-                        st.write(f"📅 Tanggal: {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}")
+                        st.markdown(f"**{nama_pemohon}** mengajukan **{row.get('Jenis Izin yang Diajukan', 'Izin')}**")
+                        st.write(f"📅 Tanggal: {row.get('Tanggal Mulai Izin', '-')} s/d {row.get('Tanggal Selesai Izin', '-')}")
                         st.write(f"🔄 Pengganti: **{nama_pengganti}**")
-                        st.write(f"📝 Alasan: {row['Alasan Detail Pengajuan Izin']}")
+                        st.write(f"📝 Alasan: {alasan}")
                         
                         col_btn1, col_btn2 = st.columns([1, 4])
                         with col_btn1:
                             if st.button("✅ Approve", key=f"app_{idx}"):
                                 if client:
                                     try:
-                                        # Buka Sheet Izin
                                         sheet_izin = client.open_by_key("1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU").sheet1
-                                        # Kolom J adalah kolom ke-10 (Status Approval)
-                                        # Indeks dataframe mulai dari 0, row di GSheets mulai dari 1 (ditambah 1 untuk header = idx + 2)
-                                        baris_gsheets = idx + 2 
-                                        sheet_izin.update_cell(baris_gsheets, 10, "Approved")
-                                        st.success("Berhasil di-Approve! Status langsung terupdate.")
+                                        # Anti-Error: Cari posisi kolom Status Approval otomatis
+                                        col_status_idx = df_izin.columns.get_loc('Status Approval') + 1
+                                        baris_gsheets = int(idx) + 2 
+                                        
+                                        sheet_izin.update_cell(baris_gsheets, col_status_idx, "APPROVED")
+                                        
+                                        # Anti-Error: Hapus cache agar data langsung terupdate tanpa delay
+                                        load_data.clear() 
+                                        st.success("Berhasil di-Approve!")
                                         st.rerun()
                                     except Exception as e:
                                         st.error(f"Gagal menulis ke Sheets: {e}")
@@ -208,7 +213,12 @@ with tab_manager:
                                 if client:
                                     try:
                                         sheet_izin = client.open_by_key("1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU").sheet1
-                                        sheet_izin.update_cell(idx + 2, 10, "Rejected")
+                                        col_status_idx = df_izin.columns.get_loc('Status Approval') + 1
+                                        baris_gsheets = int(idx) + 2 
+                                        
+                                        sheet_izin.update_cell(baris_gsheets, col_status_idx, "REJECTED")
+                                        
+                                        load_data.clear()
                                         st.success("Izin Ditolak.")
                                         st.rerun()
                                     except Exception as e:
