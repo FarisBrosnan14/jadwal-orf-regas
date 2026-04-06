@@ -10,10 +10,9 @@ st.set_page_config(page_title="Dashboard ORF - Nusantara Regas", page_icon="⚓"
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = datetime.now().date()
 
-# --- LINK BERSIH (ID SAJA) ---
-# Saya sudah membersihkan linknya agar lebih stabil dibaca sistem
-URL_JADWAL = "https://docs.google.com/spreadsheets/d/1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0/edit#gid=0"
-URL_IZIN = "https://docs.google.com/spreadsheets/d/1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU/edit#gid=0"
+# --- LINK VIP (GID) ---
+URL_TAB_DATABASE = "https://docs.google.com/spreadsheets/d/1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0/edit?gid=172132710#gid=172132710" 
+URL_TAB_IZIN = "https://docs.google.com/spreadsheets/d/1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU/edit?gid=1951809577#gid=1951809577"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -29,12 +28,13 @@ if mode_akses == "👨‍💼 Manager (Edit)":
     if pin == "regas123":
         is_manager = True
         st.sidebar.success("Akses Manager Dibuka!")
-        st.sidebar.link_button("Buka Spreadsheet Master", URL_JADWAL)
+        st.sidebar.link_button("Buka Spreadsheet Master", URL_TAB_DATABASE)
     elif pin != "":
         st.sidebar.error("PIN Salah!")
 
 st.sidebar.divider()
-LINK_GFORM_ISI = "https://forms.gle/..." # Silakan ganti dengan link form Bapak
+# Link Google Form untuk diisi operator
+LINK_GFORM_ISI = "https://forms.gle/zXzVwYvN1j1w7z9R9" # Pastikan link form Bapak sudah benar
 st.sidebar.link_button("📝 Isi Izin/Cuti (GForm)", LINK_GFORM_ISI, type="primary")
 
 # ==========================================
@@ -42,18 +42,12 @@ st.sidebar.link_button("📝 Isi Izin/Cuti (GForm)", LINK_GFORM_ISI, type="prima
 # ==========================================
 st.title("📅 Dashboard Jadwal Jaga ORF")
 
-@st.cache_data(ttl=0)
-def load_data(url, sheet_name):
-    # Menggunakan try-except untuk menangkap error 400 secara spesifik
-    return conn.read(spreadsheet=url, worksheet=sheet_name)
-
 try:
-    # Membaca tab Database
-    df_jadwal = load_data(URL_JADWAL, "Database")
+    # Membaca langsung dari Link GID (Jalur VIP)
+    df_jadwal = conn.read(spreadsheet=URL_TAB_DATABASE, ttl="0")
     
-    # Membaca data izin (Biasanya tab pertama, jadi tidak perlu sebut nama worksheet)
     try:
-        df_izin = conn.read(spreadsheet=URL_IZIN)
+        df_izin = conn.read(spreadsheet=URL_TAB_IZIN, ttl="0")
     except:
         df_izin = pd.DataFrame()
 
@@ -68,9 +62,13 @@ try:
     col_tgl = find_col(df_jadwal, ['Tanggal', 'Shift'])
     col_status = find_col(df_jadwal, ['Status', 'Kode'])
 
+    if not col_nama or not col_tgl:
+        st.warning("Menunggu data jadwal diisi oleh Manager...")
+        st.stop()
+
     st.divider()
 
-    # --- LAYOUT ---
+    # --- LAYOUT KALENDER ---
     col_kiri, col_kanan = st.columns([1.5, 2])
 
     with col_kiri:
@@ -93,45 +91,4 @@ try:
                     curr_date = datetime(pilih_tahun, pilih_bulan, tanggal).date()
                     is_selected = (curr_date == st.session_state.selected_date)
                     if cols[i].button(str(tanggal), key=f"d_{tanggal}", type="primary" if is_selected else "secondary", use_container_width=True):
-                        st.session_state.selected_date = curr_date
-                        st.rerun()
-
-    with col_kanan:
-        tgl = st.session_state.selected_date
-        st.subheader(f"📌 Jadwal: {tgl.strftime('%d %B %Y')}")
-        
-        if col_nama and col_tgl:
-            df_jadwal['Tgl_DT'] = pd.to_datetime(df_jadwal[col_tgl], errors='coerce').dt.date
-            hari_ini = df_jadwal[df_jadwal['Tgl_DT'] == tgl].copy()
-            
-            # Cek Izin
-            if not df_izin.empty and 'Nama Lengkap Operator' in df_izin.columns:
-                df_izin['M_Izin'] = pd.to_datetime(df_izin['Tanggal Mulai Izin'], errors='coerce').dt.date
-                df_izin['S_Izin'] = pd.to_datetime(df_izin['Tanggal Selesai Izin'], errors='coerce').dt.date
-                sedang_izin = df_izin[(df_izin['M_Izin'] <= tgl) & (df_izin['S_Izin'] >= tgl)]
-                
-                for _, row in sedang_izin.iterrows():
-                    nama_i = str(row['Nama Lengkap Operator']).strip().lower()
-                    hari_ini.loc[hari_ini[col_nama].str.strip().str.lower() == nama_i, col_status] = f"❌ {row['Jenis Izin yang Diajukan']}"
-
-            # Tampilkan yang masuk / izin
-            tampil = hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM']) | hari_ini[col_status].astype(str).str.contains('❌')]
-            
-            if not tampil.empty:
-                df_view = tampil[[col_nama, col_status]].copy()
-                df_view.columns = ["Nama Operator", "Shift/Status"]
-                st.table(df_view)
-            else:
-                st.info("Semua operator Off / Tidak ada jadwal.")
-            
-            if is_manager:
-                st.divider()
-                st.caption("Personel Off & Tersedia (Standby):")
-                semua = set(df_jadwal[col_nama].unique()) - {"Belum ada data", None}
-                sibuk = set(hari_ini[hari_ini[col_status].astype(str).str.upper().isin(['PG', 'MLM'])][col_nama])
-                tersedia = sorted(list(semua - sibuk))
-                for n in tersedia: st.write(f"✅ {n}")
-
-except Exception as e:
-    st.error(f"KENDALA DATA: {e}")
-    st.info("Tips: Pastikan nama tab di Sheets adalah 'Database' (tanpa spasi) dan sudah 'Publish to Web'.")
+                        st.session
