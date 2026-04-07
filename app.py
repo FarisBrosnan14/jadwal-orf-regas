@@ -12,10 +12,7 @@ st.set_page_config(page_title="Dashboard Nusantara Regas", page_icon="⚓", layo
 # --- KUSTOMISASI CSS (TAMPILAN MODERN PERTAMINA) ---
 st.markdown("""
     <style>
-    /* Warna teks judul utama */
     h1, h2, h3 { color: #004D95; font-family: 'Segoe UI', sans-serif; }
-    
-    /* Memperhalus kotak kontainer (Cards) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
@@ -23,20 +20,14 @@ st.markdown("""
         border: 1px solid #eaeaea;
         padding: 15px;
     }
-    
-    /* Panel samping (Sidebar) lebih bersih */
     [data-testid="stSidebar"] {
         background-color: #f8f9fa;
         border-right: 2px solid #eaeaea;
     }
-    
-    /* Kustomisasi tombol */
     .stButton>button {
         border-radius: 8px;
         font-weight: bold;
     }
-    
-    /* Notifikasi hijau terhubung */
     .status-badge {
         background-color: #e6f8eb;
         color: #008b45;
@@ -88,11 +79,16 @@ def get_gspread_client():
 # SIDEBAR (NAVIGASI KIRI)
 # ==========================================
 with st.sidebar:
-    # Menggunakan file logo pertamina lokal
-    st.image("pertamina.png", use_container_width=True)
+    # SISTEM ANTI-CRASH UNTUK GAMBAR LOGO
+    try:
+        st.image("pertamina.png", use_container_width=True)
+    except:
+        # Jika gagal mencari gambar lokal, gunakan link gambar cadangan
+        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png", use_container_width=True)
+        st.caption("*(Menunggu pertamina.png terupload ke GitHub)*")
+        
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Navigasi ala menu aplikasi
     menu = st.radio("Menu Utama", ["🏠 Dashboard Interaktif", "📅 Kalender Lengkap", "🧑‍🔧 Pencarian Rekan OFF"])
     
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -113,19 +109,20 @@ with col_profile:
 st.divider()
 
 # ==========================================
-# VIEW 1: DASHBOARD INTERAKTIF (SESUAI MOCKUP)
+# VIEW 1: DASHBOARD INTERAKTIF
 # ==========================================
 if menu == "🏠 Dashboard Interaktif":
     
-    # --- BARIS 1: GAMBAR, ANTREAN, PERSONEL OFF ---
     col_img, col_antre, col_off = st.columns([1.8, 1.2, 1.2])
     
     with col_img:
-        # Menampilkan gambar FSRU
+        # SISTEM ANTI-CRASH UNTUK GAMBAR KAPAL
         try:
             st.image("fsru.jpg", use_container_width=True)
         except:
-            st.info("Gambar fsru.jpg belum terunggah di GitHub.")
+            st.image("https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=800&auto=format&fit=crop", use_container_width=True)
+            st.caption("*(Menunggu fsru.jpg terupload ke GitHub)*")
+            
         st.success("🟢 Status Kapal: FSRU Nusantara Regas 1 - Operasional Normal")
         
     with col_antre:
@@ -137,10 +134,8 @@ if menu == "🏠 Dashboard Interaktif":
             pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending.empty:
-                # Menggunakan PIN sebentar untuk keamanan eksekusi
                 pin = st.text_input("🔑 PIN Manager (regas123):", type="password", key="pin_dash")
                 
-                # Hanya tampilkan maksimal 3 teratas agar dashboard tidak kepanjangan
                 for idx, row in pending.head(3).iterrows():
                     with st.container(border=True):
                         st.markdown(f"**{row['Nama Lengkap Operator']}** ({row.get('Jenis Izin yang Diajukan', 'Izin')})")
@@ -152,7 +147,6 @@ if menu == "🏠 Dashboard Interaktif":
                             with c_app:
                                 if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
                                     if client:
-                                        # DOUBLE ACTION SCRIPT
                                         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
                                         sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
                                         
@@ -164,10 +158,8 @@ if menu == "🏠 Dashboard Interaktif":
                                             d_str = d.strftime('%Y-%m-%d')
                                             if d_str in df_matrix.columns:
                                                 c_idx = list(df_matrix.columns).index(d_str) + 1
-                                                # Pemohon
                                                 match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
                                                 if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
-                                                # Pengganti
                                                 nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
                                                 if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
                                                     match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
@@ -202,7 +194,6 @@ if menu == "🏠 Dashboard Interaktif":
                     st.write("Tidak ada personel OFF.")
             st.link_button("📝 Ajukan Izin (Google Form)", LINK_GFORM, use_container_width=True, type="primary")
 
-    # --- BARIS 2: JADWAL HORIZONTAL (5 HARI KEDEPAN) ---
     st.markdown("---")
     st.subheader("📅 Tinjauan Jadwal 5 Hari Kedepan")
     
@@ -240,12 +231,11 @@ if menu == "🏠 Dashboard Interaktif":
 # ==========================================
 elif menu == "📅 Kalender Lengkap":
     st.subheader("Tinjauan Jadwal Bulanan")
-    # (Logika kalender di sini tetap sama dengan versi sebelumnya jika dibutuhkan untuk melihat bulan lain)
     c1, c2 = st.columns([1, 2])
     with c1:
         st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
     with c2:
-        st.info("Fitur kalender penuh ada di tampilan ini. Silakan gunakan Dashboard Interaktif untuk operasional harian.")
+        st.info("Gunakan Dashboard Interaktif untuk operasional harian.")
 
 # ==========================================
 # VIEW 3: PENCARIAN REKAN OFF
