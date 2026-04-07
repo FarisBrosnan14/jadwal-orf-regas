@@ -136,8 +136,7 @@ with col_title:
     st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    # PERBAIKAN: Memastikan string HTML tertutup rapat dengan "
-    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b></b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b>Faris (Admin)</b></div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -272,12 +271,66 @@ if menu == "🏠 Dashboard Interaktif":
 # VIEW 2: KALENDER LENGKAP
 # ==========================================
 elif menu == "📅 Kalender Lengkap":
-    st.subheader("Tinjauan Jadwal Bulanan")
+    st.subheader("Tinjauan Jadwal Harian & Bulanan")
     c1, c2 = st.columns([1, 2])
+    
     with c1:
-        st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
+        # Menyimpan input tanggal ke dalam variabel selected_date
+        selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
     with c2:
         st.info("Gunakan Dashboard Interaktif untuk operasional harian.")
+
+    st.markdown("---")
+
+    # Format tanggal dari input agar sesuai dengan format kolom di G-Sheets (YYYY-MM-DD)
+    selected_date_str = selected_date.strftime('%Y-%m-%d')
+
+    # Pastikan data jadwal tidak kosong
+    if not df_matrix.empty:
+        # Cek apakah tanggal yang dipilih ada di dalam kolom G-Sheets
+        if selected_date_str in df_matrix.columns:
+            st.markdown(f"### Status Personel pada **{selected_date.strftime('%d %B %Y')}**")
+            
+            # Ambil kolom Nama Operator dan kolom tanggal yang dipilih
+            df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
+            
+            # Standardisasi teks status (huruf besar, hapus spasi berlebih)
+            df_day['Status'] = df_day[selected_date_str].astype(str).str.strip().str.upper()
+
+            # --- PENGELOMPOKAN DATA ---
+            # 1. Kategori OFF
+            df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '', 'NONE'])]
+            
+            # 2. Kategori Izin/Sakit/Cuti
+            df_absen = df_day[df_day['Status'].apply(lambda x: any(k in x for k in ["IZIN", "SAKIT", "CUTI"]))]
+            
+            # 3. Kategori Shift/Bertugas (Sisa dari OFF dan Absen)
+            df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
+
+            # --- TAMPILAN 3 KOLOM ---
+            col_shift, col_off, col_absen = st.columns(3)
+            
+            with col_shift:
+                st.success(f"🟢 **Hadir / Shift ({len(df_shift)})**")
+                # Tampilkan tabel tanpa index
+                st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+                
+            with col_off:
+                st.info(f"⚪ **Sedang OFF ({len(df_off)})**")
+                st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
+                
+            with col_absen:
+                st.error(f"🔴 **Izin / Cuti / Sakit ({len(df_absen)})**")
+                if not df_absen.empty:
+                    st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+                else:
+                    st.write("Tidak ada yang absen.")
+                    
+        else:
+            # Jika tanggal terlalu jauh ke depan/belakang dan tidak ada di sheet
+            st.warning(f"⚠️ Data jadwal untuk tanggal **{selected_date.strftime('%d %B %Y')}** belum dirilis atau tidak tersedia di database.")
+    else:
+        st.error("❌ Data matrix jadwal gagal dimuat. Silakan periksa koneksi Google Sheets.")
 
 # ==========================================
 # VIEW 3: PENCARIAN REKAN OFF
