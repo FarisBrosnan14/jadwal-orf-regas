@@ -38,6 +38,41 @@ st.markdown("""
         display: inline-block;
         margin-bottom: 5px;
     }
+    
+    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
+    .scroll-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 15px;
+        padding-bottom: 15px;
+    }
+    .scroll-card {
+        flex: 0 0 220px; /* Lebar tetap tiap kartu */
+        background-color: #ffffff;
+        border: 1px solid #eaeaea;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+    .scroll-header {
+        text-align: center;
+        background-color: #004D95;
+        color: white;
+        padding: 8px;
+        border-radius: 6px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    .scroll-item {
+        margin-bottom: 10px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    /* Kustomisasi Scrollbar agar elegan */
+    .scroll-container::-webkit-scrollbar { height: 10px; }
+    .scroll-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 5px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 5px; }
+    .scroll-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -79,13 +114,11 @@ def get_gspread_client():
 # SIDEBAR (NAVIGASI KIRI)
 # ==========================================
 with st.sidebar:
-    # SISTEM ANTI-CRASH UNTUK GAMBAR LOGO
     try:
         st.image("pertamina.png", use_container_width=True)
     except:
-        # Jika gagal mencari gambar lokal, gunakan link gambar cadangan
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png", use_container_width=True)
-        st.caption("*(Menunggu pertamina.png terupload ke GitHub)*")
+        st.caption("*(Menunggu pertamina.png terupload)*")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -116,12 +149,11 @@ if menu == "🏠 Dashboard Interaktif":
     col_img, col_antre, col_off = st.columns([1.8, 1.2, 1.2])
     
     with col_img:
-        # SISTEM ANTI-CRASH UNTUK GAMBAR KAPAL
         try:
             st.image("fsru.jpg", use_container_width=True)
         except:
             st.image("https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=800&auto=format&fit=crop", use_container_width=True)
-            st.caption("*(Menunggu fsru.jpg terupload ke GitHub)*")
+            st.caption("*(Menunggu fsru.jpg terupload)*")
             
         st.success("🟢 Status Kapal: FSRU Nusantara Regas 1 - Operasional Normal")
         
@@ -194,35 +226,50 @@ if menu == "🏠 Dashboard Interaktif":
                     st.write("Tidak ada personel OFF.")
             st.link_button("📝 Ajukan Izin (Google Form)", LINK_GFORM, use_container_width=True, type="primary")
 
+    # ==========================================
+    # BAGIAN JADWAL SCROLL HORIZONTAL (14 HARI)
+    # ==========================================
     st.markdown("---")
-    st.subheader("📅 Tinjauan Jadwal 5 Hari Kedepan")
+    st.subheader("📅 Tinjauan Jadwal 14 Hari Kedepan")
     
     today = datetime.now().date()
-    days = [today + timedelta(days=i) for i in range(5)]
-    cols_days = st.columns(5)
+    # Mengambil jadwal 14 hari ke depan
+    days = [today + timedelta(days=i) for i in range(14)] 
     
     if not df_matrix.empty:
-        for i, d in enumerate(days):
+        # Membuka Container Scroll HTML
+        html_cards = '<div class="scroll-container">'
+        
+        for d in days:
             d_str = d.strftime('%Y-%m-%d')
-            with cols_days[i]:
-                with st.container(border=True):
-                    st.markdown(f"<div style='text-align:center; background-color:#004D95; color:white; padding:5px; border-radius:5px; margin-bottom:10px;'><b>{d.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
-                    
-                    if d_str in df_matrix.columns:
-                        df_day = df_matrix[['Nama Operator', d_str]].dropna()
-                        df_day = df_day[~df_day[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
+            card_content = f'<div class="scroll-card"><div class="scroll-header">{d.strftime("%d/%m/%Y")}</div>'
+            
+            if d_str in df_matrix.columns:
+                df_day = df_matrix[['Nama Operator', d_str]].dropna()
+                df_day = df_day[~df_day[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
+                
+                if not df_day.empty:
+                    for _, row in df_day.iterrows():
+                        # Membersihkan simbol bintang (**) dari GSheets/Markdown agar teks rapi
+                        nama_asli = str(row['Nama Operator']).replace('*', '').strip()
+                        status = str(row[d_str])
                         
-                        if not df_day.empty:
-                            for _, row in df_day.iterrows():
-                                status = str(row[d_str])
-                                if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
-                                    st.markdown(f"❌ **{row['Nama Operator']}**<br><span style='color:red; font-size:12px;'>{status}</span>", unsafe_allow_html=True)
-                                else:
-                                    st.markdown(f"🔹 **{row['Nama Operator']}**<br><span style='color:green; font-size:12px;'>Shift {status}</span>", unsafe_allow_html=True)
+                        if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
+                            card_content += f'<div class="scroll-item">❌ <b>{nama_asli}</b><br><span style="color:#d93025; font-size:12px; font-weight:bold;">{status}</span></div>'
                         else:
-                            st.caption("Semua Personel OFF")
-                    else:
-                        st.caption("Data belum dirilis")
+                            card_content += f'<div class="scroll-item">🔹 <b>{nama_asli}</b><br><span style="color:#008b45; font-size:12px; font-weight:bold;">Shift {status}</span></div>'
+                else:
+                    card_content += '<div class="scroll-item" style="color:#888;">Semua Personel OFF</div>'
+            else:
+                card_content += '<div class="scroll-item" style="color:#888;">Data belum dirilis</div>'
+                
+            card_content += '</div>'
+            html_cards += card_content
+            
+        html_cards += '</div>' # Menutup Container
+        
+        # Menampilkan (Inject) HTML murni ke dalam Streamlit
+        st.markdown(html_cards, unsafe_allow_html=True)
     else:
         st.warning("Data Jadwal Aktual belum dimuat.")
 
