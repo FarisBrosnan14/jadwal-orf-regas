@@ -166,7 +166,7 @@ if menu == "🏠 Dashboard Interaktif":
             pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending.empty:
-                pin = st.text_input("🔑 PIN Manager (regas123):", type="password", key="pin_dash")
+                pin = st.text_input("🔑 PIN Manager :", type="password", key="pin_dash")
                 
                 for idx, row in pending.head(3).iterrows():
                     with st.container(border=True):
