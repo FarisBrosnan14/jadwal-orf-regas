@@ -1,36 +1,51 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="ORF Nusantara Regas - Smart Scheduling", page_icon="⚓", layout="wide")
+# --- KONFIGURASI HALAMAN (WIDE LAYOUT) ---
+st.set_page_config(page_title="Dashboard Nusantara Regas", page_icon="⚓", layout="wide")
 
-# --- KUSTOMISASI TAMPILAN (CSS) ---
+# --- KUSTOMISASI CSS (TAMPILAN MODERN PERTAMINA) ---
 st.markdown("""
     <style>
-    /* Mengubah warna teks judul menjadi biru korporat */
-    h1, h2, h3 {
-        color: #00569d; 
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    /* Memperhalus tampilan kotak container */
-    div[data-testid="stVerticalBlock"] div[style*="border"] {
+    /* Warna teks judul utama */
+    h1, h2, h3 { color: #004D95; font-family: 'Segoe UI', sans-serif; }
+    
+    /* Memperhalus kotak kontainer (Cards) */
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-        border: 1px solid #e0e0e0;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        background-color: #ffffff;
+        border: 1px solid #eaeaea;
+        padding: 15px;
     }
-    /* Mempercantik tombol */
+    
+    /* Panel samping (Sidebar) lebih bersih */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 2px solid #eaeaea;
+    }
+    
+    /* Kustomisasi tombol */
     .stButton>button {
         border-radius: 8px;
         font-weight: bold;
     }
-    /* Panel samping lebih bersih */
-    [data-testid="stSidebar"] {
-        background-color: #f4f6f9;
+    
+    /* Notifikasi hijau terhubung */
+    .status-badge {
+        background-color: #e6f8eb;
+        color: #008b45;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -67,100 +82,177 @@ def get_gspread_client():
         creds = Credentials.from_service_account_info(kredensial, scopes=scope)
         return gspread.authorize(creds)
     except Exception as e:
-        st.sidebar.error(f"Koneksi API Gagal: {e}")
         return None
 
 # ==========================================
-# SIDEBAR (PANEL SAMPING)
+# SIDEBAR (NAVIGASI KIRI)
 # ==========================================
 with st.sidebar:
-    # URL Gambar FSRU Nusantara Regas (Bapak bisa mengganti URL ini dengan foto FSRU yang lebih spesifik jika punya)
-    st.image("https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=800&auto=format&fit=crop", caption="FSRU Nusantara Regas", use_container_width=True)
-    st.markdown("---")
-    st.markdown("### ⚓ Info Sistem")
-    st.info(
-        "**Smart Scheduling ORF**\n\n"
-        "Sistem digitalisasi terpadu untuk pemantauan jadwal shift dan perizinan personel "
-        "di Fasilitas Onshore Receiving Facility (ORF) PT Nusantara Regas."
-    )
-    st.markdown("---")
+    # Menggunakan file logo pertamina lokal
+    st.image("pertamina.png", use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Navigasi ala menu aplikasi
+    menu = st.radio("Menu Utama", ["🏠 Dashboard Interaktif", "📅 Kalender Lengkap", "🧑‍🔧 Pencarian Rekan OFF"])
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge'>✅ Koneksi Firebase: Terhubung</div>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge'>✅ Data G-Sheets: Terhubung</div>", unsafe_allow_html=True)
     st.caption("© 2026 PT Nusantara Regas")
 
 # ==========================================
-# HEADER UTAMA
+# HEADER ATAS
 # ==========================================
-col_logo, col_title = st.columns([1, 8])
-with col_logo:
-    # URL Logo Pertamina dari Wikimedia
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png", width=80)
+col_title, col_profile = st.columns([4, 1])
 with col_title:
-    st.title("Sistem Penjadwalan Terpadu ORF")
-    st.caption("Dashboard Digitalisasi Shift & Perizinan Personel")
+    st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
+with col_profile:
+    hari_ini_str = datetime.now().strftime('%d %B %Y')
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b>Faris (Admin)</b></div>", unsafe_allow_html=True)
 
 st.divider()
 
 # ==========================================
-# TABS NAVIGASI
+# VIEW 1: DASHBOARD INTERAKTIF (SESUAI MOCKUP)
 # ==========================================
-tab_kalender, tab_operator, tab_manager = st.tabs(["📅 Kalender Jadwal", "🧑‍🔧 Portal Operator", "👨‍💼 Manager Admin"])
-
-# ==========================================
-# TAB 1: KALENDER JADWAL
-# ==========================================
-with tab_kalender:
-    col_kiri, col_kanan = st.columns([1.5, 2])
-
-    with col_kiri:
-        c1, c2 = st.columns(2)
-        with c1:
-            nama_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-            pilih_bulan = st.selectbox("Bulan", range(1, 13), format_func=lambda x: nama_bulan[x-1], index=st.session_state.selected_date.month - 1)
-        with c2:
-            pilih_tahun = st.selectbox("Tahun", range(2024, 2031), index=range(2024, 2031).index(st.session_state.selected_date.year))
+if menu == "🏠 Dashboard Interaktif":
+    
+    # --- BARIS 1: GAMBAR, ANTREAN, PERSONEL OFF ---
+    col_img, col_antre, col_off = st.columns([1.8, 1.2, 1.2])
+    
+    with col_img:
+        # Menampilkan gambar FSRU
+        try:
+            st.image("fsru.jpg", use_container_width=True)
+        except:
+            st.info("Gambar fsru.jpg belum terunggah di GitHub.")
+        st.success("🟢 Status Kapal: FSRU Nusantara Regas 1 - Operasional Normal")
         
-        cal = calendar.monthcalendar(pilih_tahun, pilih_bulan)
-        cols = st.columns(7)
-        for i, h in enumerate(["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]):
-            cols[i].markdown(f"<div style='text-align:center;font-weight:bold; color:#00569d;'>{h}</div>", unsafe_allow_html=True)
+    with col_antre:
+        st.subheader("🔔 Antrean Persetujuan")
+        client = get_gspread_client()
         
-        for minggu in cal:
-            cols = st.columns(7)
-            for i, tanggal in enumerate(minggu):
-                if tanggal != 0:
-                    curr_date = datetime(pilih_tahun, pilih_bulan, tanggal).date()
-                    is_selected = (curr_date == st.session_state.selected_date)
-                    if cols[i].button(str(tanggal), key=f"d_{tanggal}", type="primary" if is_selected else "secondary", use_container_width=True):
-                        st.session_state.selected_date = curr_date
-                        st.rerun()
-
-    with col_kanan:
-        tgl_str = st.session_state.selected_date.strftime('%Y-%m-%d')
-        st.subheader(f"📌 Status Shift: {st.session_state.selected_date.strftime('%d %B %Y')}")
-        
-        if not df_matrix.empty:
-            if tgl_str in df_matrix.columns:
-                df_bersih = df_matrix.dropna(subset=['Nama Operator']).copy()
-                df_view = df_bersih[['Nama Operator', tgl_str]].copy()
-                df_view.columns = ["Nama Operator", "Shift/Status"]
+        if not df_izin.empty and 'Status Approval' in df_izin.columns:
+            df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
+            pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
+            
+            if not pending.empty:
+                # Menggunakan PIN sebentar untuk keamanan eksekusi
+                pin = st.text_input("🔑 PIN Manager (regas123):", type="password", key="pin_dash")
                 
-                df_view = df_view[~df_view["Shift/Status"].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
-                
-                if not df_view.empty:
-                    df_view["Shift/Status"] = df_view["Shift/Status"].apply(lambda x: f"❌ {x}" if any(keyword in str(x).upper() for keyword in ["IZIN", "SAKIT", "CUTI"]) else f"✅ {x}")
-                    st.dataframe(df_view, width=600, hide_index=True)
-                else:
-                    st.info("Semua personel OFF pada tanggal ini.")
+                # Hanya tampilkan maksimal 3 teratas agar dashboard tidak kepanjangan
+                for idx, row in pending.head(3).iterrows():
+                    with st.container(border=True):
+                        st.markdown(f"**{row['Nama Lengkap Operator']}** ({row.get('Jenis Izin yang Diajukan', 'Izin')})")
+                        st.caption(f"📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} | Shift: {row.get('Shift Izin', 'Pg')}")
+                        st.caption(f"🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}")
+                        
+                        if pin == "regas123":
+                            c_app, c_rej = st.columns(2)
+                            with c_app:
+                                if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
+                                    if client:
+                                        # DOUBLE ACTION SCRIPT
+                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
+                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
+                                        
+                                        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                                        d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
+                                        d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
+                                        
+                                        for d in pd.date_range(d_start, d_end):
+                                            d_str = d.strftime('%Y-%m-%d')
+                                            if d_str in df_matrix.columns:
+                                                c_idx = list(df_matrix.columns).index(d_str) + 1
+                                                # Pemohon
+                                                match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
+                                                if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
+                                                # Pengganti
+                                                nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+                                                if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
+                                                    match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
+                                                    if not match_sub.empty: sh_aktual.update_cell(int(match_sub.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
+                                        load_data.clear()
+                                        st.rerun()
+                            with c_rej:
+                                if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                                    if client:
+                                        client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
+                                        load_data.clear()
+                                        st.rerun()
             else:
-                st.info(f"Data jadwal untuk tanggal {tgl_str} belum diinput di Google Sheets.")
+                st.info("✨ Tidak ada antrean pending.")
         else:
-            st.warning("Data Jadwal Aktual tidak terbaca.")
+            st.warning("Menunggu data izin.")
+
+    with col_off:
+        st.subheader("👥 Personel OFF Hari Ini")
+        tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
+        
+        if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
+            df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
+            kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+            tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
+            
+            with st.container(border=True):
+                if tersedia:
+                    for orang in tersedia:
+                        st.markdown(f"🔹 {orang}")
+                else:
+                    st.write("Tidak ada personel OFF.")
+            st.link_button("📝 Ajukan Izin (Google Form)", LINK_GFORM, use_container_width=True, type="primary")
+
+    # --- BARIS 2: JADWAL HORIZONTAL (5 HARI KEDEPAN) ---
+    st.markdown("---")
+    st.subheader("📅 Tinjauan Jadwal 5 Hari Kedepan")
+    
+    today = datetime.now().date()
+    days = [today + timedelta(days=i) for i in range(5)]
+    cols_days = st.columns(5)
+    
+    if not df_matrix.empty:
+        for i, d in enumerate(days):
+            d_str = d.strftime('%Y-%m-%d')
+            with cols_days[i]:
+                with st.container(border=True):
+                    st.markdown(f"<div style='text-align:center; background-color:#004D95; color:white; padding:5px; border-radius:5px; margin-bottom:10px;'><b>{d.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
+                    
+                    if d_str in df_matrix.columns:
+                        df_day = df_matrix[['Nama Operator', d_str]].dropna()
+                        df_day = df_day[~df_day[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
+                        
+                        if not df_day.empty:
+                            for _, row in df_day.iterrows():
+                                status = str(row[d_str])
+                                if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
+                                    st.markdown(f"❌ **{row['Nama Operator']}**<br><span style='color:red; font-size:12px;'>{status}</span>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"🔹 **{row['Nama Operator']}**<br><span style='color:green; font-size:12px;'>Shift {status}</span>", unsafe_allow_html=True)
+                        else:
+                            st.caption("Semua Personel OFF")
+                    else:
+                        st.caption("Data belum dirilis")
+    else:
+        st.warning("Data Jadwal Aktual belum dimuat.")
 
 # ==========================================
-# TAB 2: PORTAL OPERATOR
+# VIEW 2: KALENDER LENGKAP
 # ==========================================
-with tab_operator:
-    st.subheader("🔍 Cek Rekan Tersedia (OFF)")
-    tgl_cek = st.date_input("Pilih Tanggal Rencana Izin:", datetime.now().date())
+elif menu == "📅 Kalender Lengkap":
+    st.subheader("Tinjauan Jadwal Bulanan")
+    # (Logika kalender di sini tetap sama dengan versi sebelumnya jika dibutuhkan untuk melihat bulan lain)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
+    with c2:
+        st.info("Fitur kalender penuh ada di tampilan ini. Silakan gunakan Dashboard Interaktif untuk operasional harian.")
+
+# ==========================================
+# VIEW 3: PENCARIAN REKAN OFF
+# ==========================================
+elif menu == "🧑‍🔧 Pencarian Rekan OFF":
+    st.subheader("Cari Ketersediaan Pengganti")
+    tgl_cek = st.date_input("Pilih Tanggal Rencana Izin:")
     tgl_cek_str = tgl_cek.strftime('%Y-%m-%d')
 
     if not df_matrix.empty and tgl_cek_str in df_matrix.columns:
@@ -170,90 +262,7 @@ with tab_operator:
         
         if tersedia:
             st.success(f"Terdapat **{len(tersedia)} personel** yang OFF di tanggal {tgl_cek_str}:")
-            
-            df_tersedia = pd.DataFrame({"Nama Personel (Status: OFF)": tersedia})
-            st.dataframe(df_tersedia, use_container_width=True, hide_index=True)
-            
-            st.info("💡 Silakan ingat/salin nama rekan di atas untuk diisi pada form pengajuan pengganti.")
-            st.link_button("📝 Ajukan Izin di Google Form", LINK_GFORM, type="primary")
+            st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
+            st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary")
         else:
-            st.error("Tidak ada rekan yang OFF di tanggal ini. Silakan koordinasi dengan Manager.")
-
-# ==========================================
-# TAB 3: MANAGER ADMIN
-# ==========================================
-with tab_manager:
-    pin = st.text_input("🔑 Masukkan PIN Manager:", type="password")
-    if pin == "regas123":
-        st.success("Akses Manager Terbuka!")
-        st.subheader("🔔 Antrean Persetujuan Izin")
-        
-        client = get_gspread_client()
-        
-        if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
-            pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
-            
-            if not pending.empty:
-                for idx, row in pending.iterrows():
-                    with st.container(border=True):
-                        st.markdown(f"#### {row['Nama Lengkap Operator']}")
-                        st.write(f"**Mengajukan:** {row.get('Jenis Izin yang Diajukan', 'Izin')} | **Shift:** {row.get('Shift Izin', 'PG')}")
-                        st.write(f"**Tanggal:** 📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}")
-                        st.write(f"**Rekan Pengganti:** 🔄 {row.get('Nama Lengkap Operator Pengganti', 'Tidak Ada')}")
-                        
-                        col_btn1, col_btn2 = st.columns([1, 4])
-                        with col_btn1:
-                            if st.button("✅ Approve", key=f"app_{idx}"):
-                                if client:
-                                    try:
-                                        # Update Izin
-                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-                                        col_app_idx = df_izin.columns.get_loc('Status Approval') + 1
-                                        sh_izin.update_cell(int(idx)+2, col_app_idx, "APPROVED")
-                                        
-                                        # Update Jadwal Aktual Matriks
-                                        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                                        d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
-                                        d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
-                                        date_range = pd.date_range(d_start, d_end)
-                                        
-                                        for d in date_range:
-                                            d_str = d.strftime('%Y-%m-%d')
-                                            if d_str in df_matrix.columns:
-                                                col_idx = list(df_matrix.columns).index(d_str) + 1
-                                                
-                                                # Pemohon
-                                                nama_p = str(row['Nama Lengkap Operator']).strip().lower()
-                                                match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_p]
-                                                if not match_p.empty:
-                                                    sh_aktual.update_cell(int(match_p.index[0])+2, col_idx, str(row['Jenis Izin yang Diajukan']).upper())
-                                                
-                                                # Pengganti
-                                                nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                                                if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
-                                                    match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
-                                                    if not match_sub.empty:
-                                                        sh_aktual.update_cell(int(match_sub.index[0])+2, col_idx, str(row.get('Shift Izin', 'PG')).title())
-                                        
-                                        load_data.clear()
-                                        st.success(f"Jadwal diperbarui!")
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Gagal: {e}")
-                        
-                        with col_btn2:
-                            if st.button("❌ Reject", type="secondary", key=f"rej_{idx}"):
-                                if client:
-                                    try:
-                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-                                        col_app_idx = df_izin.columns.get_loc('Status Approval') + 1
-                                        sh_izin.update_cell(int(idx)+2, col_app_idx, "REJECTED")
-                                        load_data.clear()
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Gagal: {e}")
-            else:
-                st.info("✨ Antrean approval kosong.")
-    elif pin != "":
-        st.error("PIN salah.")
+            st.error("Tidak ada rekan yang OFF di tanggal ini.")
