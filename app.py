@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-import calendar
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -95,16 +94,20 @@ def get_gspread_client():
     except Exception as e:
         return None
 
-@st.cache_data(ttl=2) # Waktu cache dipersingkat menjadi 2 detik
+@st.cache_data(ttl=2) # Waktu cache 2 detik agar real-time
 def load_data():
     try:
         client = get_gspread_client()
         if client:
-            # Membaca data Jadwal Aktual langsung lewat API
+            # Membaca data Jadwal Aktual
             data_j = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
             df_j = pd.DataFrame(data_j[1:], columns=data_j[0]) if len(data_j) > 1 else pd.DataFrame(columns=data_j[0] if data_j else [])
             
-            # Membaca data Izin langsung lewat API
+            # Filter baris kosong (memastikan data Hantu/kosong tidak terbaca)
+            if 'Nama Operator' in df_j.columns:
+                df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
+            
+            # Membaca data Izin
             data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
             df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
             
@@ -170,7 +173,7 @@ if menu == "🏠 Dashboard Interaktif":
         pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
         
         if pin == "regas123":
-            # --- BAGIAN AKSES SPREADSHEET (BARU) ---
+            # --- BAGIAN AKSES SPREADSHEET ---
             st.markdown("<div style='background-color:#f0f7ff; padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
             st.markdown("🛠️ **Akses Editor Spreadsheet**")
             c_edit1, c_edit2 = st.columns(2)
