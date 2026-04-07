@@ -161,7 +161,7 @@ if menu == "🏠 Dashboard Interaktif":
         client = get_gspread_client()
         
         # INPUT PIN UNTUK AKSES FITUR MANAJER
-        pin = st.text_input("🔑 PIN Manager, type="password", key="pin_dash")
+        pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
         
         if pin == "regas123":
             # --- BAGIAN AKSES SPREADSHEET (BARU) ---
