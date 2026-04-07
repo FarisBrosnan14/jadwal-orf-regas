@@ -137,7 +137,7 @@ with col_title:
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
     # PERBAIKAN: Memastikan string HTML tertutup rapat dengan "
-    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b>Faris (Admin)</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b></b></div>", unsafe_allow_html=True)
 
 st.divider()
 
