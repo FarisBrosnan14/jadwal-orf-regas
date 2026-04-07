@@ -213,11 +213,6 @@ st.divider()
 if menu == "🏠 Dashboard Interaktif":
     
     col_info, col_antre, col_off = st.columns([1, 1.5, 1.5])
-    
-    with col_info:
-        with st.container(border=True):
-            st.subheader("🚢 Status Operasional")
-            st.success("🟢 FSRU Nusantara Regas 1 beroperasi normal.")
         
     with col_antre:
         st.subheader("🔔 Panel Manajer")
