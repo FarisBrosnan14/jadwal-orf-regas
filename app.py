@@ -29,7 +29,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (MODERN & TEGAS) ---
+# --- KUSTOMISASI CSS (MODERN, TEGAS & GLASSMORPHISM) ---
 st.markdown(f"""
     <style>
     /* Mengatur Background Utama Aplikasi */
@@ -121,7 +121,6 @@ st.markdown(f"""
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(193, 193, 193, 1); border-radius: 5px; }}
     .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(168, 168, 168, 1); }}
     
-    /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
         background-color: rgba(255, 255, 255, 0.98);
         padding: 10px 20px;
@@ -184,7 +183,7 @@ with st.sidebar:
         st.image("pertamina.png", use_container_width=True)
     except:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png", use_container_width=True)
-        st.caption("*(Menunggu pertamina.png terupload)*")
+        st.caption("*(Menunggu pertamina.png)*")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -198,7 +197,6 @@ with st.sidebar:
 # ==========================================
 # HEADER ATAS
 # ==========================================
-# Membuat rasio judul lebih lebar agar tidak terpotong
 col_title, col_profile = st.columns([5.5, 1.5])
 with col_title:
     st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 12px 25px; border-radius: 12px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-size: 30px;'>FSRU Command Center & Integrated Scheduling</h1>", unsafe_allow_html=True)
@@ -213,10 +211,10 @@ st.divider()
 # ==========================================
 if menu == "🏠 Dashboard Interaktif":
     
-    # Rasio kolom disesuaikan: Status (Kiri) 1.2, Manajer (Tengah) 1.8, OFF (Kanan) 1.1
-    col_info, col_antre, col_off = st.columns([1.2, 1.8, 1.1])
+    # Rasio kolom diatur ulang agar Panel Manajer lebih luas
+    col_antre, col_off = st.columns([2.5, 1.5])
         
-      with col_antre:
+    with col_antre:
         st.subheader("🔔 Panel Manajer")
         client = get_gspread_client()
         
@@ -276,10 +274,10 @@ if menu == "🏠 Dashboard Interaktif":
                 else:
                     st.info("✨ Tidak ada antrean pending saat ini.")
             else:
-                st.warning("Menunggu data izin ditarik dari server.")
+                st.warning("Menunggu data izin.")
         else:
             with st.container(border=True):
-                st.caption("Masukkan PIN untuk mengakses Panel Manajer (Approval Izin & Editor Sheet).")
+                st.caption("Masukkan PIN untuk mengakses Panel Manajer.")
 
     with col_off:
         st.subheader("👥 Personel OFF Hari Ini")
@@ -347,7 +345,7 @@ elif menu == "📅 Kalender Lengkap":
     st.markdown("<div class='kalender-header'><h2>Tinjauan Jadwal Harian & Bulanan</h2></div>", unsafe_allow_html=True)
     
     with st.container(border=True):
-        c1, c2 = st.columns([1, 3]) # Proporsi diubah agar kotak tanggal tidak terlalu panjang
+        c1, c2 = st.columns([1, 3])
         with c1:
             selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
         with c2:
