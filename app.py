@@ -17,7 +17,7 @@ ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
 
 # URL untuk pembacaan data
-URL_JADWAL_AKTUAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_JADWAL}/edit#gid=0" # Pastikan GID Tab Jadwal_Aktual benar
+URL_JADWAL_AKTUAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_JADWAL}/edit#gid=0"
 URL_IZIN = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_IZIN}/edit"
 LINK_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 
@@ -27,9 +27,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 @st.cache_data(ttl=5) 
 def load_data():
     try:
-        # Membaca Tab Jadwal_Aktual (Format Matriks)
         df_j = conn.read(spreadsheet=URL_JADWAL_AKTUAL, ttl="0")
-        # Membaca Tab Izin (Format List Vertikal)
         df_i = conn.read(spreadsheet=URL_IZIN, ttl="0")
         return df_j, df_i
     except Exception as e:
@@ -90,19 +88,22 @@ with tab_kalender:
         st.subheader(f"📌 Status Shift: {st.session_state.selected_date.strftime('%d %B %Y')}")
         
         if not df_matrix.empty:
-            # Mencari kolom tanggal yang sesuai di matriks
             if tgl_str in df_matrix.columns:
-                # Mengambil kolom Nama (Kolom 1) dan kolom Tanggal terpilih
-                df_view = df_matrix[['Nama Operator', tgl_str]].copy()
+                # PERBAIKAN: Bersihkan baris kosong (NaN) di bawah tabel
+                df_bersih = df_matrix.dropna(subset=['Nama Operator']).copy()
+                
+                df_view = df_bersih[['Nama Operator', tgl_str]].copy()
                 df_view.columns = ["Nama Operator", "Shift/Status"]
                 
-                # Filter hanya yang sedang masuk (PG/MLM) atau sedang izin (❌)
-                df_view = df_view[df_view["Shift/Status"].notna() & (df_view["Shift/Status"] != "")]
+                # PERBAIKAN: Jangan tampilkan yang sedang "Off" agar kalender fokus ke yang masuk/izin saja
+                df_view = df_view[~df_view["Shift/Status"].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
                 
-                # Mempercantik tampilan tanda silang jika ada
-                df_view["Shift/Status"] = df_view["Shift/Status"].apply(lambda x: f"❌ {x}" if any(keyword in str(x).upper() for keyword in ["IZIN", "SAKIT", "CUTI"]) else x)
-                
-                st.dataframe(df_view, width=600, hide_index=True)
+                if not df_view.empty:
+                    # Tambahkan icon silang merah untuk izin
+                    df_view["Shift/Status"] = df_view["Shift/Status"].apply(lambda x: f"❌ {x}" if any(keyword in str(x).upper() for keyword in ["IZIN", "SAKIT", "CUTI"]) else x)
+                    st.dataframe(df_view, width=600, hide_index=True)
+                else:
+                    st.info("Semua personel OFF pada tanggal ini.")
             else:
                 st.info(f"Data jadwal untuk tanggal {tgl_str} belum diinput di Google Sheets.")
         else:
@@ -117,8 +118,14 @@ with tab_operator:
     tgl_cek_str = tgl_cek.strftime('%Y-%m-%d')
 
     if not df_matrix.empty and tgl_cek_str in df_matrix.columns:
-        # Mencari siapa yang kolom tanggalnya kosong (berarti OFF)
-        tersedia = df_matrix[df_matrix[tgl_cek_str].isna() | (df_matrix[tgl_cek_str] == "")]["Nama Operator"].tolist()
+        # PERBAIKAN ERROR TYPE: Bersihkan nama kosong (NaN) agar .join() tidak error
+        df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
+        
+        # PERBAIKAN LOGIKA: Cari yang selnya berisi "Off", kosong, atau "NaN"
+        kondisi_off = df_valid_names[tgl_cek_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+        
+        # Jadikan list string murni
+        tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
         
         if tersedia:
             st.success(f"Personel yang OFF di tanggal {tgl_cek_str}:")
@@ -138,7 +145,6 @@ with tab_manager:
         client = get_gspread_client()
         
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            # Filter baris yang belum diproses
             df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
             pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
@@ -172,7 +178,7 @@ with tab_manager:
                                             
                                             # A. Update Pemohon (Ganti jadi IZIN/CUTI)
                                             nama_p = str(row['Nama Lengkap Operator']).strip().lower()
-                                            match_p = df_matrix[df_matrix.iloc[:,0].str.strip().str.lower() == nama_p]
+                                            match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_p]
                                             if not match_p.empty:
                                                 row_p_idx = int(match_p.index[0]) + 2
                                                 sh_aktual.update_cell(row_p_idx, col_idx, str(row['Jenis Izin yang Diajukan']).upper())
@@ -180,10 +186,10 @@ with tab_manager:
                                             # B. Update Pengganti (Ganti jadi PG/MLM)
                                             nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
                                             if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
-                                                match_sub = df_matrix[df_matrix.iloc[:,0].str.strip().str.lower() == nama_sub]
+                                                match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
                                                 if not match_sub.empty:
                                                     row_sub_idx = int(match_sub.index[0]) + 2
-                                                    sh_aktual.update_cell(row_sub_idx, col_idx, str(row.get('Shift Izin', 'PG')).upper())
+                                                    sh_aktual.update_cell(row_sub_idx, col_idx, str(row.get('Shift Izin', 'PG')).title())
                                     
                                     load_data.clear()
                                     st.success(f"Sukses! Jadwal Aktual di Google Sheets telah direvisi otomatis.")
