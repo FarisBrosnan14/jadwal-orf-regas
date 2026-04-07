@@ -54,11 +54,11 @@ st.markdown(f"""
 
     /* KARTU/MENU MELAYANG */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-        border-radius: 15px;
+        border-radius: 12px;
         background-color: rgba(255, 255, 255, 0.98) !important; 
         backdrop-filter: blur(10px); 
         border: 1px solid rgba(255, 255, 255, 0.9);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); 
+        box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.10); 
         padding: 20px;
     }}
     
@@ -100,7 +100,7 @@ st.markdown(f"""
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 10px;
         padding: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }}
     .scroll-header {{
         text-align: center;
@@ -124,7 +124,7 @@ st.markdown(f"""
     /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
         background-color: rgba(255, 255, 255, 0.98);
-        padding: 10px 15px;
+        padding: 10px 20px;
         border-radius: 10px;
         display: inline-block;
         margin-bottom: 15px;
@@ -198,12 +198,13 @@ with st.sidebar:
 # ==========================================
 # HEADER ATAS
 # ==========================================
-col_title, col_profile = st.columns([4, 1])
+# Membuat rasio judul lebih lebar agar tidak terpotong
+col_title, col_profile = st.columns([5.5, 1.5])
 with col_title:
-    st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 10px 20px; border-radius: 10px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 12px 25px; border-radius: 12px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-size: 30px;'>FSRU Command Center & Integrated Scheduling</h1>", unsafe_allow_html=True)
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: rgba(255,255,255,0.98); padding: 10px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:center; color:#004D95; background-color: rgba(255,255,255,0.98); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -212,8 +213,14 @@ st.divider()
 # ==========================================
 if menu == "🏠 Dashboard Interaktif":
     
-    col_info, col_antre, col_off = st.columns([1, 1.5, 1.5])
+    # Rasio kolom disesuaikan: Status (Kiri) 1.2, Manajer (Tengah) 1.8, OFF (Kanan) 1.1
+    col_info, col_antre, col_off = st.columns([1.2, 1.8, 1.1])
         
+    with col_info:
+        with st.container(border=True):
+            st.subheader("🚢 Status Operasional")
+            st.success("🟢 FSRU Nusantara Regas 1 beroperasi normal.")
+            
     with col_antre:
         st.subheader("🔔 Panel Manajer")
         client = get_gspread_client()
@@ -225,12 +232,12 @@ if menu == "🏠 Dashboard Interaktif":
             st.markdown("🛠️ **Akses Editor Spreadsheet**")
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
-                st.link_button("📝 Edit Jadwal", URL_JADWAL_AKTUAL, use_container_width=True)
+                st.link_button("📝 Edit Jadwal Aktual", URL_JADWAL_AKTUAL, use_container_width=True)
             with c_edit2:
-                st.link_button("📋 Edit Data Izin", URL_IZIN, use_container_width=True)
+                st.link_button("📋 Edit Database Izin", URL_IZIN, use_container_width=True)
             st.markdown("</div><br>", unsafe_allow_html=True)
 
-            st.markdown("<div class='kalender-header'>**Antrean Persetujuan:**</div>", unsafe_allow_html=True)
+            st.markdown("<div class='kalender-header'>**Antrean Persetujuan Izin:**</div>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
@@ -272,12 +279,12 @@ if menu == "🏠 Dashboard Interaktif":
                                         load_data.clear()
                                         st.rerun()
                 else:
-                    st.info("✨ Tidak ada antrean pending.")
+                    st.info("✨ Tidak ada antrean pending saat ini.")
             else:
-                st.warning("Menunggu data izin.")
+                st.warning("Menunggu data izin ditarik dari server.")
         else:
             with st.container(border=True):
-                st.caption("Masukkan PIN untuk akses fitur Manajer (Approval & Editor).")
+                st.caption("Masukkan PIN untuk mengakses Panel Manajer (Approval Izin & Editor Sheet).")
 
     with col_off:
         st.subheader("👥 Personel OFF Hari Ini")
@@ -345,7 +352,7 @@ elif menu == "📅 Kalender Lengkap":
     st.markdown("<div class='kalender-header'><h2>Tinjauan Jadwal Harian & Bulanan</h2></div>", unsafe_allow_html=True)
     
     with st.container(border=True):
-        c1, c2 = st.columns([1, 2])
+        c1, c2 = st.columns([1, 3]) # Proporsi diubah agar kotak tanggal tidak terlalu panjang
         with c1:
             selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
         with c2:
