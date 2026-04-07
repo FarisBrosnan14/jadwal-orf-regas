@@ -22,7 +22,7 @@ img_base64 = get_base64_of_bin_file("fsru.jpg")
 
 # PENGATURAN OPACITY BACKGROUND (DIPUDARKAN LAGI):
 # Lapisan putih dinaikkan menjadi 85% (0.90) agar gambar FSRU lebih samar/pudar
-overlay_opacity = 0.95
+overlay_opacity = 0.90
 bg_color = f"rgba(255, 255, 255, {overlay_opacity})"
 
 if img_base64:
