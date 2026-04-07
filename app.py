@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
 import calendar
@@ -86,20 +85,7 @@ URL_JADWAL_AKTUAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_JADWAL}/e
 URL_IZIN = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_IZIN}/edit"
 LINK_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 
-# --- KONEKSI BACA ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-@st.cache_data(ttl=5) 
-def load_data():
-    try:
-        df_j = conn.read(spreadsheet=URL_JADWAL_AKTUAL, ttl="0")
-        df_i = conn.read(spreadsheet=URL_IZIN, ttl="0")
-        return df_j, df_i
-    except Exception as e:
-        return pd.DataFrame(), pd.DataFrame()
-
-df_matrix, df_izin = load_data()
-
+# --- FUNGSI KONEKSI GSPREAD (REAL-TIME API) ---
 def get_gspread_client():
     try:
         kredensial = dict(st.secrets["gcp_service_account"])
@@ -108,6 +94,26 @@ def get_gspread_client():
         return gspread.authorize(creds)
     except Exception as e:
         return None
+
+@st.cache_data(ttl=2) # Waktu cache dipersingkat menjadi 2 detik
+def load_data():
+    try:
+        client = get_gspread_client()
+        if client:
+            # Membaca data Jadwal Aktual langsung lewat API
+            data_j = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
+            df_j = pd.DataFrame(data_j[1:], columns=data_j[0]) if len(data_j) > 1 else pd.DataFrame(columns=data_j[0] if data_j else [])
+            
+            # Membaca data Izin langsung lewat API
+            data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
+            df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
+            
+            return df_j, df_i
+        return pd.DataFrame(), pd.DataFrame()
+    except Exception as e:
+        return pd.DataFrame(), pd.DataFrame()
+
+df_matrix, df_izin = load_data()
 
 # ==========================================
 # SIDEBAR (NAVIGASI KIRI)
