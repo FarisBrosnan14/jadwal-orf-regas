@@ -4,120 +4,95 @@ from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
 import base64
+import os
 
 # --- KONFIGURASI HALAMAN (WIDE LAYOUT) ---
 st.set_page_config(page_title="Dashboard Nusantara Regas", page_icon="⚓", layout="wide")
 
-# --- FUNGSI HELPER UNTUK BACKGROUND IMAGE (LOCAL FILE) ---
+# --- FUNGSI UNTUK MEMBACA GAMBAR LOKAL KE BASE64 ---
 def get_base64_of_bin_file(bin_file):
-    """Membaca file biner dan mengubahnya menjadi string base64."""
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-def set_png_as_page_bg(png_file):
-    """Menetapkan gambar PNG lokal sebagai background halaman dengan transparansi."""
     try:
-        bin_str = get_base64_of_bin_file(png_file)
-        page_bg_img = f'''
-        <style>
-        .stApp {{
-            background-image: url("data:image/png;base64,{bin_str}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }}
-        
-        /* Lapisan Overlay untuk Transparansi Konten */
-        .stApp > header {{
-            background-color: rgba(0,0,0,0); /* Header transparan penuh */
-        }}
-        
-        .reportview-container .main .block-container{{
-            background-color: rgba(255, 255, 255, 0.85); /* Putih transparan di atas konten */
-            padding: 2rem;
-            border-radius: 15px;
-            backdrop-filter: blur(3px); /* Efek blur sedikit pada background */
-        }}
-        
-        /* Sidebar tetap sedikit solid agar menu jelas */
-        [data-testid="stSidebar"] {{
-            background-color: rgba(248, 249, 250, 0.95);
-            border-right: 2px solid #eaeaea;
-        }}
-        </style>
-        '''
-        st.markdown(page_bg_img, unsafe_allow_html=True)
-    except FileNotFoundError:
-        # Jika file tidak ditemukan, gunakan background solid default
-        st.warning(f"⚠️ File gambar '{png_file}' tidak ditemukan. Menggunakan background default.")
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except Exception:
+        return None
 
-# --- TERAPKAN BACKGROUND IMAGE ---
-# Pastikan file 'fsru.jpg' berada di folder yang sama dengan script python ini.
-# Jika file kamu formatnya .png, ubah namanya di sini.
-set_png_as_page_bg('fsru.jpg')
+# Coba baca fsru.jpg dari folder lokal, jika gagal gunakan link online
+img_base64 = get_base64_of_bin_file('fsru.jpg')
+if img_base64:
+    bg_url = f"data:image/jpeg;base64,{img_base64}"
+else:
+    bg_url = "https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop"
 
-
-# --- KUSTOMISASI CSS TAMBAHAN (TAMPILAN MODERN PERTAMINA) ---
-st.markdown("""
+# --- KUSTOMISASI CSS (TAMPILAN MODERN PERTAMINA & BACKGROUND) ---
+st.markdown(f"""
     <style>
-    /* Reset warna teks global agar kontras */
-    html, body, [class*="css"]  {
-        color: #1a1a1a;
-    }
+    /* 1. LAYER BACKGROUND FSRU (TRANSPARAN) */
+    .stApp::before {{
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("{bg_url}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        opacity: 0.15; /* ATUR TRANSPARANSI DI SINI (0.15 = 15% Terlihat) */
+        z-index: -1; /* Memastikan gambar berada paling belakang */
+    }}
+
+    /* 2. ELEMEN UI TETAP SOLID (TIDAK TRANSPARAN) */
+    h1, h2, h3 {{ color: #004D95; font-family: 'Segoe UI', sans-serif; text-shadow: 1px 1px 2px rgba(255,255,255,0.8); }}
     
-    h1, h2, h3 { color: #004D95; font-family: 'Segoe UI', sans-serif; }
-    
-    /* Kartu Konten (White Panels) */
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        background-color: rgba(255, 255, 255, 0.9); /* Sedikit transparan */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        background-color: rgba(255, 255, 255, 0.95); /* Kartu berwarna putih pekat */
         border: 1px solid #eaeaea;
-        padding: 20px;
-        margin-bottom: 1rem;
-    }
+        padding: 15px;
+    }}
     
-    /* Tombol Style */
-    .stButton>button {
+    [data-testid="stSidebar"] {{
+        background-color: rgba(248, 249, 250, 0.95); /* Sidebar putih pekat */
+        border-right: 2px solid #eaeaea;
+    }}
+    
+    .stButton>button {{
         border-radius: 8px;
         font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
+    }}
     
-    /* Status Badge */
-    .status-badge {
-        background-color: rgba(230, 248, 235, 0.9);
+    .status-badge {{
+        background-color: #e6f8eb;
         color: #008b45;
-        padding: 6px 12px;
+        padding: 8px 15px;
         border-radius: 15px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: bold;
         display: inline-block;
-        margin-bottom: 8px;
-    }
+        margin-bottom: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }}
     
     /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
-    .scroll-container {
+    .scroll-container {{
         display: flex;
         overflow-x: auto;
         gap: 15px;
         padding-bottom: 15px;
-    }
-    .scroll-card {
-        flex: 0 0 240px;
+    }}
+    .scroll-card {{
+        flex: 0 0 220px;
         background-color: rgba(255, 255, 255, 0.95);
         border: 1px solid #eaeaea;
         border-radius: 10px;
         padding: 15px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-    .scroll-header {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }}
+    .scroll-header {{
         text-align: center;
         background-color: #004D95;
         color: white;
@@ -125,16 +100,16 @@ st.markdown("""
         border-radius: 6px;
         font-weight: bold;
         margin-bottom: 15px;
-    }
-    .scroll-item {
-        margin-bottom: 12px;
+    }}
+    .scroll-item {{
+        margin-bottom: 10px;
         font-size: 14px;
-        line-height: 1.5;
-    }
-    .scroll-container::-webkit-scrollbar { height: 10px; }
-    .scroll-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 5px; }
-    .scroll-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 5px; }
-    .scroll-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        line-height: 1.4;
+    }}
+    .scroll-container::-webkit-scrollbar {{ height: 10px; }}
+    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.8); border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: #c1c1c1; border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: #a8a8a8; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -159,20 +134,17 @@ def get_gspread_client():
     except Exception as e:
         return None
 
-@st.cache_data(ttl=2) # Waktu cache 2 detik agar real-time
+@st.cache_data(ttl=2)
 def load_data():
     try:
         client = get_gspread_client()
         if client:
-            # Membaca data Jadwal Aktual
             data_j = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
             df_j = pd.DataFrame(data_j[1:], columns=data_j[0]) if len(data_j) > 1 else pd.DataFrame(columns=data_j[0] if data_j else [])
             
-            # Filter baris kosong (memastikan data Hantu/kosong tidak terbaca)
             if 'Nama Operator' in df_j.columns:
                 df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
             
-            # Membaca data Izin
             data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
             df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
             
@@ -198,8 +170,8 @@ with st.sidebar:
     menu = st.radio("Menu Utama", ["🏠 Dashboard Interaktif", "📅 Kalender Lengkap", "🧑‍🔧 Pencarian Rekan OFF"])
     
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge'>✅ Koneksi Firebase: Terhubung</div>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge'>✅ Data G-Sheets: Terhubung</div>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge' style='font-size:11px;'>✅ Koneksi Firebase: Terhubung</div>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge' style='font-size:11px;'>✅ Data G-Sheets: Terhubung</div>", unsafe_allow_html=True)
     st.caption("© 2026 PT Nusantara Regas")
 
 # ==========================================
@@ -210,7 +182,7 @@ with col_title:
     st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#1a1a1a; font-weight:bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#004D95; font-weight:bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -219,23 +191,19 @@ st.divider()
 # ==========================================
 if menu == "🏠 Dashboard Interaktif":
     
-    # Menghapus gambar FSRU yang solid di kolom kiri agar tidak ganda dengan background
-    col_antre, col_off = st.columns([1, 1])
+    # Layout diubah karena gambar FSRU sudah menjadi background
+    st.markdown("<div class='status-badge'>🟢 Status Kapal: FSRU Nusantara Regas 1 - Operasional Normal</div><br><br>", unsafe_allow_html=True)
     
-    # Kolom info kapal dipindah ke atas antrean
+    col_antre, col_off = st.columns([1.5, 1.5])
+    
     with col_antre:
-        st.success("🟢 **Status Kapal:** FSRU Nusantara Regas 1 - Operasional Normal")
-        st.markdown("<br>", unsafe_allow_html=True)
-        
         st.subheader("🔔 Panel Manajer")
         client = get_gspread_client()
         
-        # INPUT PIN UNTUK AKSES FITUR MANAJER
         pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
         
         if pin == "regas123":
-            # --- BAGIAN AKSES SPREADSHEET ---
-            st.markdown("<div style='background-color:rgba(240, 247, 255, 0.9); padding:15px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color:rgba(240, 247, 255, 0.9); padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
             st.markdown("🛠️ **Akses Editor Spreadsheet**")
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
@@ -244,7 +212,6 @@ if menu == "🏠 Dashboard Interaktif":
                 st.link_button("📋 Edit Data Izin", URL_IZIN, use_container_width=True)
             st.markdown("</div><br>", unsafe_allow_html=True)
 
-            # --- BAGIAN APPROVAL IZIN ---
             st.markdown("**Antrean Persetujuan:**")
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
@@ -305,7 +272,7 @@ if menu == "🏠 Dashboard Interaktif":
             with st.container(border=True):
                 if tersedia:
                     for orang in tersedia:
-                        st.markdown(f"🔹 {orang}")
+                        st.markdown(f"🔹 **{orang}**")
                 else:
                     st.write("Tidak ada personel OFF.")
             st.link_button("📝 Ajukan Izin (Google Form)", LINK_GFORM, use_container_width=True, type="primary")
