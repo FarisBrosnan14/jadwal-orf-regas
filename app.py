@@ -10,8 +10,6 @@ import os
 st.set_page_config(page_title="Dashboard Nusantara Regas", page_icon="⚓", layout="wide")
 
 # --- FUNGSI LOAD BACKGROUND IMAGE (BASE64) ---
-# Fungsi ini akan mengubah file fsru.jpg menjadi background. 
-# Jika file tidak ditemukan, otomatis pakai gambar online sebagai cadangan.
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -21,10 +19,13 @@ def get_base64_of_bin_file(bin_file):
         return None
 
 img_base64 = get_base64_of_bin_file("fsru.jpg")
+
+# PENGATURAN OPACITY BACKGROUND:
+# linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)) memberikan lapisan putih 65% di atas gambar
 if img_base64:
-    bg_image_css = f"background-image: url('data:image/jpeg;base64,{img_base64}');"
+    bg_image_css = f"background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)), url('data:image/jpeg;base64,{img_base64}');"
 else:
-    bg_image_css = "background-image: url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
+    bg_image_css = "background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
 # --- KUSTOMISASI CSS (GLASSMORPHISM / MELAYANG) ---
 st.markdown(f"""
@@ -42,28 +43,28 @@ st.markdown(f"""
         background-color: rgba(255, 255, 255, 0.0) !important;
     }}
 
-    /* Teks Judul dengan sedikit bayangan agar terbaca di background apapun */
+    /* Teks Judul */
     h1, h2, h3 {{ 
         color: #004D95; 
         font-family: 'Segoe UI', sans-serif; 
-        text-shadow: 1px 1px 3px rgba(255,255,255,0.8);
+        text-shadow: 1px 1px 3px rgba(255,255,255,0.9);
     }}
 
-    /* KARTU/MENU MELAYANG (GLASSMORPHISM) */
+    /* KARTU/MENU MELAYANG (OPACITY DINAIKKAN JADI 95%) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.85) !important; /* Opacity 85% */
-        backdrop-filter: blur(10px); /* Efek kaca buram */
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); /* Bayangan melayang */
+        background-color: rgba(255, 255, 255, 0.95) !important; 
+        backdrop-filter: blur(10px); 
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); 
         padding: 20px;
     }}
     
-    /* SIDEBAR TRANSPARAN */
+    /* SIDEBAR TRANSPARAN (OPACITY DINAIKKAN) */
     [data-testid="stSidebar"] {{
-        background-color: rgba(248, 249, 250, 0.85) !important;
+        background-color: rgba(248, 249, 250, 0.95) !important;
         backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255, 255, 255, 0.4);
+        border-right: 1px solid rgba(255, 255, 255, 0.6);
     }}
 
     .stButton>button {{
@@ -72,7 +73,7 @@ st.markdown(f"""
     }}
     
     .status-badge {{
-        background-color: rgba(230, 248, 235, 0.9);
+        background-color: rgba(230, 248, 235, 1);
         color: #008b45;
         padding: 5px 10px;
         border-radius: 15px;
@@ -92,16 +93,16 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background-color: rgba(255, 255, 255, 0.85); /* Kaca transparan */
+        background-color: rgba(255, 255, 255, 0.95); 
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         border-radius: 10px;
         padding: 15px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }}
     .scroll-header {{
         text-align: center;
-        background-color: rgba(0, 77, 149, 0.9);
+        background-color: rgba(0, 77, 149, 1);
         color: white;
         padding: 8px;
         border-radius: 6px;
@@ -114,19 +115,19 @@ st.markdown(f"""
         line-height: 1.4;
     }}
     .scroll-container::-webkit-scrollbar {{ height: 10px; }}
-    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.5); border-radius: 5px; }}
-    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(193, 193, 193, 0.8); border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.8); border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(193, 193, 193, 1); border-radius: 5px; }}
     .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(168, 168, 168, 1); }}
     
     /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 255, 255, 0.95);
         padding: 10px 15px;
         border-radius: 10px;
         display: inline-block;
         margin-bottom: 15px;
         backdrop-filter: blur(5px);
-        border: 1px solid rgba(255,255,255,0.5);
+        border: 1px solid rgba(255,255,255,0.8);
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -197,10 +198,10 @@ with st.sidebar:
 # ==========================================
 col_title, col_profile = st.columns([4, 1])
 with col_title:
-    st.markdown("<h1 style='background-color: rgba(255,255,255,0.85); padding: 10px 20px; border-radius: 10px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='background-color: rgba(255,255,255,0.95); padding: 10px 20px; border-radius: 10px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.8);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: rgba(255,255,255,0.85); padding: 10px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: rgba(255,255,255,0.95); padding: 10px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.8); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -225,7 +226,7 @@ if menu == "🏠 Dashboard Interaktif":
         pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
         
         if pin == "regas123":
-            st.markdown("<div style='background-color:rgba(240, 247, 255, 0.9); padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color:rgba(240, 247, 255, 0.95); padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
             st.markdown("🛠️ **Akses Editor Spreadsheet**")
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
