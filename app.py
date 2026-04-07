@@ -136,7 +136,7 @@ with col_title:
     st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b>)</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br></b></div>", unsafe_allow_html=True)
 
 st.divider()
 
