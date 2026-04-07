@@ -47,7 +47,7 @@ st.markdown("""
         padding-bottom: 15px;
     }
     .scroll-card {
-        flex: 0 0 220px; /* Lebar tetap tiap kartu */
+        flex: 0 0 220px;
         background-color: #ffffff;
         border: 1px solid #eaeaea;
         border-radius: 10px;
@@ -68,7 +68,6 @@ st.markdown("""
         font-size: 14px;
         line-height: 1.4;
     }
-    /* Kustomisasi Scrollbar agar elegan */
     .scroll-container::-webkit-scrollbar { height: 10px; }
     .scroll-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 5px; }
     .scroll-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 5px; }
@@ -137,7 +136,8 @@ with col_title:
     st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤, unsafe_allow_html=True)
+    # PERBAIKAN: Memastikan string HTML tertutup rapat dengan "
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br>👤 <b>Faris (Admin)</b></div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -166,7 +166,7 @@ if menu == "🏠 Dashboard Interaktif":
             pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending.empty:
-                pin = st.text_input("🔑 PIN Manager :", type="password", key="pin_dash")
+                pin = st.text_input("🔑 PIN Manager (regas123):", type="password", key="pin_dash")
                 
                 for idx, row in pending.head(3).iterrows():
                     with st.container(border=True):
@@ -233,11 +233,9 @@ if menu == "🏠 Dashboard Interaktif":
     st.subheader("📅 Tinjauan Jadwal 14 Hari Kedepan")
     
     today = datetime.now().date()
-    # Mengambil jadwal 14 hari ke depan
     days = [today + timedelta(days=i) for i in range(14)] 
     
     if not df_matrix.empty:
-        # Membuka Container Scroll HTML
         html_cards = '<div class="scroll-container">'
         
         for d in days:
@@ -250,7 +248,6 @@ if menu == "🏠 Dashboard Interaktif":
                 
                 if not df_day.empty:
                     for _, row in df_day.iterrows():
-                        # Membersihkan simbol bintang (**) dari GSheets/Markdown agar teks rapi
                         nama_asli = str(row['Nama Operator']).replace('*', '').strip()
                         status = str(row[d_str])
                         
@@ -266,9 +263,7 @@ if menu == "🏠 Dashboard Interaktif":
             card_content += '</div>'
             html_cards += card_content
             
-        html_cards += '</div>' # Menutup Container
-        
-        # Menampilkan (Inject) HTML murni ke dalam Streamlit
+        html_cards += '</div>' 
         st.markdown(html_cards, unsafe_allow_html=True)
     else:
         st.warning("Data Jadwal Aktual belum dimuat.")
