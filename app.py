@@ -142,7 +142,7 @@ with st.sidebar:
 # ==========================================
 col_title, col_profile = st.columns([4, 1])
 with col_title:
-    st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
+    st.header("Sistem Penjadwalan Terpadu Operator ORF Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
     st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
