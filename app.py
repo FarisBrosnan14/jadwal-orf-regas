@@ -27,7 +27,7 @@ if img_base64:
 else:
     bg_image_css = "background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (GLASSMORPHISM / MELAYANG) ---
+# --- KUSTOMISASI CSS (KARTU SOLID) ---
 st.markdown(f"""
     <style>
     /* Mengatur Background Utama Aplikasi */
@@ -47,24 +47,22 @@ st.markdown(f"""
     h1, h2, h3 {{ 
         color: #004D95; 
         font-family: 'Segoe UI', sans-serif; 
-        text-shadow: 1px 1px 3px rgba(255,255,255,1);
     }}
 
-    /* KARTU/MENU MELAYANG (OPACITY DINAIKKAN JADI 98%) */
+    /* KARTU/MENU SOLID PUTIH (TIDAK TRANSPARAN) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.98) !important; 
-        backdrop-filter: blur(10px); 
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        background-color: #ffffff !important; 
+        border: 1px solid #eaeaea;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); 
         padding: 20px;
     }}
     
-    /* SIDEBAR TRANSPARAN (OPACITY DINAIKKAN JADI 98%) */
+    /* SIDEBAR SOLID ABU-ABU TERANG */
     [data-testid="stSidebar"] {{
-        background-color: rgba(248, 249, 250, 0.98) !important;
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255, 255, 255, 0.8);
+        background-color: #f8f9fa !important;
+        border-right: 1px solid #eaeaea;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.05);
     }}
 
     .stButton>button {{
@@ -73,7 +71,7 @@ st.markdown(f"""
     }}
     
     .status-badge {{
-        background-color: rgba(230, 248, 235, 1);
+        background-color: #e6f8eb;
         color: #008b45;
         padding: 5px 10px;
         border-radius: 15px;
@@ -84,7 +82,7 @@ st.markdown(f"""
         border: 1px solid #008b45;
     }}
     
-    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL MELAYANG === */
+    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL SOLID === */
     .scroll-container {{
         display: flex;
         overflow-x: auto;
@@ -93,16 +91,15 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background-color: rgba(255, 255, 255, 0.98); 
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        background-color: #ffffff; 
+        border: 1px solid #eaeaea;
         border-radius: 10px;
         padding: 15px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }}
     .scroll-header {{
         text-align: center;
-        background-color: rgba(0, 77, 149, 1);
+        background-color: #004D95;
         color: white;
         padding: 8px;
         border-radius: 6px;
@@ -115,19 +112,19 @@ st.markdown(f"""
         line-height: 1.4;
     }}
     .scroll-container::-webkit-scrollbar {{ height: 10px; }}
-    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.9); border-radius: 5px; }}
-    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(193, 193, 193, 1); border-radius: 5px; }}
-    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(168, 168, 168, 1); }}
+    .scroll-container::-webkit-scrollbar-track {{ background: #f1f1f1; border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: #c1c1c1; border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: #a8a8a8; }}
     
     /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
-        background-color: rgba(255, 255, 255, 0.98);
+        background-color: #ffffff;
         padding: 10px 15px;
         border-radius: 10px;
         display: inline-block;
         margin-bottom: 15px;
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255,255,255,0.9);
+        border: 1px solid #eaeaea;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -198,10 +195,10 @@ with st.sidebar:
 # ==========================================
 col_title, col_profile = st.columns([4, 1])
 with col_title:
-    st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 10px 20px; border-radius: 10px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='background-color: #ffffff; padding: 10px 20px; border-radius: 10px; display: inline-block; border: 1px solid #eaeaea; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: rgba(255,255,255,0.98); padding: 10px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #eaeaea; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -226,7 +223,7 @@ if menu == "🏠 Dashboard Interaktif":
         pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
         
         if pin == "regas123":
-            st.markdown("<div style='background-color:rgba(240, 247, 255, 0.98); padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color:#f0f7ff; padding:10px; border-radius:10px; border:1px solid #004D95;'>", unsafe_allow_html=True)
             st.markdown("🛠️ **Akses Editor Spreadsheet**")
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
