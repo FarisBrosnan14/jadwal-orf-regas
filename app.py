@@ -20,9 +20,8 @@ def get_base64_of_bin_file(bin_file):
 
 img_base64 = get_base64_of_bin_file("fsru.jpg")
 
-# PENGATURAN OPACITY BACKGROUND (DIPUDARKAN LAGI):
-# Lapisan putih dinaikkan menjadi 85% (0.90) agar gambar FSRU lebih samar/pudar
-overlay_opacity = 0.90
+# PENGATURAN OPACITY BACKGROUND:
+overlay_opacity = 0.85
 bg_color = f"rgba(255, 255, 255, {overlay_opacity})"
 
 if img_base64:
@@ -53,7 +52,7 @@ st.markdown(f"""
         text-shadow: 1px 1px 2px rgba(255,255,255,1);
     }}
 
-    /* KARTU/MENU MELAYANG (OPACITY TEGAS 98%) */
+    /* KARTU/MENU MELAYANG */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 15px;
         background-color: rgba(255, 255, 255, 0.98) !important; 
@@ -63,7 +62,7 @@ st.markdown(f"""
         padding: 20px;
     }}
     
-    /* SIDEBAR TRANSPARAN (OPACITY TEGAS 98%) */
+    /* SIDEBAR TRANSPARAN */
     [data-testid="stSidebar"] {{
         background-color: rgba(248, 249, 250, 0.98) !important;
         backdrop-filter: blur(10px);
@@ -96,7 +95,7 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background-color: rgba(255, 255, 255, 1.00); 
+        background-color: rgba(255, 255, 255, 0.98); 
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 10px;
@@ -124,7 +123,7 @@ st.markdown(f"""
     
     /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
-        background-color: rgba(255, 255, 255, 1.00);
+        background-color: rgba(255, 255, 255, 0.98);
         padding: 10px 15px;
         border-radius: 10px;
         display: inline-block;
@@ -219,8 +218,6 @@ if menu == "🏠 Dashboard Interaktif":
         with st.container(border=True):
             st.subheader("🚢 Status Operasional")
             st.success("🟢 FSRU Nusantara Regas 1 beroperasi normal.")
-            st.info("⚓ Mode: Siaga / Standby")
-            st.caption("Pastikan seluruh jadwal operator terisi untuk kelancaran bongkar muat.")
         
     with col_antre:
         st.subheader("🔔 Panel Manajer")
