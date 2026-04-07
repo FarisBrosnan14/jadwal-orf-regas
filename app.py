@@ -21,8 +21,8 @@ def get_base64_of_bin_file(bin_file):
 img_base64 = get_base64_of_bin_file("fsru.jpg")
 
 # PENGATURAN OPACITY BACKGROUND (DIPUDARKAN LAGI):
-# Lapisan putih dinaikkan menjadi 85% (0.85) agar gambar FSRU lebih samar/pudar
-overlay_opacity = 0.85
+# Lapisan putih dinaikkan menjadi 85% (0.90) agar gambar FSRU lebih samar/pudar
+overlay_opacity = 0.95
 bg_color = f"rgba(255, 255, 255, {overlay_opacity})"
 
 if img_base64:
@@ -96,7 +96,7 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background-color: rgba(255, 255, 255, 0.98); 
+        background-color: rgba(255, 255, 255, 1.00); 
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 10px;
@@ -124,7 +124,7 @@ st.markdown(f"""
     
     /* Mengubah background container Markdown khusus Kalender Harian */
     .kalender-header {{
-        background-color: rgba(255, 255, 255, 0.98);
+        background-color: rgba(255, 255, 255, 1.00);
         padding: 10px 15px;
         border-radius: 10px;
         display: inline-block;
