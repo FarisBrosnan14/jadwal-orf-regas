@@ -9,7 +9,9 @@ import os
 # --- KONFIGURASI HALAMAN (WIDE LAYOUT) ---
 st.set_page_config(page_title="Dashboard Nusantara Regas", page_icon="⚓", layout="wide")
 
-# --- FUNGSI UNTUK MEMBACA GAMBAR LOKAL KE BASE64 ---
+# --- FUNGSI LOAD BACKGROUND IMAGE (BASE64) ---
+# Fungsi ini akan mengubah file fsru.jpg menjadi background. 
+# Jika file tidak ditemukan, otomatis pakai gambar online sebagai cadangan.
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -18,66 +20,70 @@ def get_base64_of_bin_file(bin_file):
     except Exception:
         return None
 
-# Coba baca fsru.jpg dari folder lokal, jika gagal gunakan link online
-img_base64 = get_base64_of_bin_file('fsru.jpg')
+img_base64 = get_base64_of_bin_file("fsru.jpg")
 if img_base64:
-    bg_url = f"data:image/jpeg;base64,{img_base64}"
+    bg_image_css = f"background-image: url('data:image/jpeg;base64,{img_base64}');"
 else:
-    bg_url = "https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop"
+    bg_image_css = "background-image: url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (TAMPILAN MODERN PERTAMINA & BACKGROUND) ---
+# --- KUSTOMISASI CSS (GLASSMORPHISM / MELAYANG) ---
 st.markdown(f"""
     <style>
-    /* 1. LAYER BACKGROUND FSRU (TRANSPARAN) */
-    .stApp::before {{
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url("{bg_url}");
+    /* Mengatur Background Utama Aplikasi */
+    .stApp {{
+        {bg_image_css}
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-        opacity: 0.15; /* ATUR TRANSPARANSI DI SINI (0.15 = 15% Terlihat) */
-        z-index: -1; /* Memastikan gambar berada paling belakang */
+    }}
+    
+    /* Mengatur Transparansi Header Bawaan Streamlit */
+    header[data-testid="stHeader"] {{
+        background-color: rgba(255, 255, 255, 0.0) !important;
     }}
 
-    /* 2. ELEMEN UI TETAP SOLID (TIDAK TRANSPARAN) */
-    h1, h2, h3 {{ color: #004D95; font-family: 'Segoe UI', sans-serif; text-shadow: 1px 1px 2px rgba(255,255,255,0.8); }}
-    
+    /* Teks Judul dengan sedikit bayangan agar terbaca di background apapun */
+    h1, h2, h3 {{ 
+        color: #004D95; 
+        font-family: 'Segoe UI', sans-serif; 
+        text-shadow: 1px 1px 3px rgba(255,255,255,0.8);
+    }}
+
+    /* KARTU/MENU MELAYANG (GLASSMORPHISM) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        background-color: rgba(255, 255, 255, 0.95); /* Kartu berwarna putih pekat */
-        border: 1px solid #eaeaea;
-        padding: 15px;
+        border-radius: 15px;
+        background-color: rgba(255, 255, 255, 0.85) !important; /* Opacity 85% */
+        backdrop-filter: blur(10px); /* Efek kaca buram */
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); /* Bayangan melayang */
+        padding: 20px;
     }}
     
+    /* SIDEBAR TRANSPARAN */
     [data-testid="stSidebar"] {{
-        background-color: rgba(248, 249, 250, 0.95); /* Sidebar putih pekat */
-        border-right: 2px solid #eaeaea;
+        background-color: rgba(248, 249, 250, 0.85) !important;
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255, 255, 255, 0.4);
     }}
-    
+
     .stButton>button {{
         border-radius: 8px;
         font-weight: bold;
     }}
     
     .status-badge {{
-        background-color: #e6f8eb;
+        background-color: rgba(230, 248, 235, 0.9);
         color: #008b45;
-        padding: 8px 15px;
+        padding: 5px 10px;
         border-radius: 15px;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: bold;
         display: inline-block;
         margin-bottom: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #008b45;
     }}
     
-    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
+    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL MELAYANG === */
     .scroll-container {{
         display: flex;
         overflow-x: auto;
@@ -86,15 +92,16 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background-color: rgba(255, 255, 255, 0.95);
-        border: 1px solid #eaeaea;
+        background-color: rgba(255, 255, 255, 0.85); /* Kaca transparan */
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 10px;
         padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }}
     .scroll-header {{
         text-align: center;
-        background-color: #004D95;
+        background-color: rgba(0, 77, 149, 0.9);
         color: white;
         padding: 8px;
         border-radius: 6px;
@@ -107,9 +114,20 @@ st.markdown(f"""
         line-height: 1.4;
     }}
     .scroll-container::-webkit-scrollbar {{ height: 10px; }}
-    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.8); border-radius: 5px; }}
-    .scroll-container::-webkit-scrollbar-thumb {{ background: #c1c1c1; border-radius: 5px; }}
-    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: #a8a8a8; }}
+    .scroll-container::-webkit-scrollbar-track {{ background: rgba(241, 241, 241, 0.5); border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(193, 193, 193, 0.8); border-radius: 5px; }}
+    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(168, 168, 168, 1); }}
+    
+    /* Mengubah background container Markdown khusus Kalender Harian */
+    .kalender-header {{
+        background-color: rgba(255, 255, 255, 0.85);
+        padding: 10px 15px;
+        border-radius: 10px;
+        display: inline-block;
+        margin-bottom: 15px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.5);
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -134,7 +152,7 @@ def get_gspread_client():
     except Exception as e:
         return None
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=2) 
 def load_data():
     try:
         client = get_gspread_client()
@@ -170,8 +188,8 @@ with st.sidebar:
     menu = st.radio("Menu Utama", ["🏠 Dashboard Interaktif", "📅 Kalender Lengkap", "🧑‍🔧 Pencarian Rekan OFF"])
     
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge' style='font-size:11px;'>✅ Koneksi Firebase: Terhubung</div>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge' style='font-size:11px;'>✅ Data G-Sheets: Terhubung</div>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge'>✅ Koneksi Firebase: Terhubung</div>", unsafe_allow_html=True)
+    st.markdown("<div class='status-badge'>✅ Data G-Sheets: Terhubung</div>", unsafe_allow_html=True)
     st.caption("© 2026 PT Nusantara Regas")
 
 # ==========================================
@@ -179,10 +197,10 @@ with st.sidebar:
 # ==========================================
 col_title, col_profile = st.columns([4, 1])
 with col_title:
-    st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
+    st.markdown("<h1 style='background-color: rgba(255,255,255,0.85); padding: 10px 20px; border-radius: 10px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5);'>Sistem Penjadwalan Terpadu</h1>", unsafe_allow_html=True)
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#004D95; font-weight:bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#004D95; background-color: rgba(255,255,255,0.85); padding: 10px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -191,11 +209,15 @@ st.divider()
 # ==========================================
 if menu == "🏠 Dashboard Interaktif":
     
-    # Layout diubah karena gambar FSRU sudah menjadi background
-    st.markdown("<div class='status-badge'>🟢 Status Kapal: FSRU Nusantara Regas 1 - Operasional Normal</div><br><br>", unsafe_allow_html=True)
+    col_info, col_antre, col_off = st.columns([1, 1.5, 1.5])
     
-    col_antre, col_off = st.columns([1.5, 1.5])
-    
+    with col_info:
+        with st.container(border=True):
+            st.subheader("🚢 Status Operasional")
+            st.success("🟢 FSRU Nusantara Regas 1 beroperasi normal.")
+            st.info("⚓ Mode: Siaga / Standby")
+            st.caption("Pastikan seluruh jadwal operator terisi untuk kelancaran bongkar muat.")
+        
     with col_antre:
         st.subheader("🔔 Panel Manajer")
         client = get_gspread_client()
@@ -212,7 +234,7 @@ if menu == "🏠 Dashboard Interaktif":
                 st.link_button("📋 Edit Data Izin", URL_IZIN, use_container_width=True)
             st.markdown("</div><br>", unsafe_allow_html=True)
 
-            st.markdown("**Antrean Persetujuan:**")
+            st.markdown("<div class='kalender-header'>**Antrean Persetujuan:**</div>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
@@ -258,7 +280,8 @@ if menu == "🏠 Dashboard Interaktif":
             else:
                 st.warning("Menunggu data izin.")
         else:
-            st.caption("Masukkan PIN untuk akses fitur Manajer.")
+            with st.container(border=True):
+                st.caption("Masukkan PIN untuk akses fitur Manajer (Approval & Editor).")
 
     with col_off:
         st.subheader("👥 Personel OFF Hari Ini")
@@ -272,7 +295,7 @@ if menu == "🏠 Dashboard Interaktif":
             with st.container(border=True):
                 if tersedia:
                     for orang in tersedia:
-                        st.markdown(f"🔹 **{orang}**")
+                        st.markdown(f"🔹 {orang}")
                 else:
                     st.write("Tidak ada personel OFF.")
             st.link_button("📝 Ajukan Izin (Google Form)", LINK_GFORM, use_container_width=True, type="primary")
@@ -281,7 +304,7 @@ if menu == "🏠 Dashboard Interaktif":
     # BAGIAN JADWAL SCROLL HORIZONTAL (14 HARI)
     # ==========================================
     st.markdown("---")
-    st.subheader("📅 Tinjauan Jadwal 14 Hari Kedepan")
+    st.markdown("<div class='kalender-header'><h2>📅 Tinjauan Jadwal 14 Hari Kedepan</h2></div>", unsafe_allow_html=True)
     
     today = datetime.now().date()
     days = [today + timedelta(days=i) for i in range(14)] 
@@ -323,20 +346,21 @@ if menu == "🏠 Dashboard Interaktif":
 # VIEW 2: KALENDER LENGKAP
 # ==========================================
 elif menu == "📅 Kalender Lengkap":
-    st.subheader("Tinjauan Jadwal Harian & Bulanan")
-    c1, c2 = st.columns([1, 2])
+    st.markdown("<div class='kalender-header'><h2>Tinjauan Jadwal Harian & Bulanan</h2></div>", unsafe_allow_html=True)
     
-    with c1:
-        selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
-    with c2:
-        st.info("Gunakan Dashboard Interaktif untuk operasional harian.")
+    with st.container(border=True):
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
+        with c2:
+            st.info("Gunakan Dashboard Interaktif untuk operasional harian.")
 
     st.markdown("---")
     selected_date_str = selected_date.strftime('%Y-%m-%d')
 
     if not df_matrix.empty:
         if selected_date_str in df_matrix.columns:
-            st.markdown(f"### Status Personel pada **{selected_date.strftime('%d %B %Y')}**")
+            st.markdown(f"<div class='kalender-header'><h3>Status Personel pada <b>{selected_date.strftime('%d %B %Y')}</b></h3></div>", unsafe_allow_html=True)
             df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
@@ -346,17 +370,20 @@ elif menu == "📅 Kalender Lengkap":
 
             col_shift, col_off, col_absen = st.columns(3)
             with col_shift:
-                st.success(f"🟢 **Hadir / Shift ({len(df_shift)})**")
-                st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+                with st.container(border=True):
+                    st.success(f"🟢 **Hadir / Shift ({len(df_shift)})**")
+                    st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
             with col_off:
-                st.info(f"⚪ **Sedang OFF ({len(df_off)})**")
-                st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
+                with st.container(border=True):
+                    st.info(f"⚪ **Sedang OFF ({len(df_off)})**")
+                    st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
             with col_absen:
-                st.error(f"🔴 **Izin / Cuti / Sakit ({len(df_absen)})**")
-                if not df_absen.empty:
-                    st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
-                else:
-                    st.write("Tidak ada yang absen.")
+                with st.container(border=True):
+                    st.error(f"🔴 **Izin / Cuti / Sakit ({len(df_absen)})**")
+                    if not df_absen.empty:
+                        st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+                    else:
+                        st.write("Tidak ada yang absen.")
         else:
             st.warning(f"⚠️ Data jadwal untuk tanggal **{selected_date.strftime('%d %B %Y')}** belum dirilis atau tidak tersedia.")
     else:
@@ -366,18 +393,20 @@ elif menu == "📅 Kalender Lengkap":
 # VIEW 3: PENCARIAN REKAN OFF
 # ==========================================
 elif menu == "🧑‍🔧 Pencarian Rekan OFF":
-    st.subheader("Cari Ketersediaan Pengganti")
-    tgl_cek = st.date_input("Pilih Tanggal Rencana Izin:")
-    tgl_cek_str = tgl_cek.strftime('%Y-%m-%d')
+    st.markdown("<div class='kalender-header'><h2>Cari Ketersediaan Pengganti</h2></div>", unsafe_allow_html=True)
+    
+    with st.container(border=True):
+        tgl_cek = st.date_input("Pilih Tanggal Rencana Izin:")
+        tgl_cek_str = tgl_cek.strftime('%Y-%m-%d')
 
-    if not df_matrix.empty and tgl_cek_str in df_matrix.columns:
-        df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
-        kondisi_off = df_valid_names[tgl_cek_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
-        tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
-        
-        if tersedia:
-            st.success(f"Terdapat **{len(tersedia)} personel** yang OFF di tanggal {tgl_cek_str}:")
-            st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
-            st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary")
-        else:
-            st.error("Tidak ada rekan yang OFF di tanggal ini.")
+        if not df_matrix.empty and tgl_cek_str in df_matrix.columns:
+            df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
+            kondisi_off = df_valid_names[tgl_cek_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+            tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
+            
+            if tersedia:
+                st.success(f"Terdapat **{len(tersedia)} personel** yang OFF di tanggal {tgl_cek_str}:")
+                st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
+                st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary")
+            else:
+                st.error("Tidak ada rekan yang OFF di tanggal ini.")
