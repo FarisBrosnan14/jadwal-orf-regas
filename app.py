@@ -216,12 +216,7 @@ if menu == "🏠 Dashboard Interaktif":
     # Rasio kolom disesuaikan: Status (Kiri) 1.2, Manajer (Tengah) 1.8, OFF (Kanan) 1.1
     col_info, col_antre, col_off = st.columns([1.2, 1.8, 1.1])
         
-    with col_info:
-        with st.container(border=True):
-            st.subheader("🚢 Status Operasional")
-            st.success("🟢 FSRU Nusantara Regas 1 beroperasi normal.")
-            
-    with col_antre:
+      with col_antre:
         st.subheader("🔔 Panel Manajer")
         client = get_gspread_client()
         
