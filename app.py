@@ -136,7 +136,7 @@ with col_title:
     st.header("Sistem Penjadwalan Terpadu Nusantara Regas")
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
-    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}<br></b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:right; color:#4a4a4a;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -165,7 +165,7 @@ if menu == "🏠 Dashboard Interaktif":
             pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
             if not pending.empty:
-                pin = st.text_input("🔑 PIN Manager (regas123):", type="password", key="pin_dash")
+                pin = st.text_input("🔑 PIN Manager", type="password", key="pin_dash")
                 
                 for idx, row in pending.head(3).iterrows():
                     with st.container(border=True):
@@ -294,15 +294,15 @@ elif menu == "📅 Kalender Lengkap":
             # Ambil kolom Nama Operator dan kolom tanggal yang dipilih
             df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
             
-            # Standardisasi teks status (huruf besar, hapus spasi berlebih)
-            df_day['Status'] = df_day[selected_date_str].astype(str).str.strip().str.upper()
+            # Standardisasi teks: isi data kosong (NaN/NA) dengan teks kosong dulu sebelum diubah
+            df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
             # --- PENGELOMPOKAN DATA ---
-            # 1. Kategori OFF
-            df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '', 'NONE'])]
+            # 1. Kategori OFF (Tambahkan <NA> sebagai antisipasi format PyArrow Streamlit)
+            df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '<NA>', '', 'NONE'])]
             
-            # 2. Kategori Izin/Sakit/Cuti
-            df_absen = df_day[df_day['Status'].apply(lambda x: any(k in x for k in ["IZIN", "SAKIT", "CUTI"]))]
+            # 2. Kategori Izin/Sakit/Cuti (Gunakan .str.contains agar kebal terhadap TypeError)
+            df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI', na=False)]
             
             # 3. Kategori Shift/Bertugas (Sisa dari OFF dan Absen)
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
