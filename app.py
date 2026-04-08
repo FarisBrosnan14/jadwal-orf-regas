@@ -367,21 +367,19 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
-# Menggunakan format string satu baris agar tidak ada spasi/indentasi yang mengganggu markdown
 if pending_count > 0:
     notif_html = f'<div class="notif-wrapper" title="Ada {pending_count} ajuan izin menunggu persetujuan"><span class="notif-bell">🔔</span><span class="notif-badge">{pending_count}</span></div>'
 else:
     notif_html = '<div class="notif-wrapper" style="opacity: 0.3;" title="Tidak ada antrean"><span class="notif-bell">🔔</span></div>'
 
-# HTML Utama Header juga dirender rapat ke kiri tanpa indentasi mendalam
 st.markdown(f"""
 <div class="header-bar">
-    <div>{logo_html}</div>
-    <h1 class="header-title">NR ORF Integrated Command</h1>
-    <div style="display: flex; align-items: center;">
-        {notif_html}
-        <div class="header-date">📅 {hari_ini_str}</div>
-    </div>
+<div>{logo_html}</div>
+<h1 class="header-title">NR ORF Integrated Command</h1>
+<div style="display: flex; align-items: center;">
+{notif_html}
+<div class="header-date">📅 {hari_ini_str}</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -450,20 +448,19 @@ if menu == "🏠 Dashboard":
                             bukti_html = "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
 
                         with st.container(border=True):
+                            # PERHATIAN: HTML DI BAWAH INI SENGAJA DIRATAKAN KIRI (TANPA SPASI) AGAR TIDAK BOCOR KE MARKDOWN
                             st.markdown(f"""
-                            <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-                                <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                                <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
-                                <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                                
-                                <div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'>
-                                    <div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{alasan_izin}</div>
-                                    <div style='font-size:13px;'>{bukti_html}</div>
-                                </div>
-                                
-                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
+<div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
+<b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+<div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
+<div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
+<div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'>
+<div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{alasan_izin}</div>
+<div style='font-size:13px;'>{bukti_html}</div>
+</div>
+<div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+</div>
+""", unsafe_allow_html=True)
                             
                             c_app, c_rej = st.columns(2)
                             with c_app:
