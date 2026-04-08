@@ -79,18 +79,18 @@ st.markdown(f"""
     }}
     
     .header-logo {{
-        max-height: 60px; /* Ukuran Logo Proporsional */
+        max-height: 60px;
         display: block;
     }}
     
     .header-title {{
-        color: #004D95 !important; /* Biru Pertamina */
+        color: #004D95 !important; 
         font-weight: 800;
         font-size: 32px;
         margin: 0;
         text-align: center;
         flex-grow: 1;
-        text-shadow: none !important; /* Hapus bayangan agar teks rapi di atas putih */
+        text-shadow: none !important; 
         letter-spacing: -0.5px;
     }}
     
@@ -105,7 +105,6 @@ st.markdown(f"""
         white-space: nowrap;
     }}
 
-    /* Responsif untuk Layar HP */
     @media (max-width: 768px) {{
         .header-bar {{
             flex-direction: column;
@@ -358,13 +357,15 @@ def set_menu(menu_name):
 nav_c1, nav_c2 = st.columns(2)
 
 with nav_c1:
+    # PERBAIKAN: args disesuaikan dengan nama yang benar
     st.button("🏠 Dashboard", 
               type="primary" if st.session_state.active_menu == "🏠 Dashboard" else "secondary", 
               on_click=set_menu, args=("🏠 Dashboard",), use_container_width=True)
 with nav_c2:
+    # PERBAIKAN: args disesuaikan secara konsisten menjadi "📅 Kalender Lengkap"
     st.button("📅 Kalender Lengkap", 
-              type="primary" if st.session_state.active_menu == "📅 Kalender" else "secondary", 
-              on_click=set_menu, args=("📅 Kalender",), use_container_width=True)
+              type="primary" if st.session_state.active_menu == "📅 Kalender Lengkap" else "secondary", 
+              on_click=set_menu, args=("📅 Kalender Lengkap",), use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 menu = st.session_state.active_menu
@@ -521,7 +522,6 @@ if menu == "🏠 Dashboard":
                         status = str(row[d_str])
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
-                        # LOGIKA HIGHLIGHT WARNA (Ditambah Oranye untuk Perjalanan Dinas, Biru untuk Pengganti)
                         if any(k in status.upper() for k in ["DINAS", "PD"]):
                             card_content += f'<div class="scroll-item item-dinas" style="animation-delay: {item_delay}s;">🟠 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fdba74; font-size:11px; font-weight:800; background:rgba(249, 115, 22, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         elif any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
