@@ -371,13 +371,17 @@ def load_data():
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
             
-            # 3. Load Data Operator (Posisi & Kontak) - Menggunakan Try Except agar tidak error jika sheet belum dibuat
+            # 3. Load Data Operator (Posisi & Kontak) - DENGAN PEMBERSIHAN HEADER
             try:
                 data_k = client.open_by_key(ID_SHEET_JADWAL).worksheet("Data_Operator").get_all_values()
-                df_k = pd.DataFrame(data_k[1:], columns=data_k[0]) if len(data_k) > 1 else pd.DataFrame(columns=["Posisi", "Nama Operator", "Contact Person"])
+                if len(data_k) > 1:
+                    # Bersihkan nama header dari spasi tersembunyi
+                    headers = [str(h).strip() for h in data_k[0]]
+                    df_k = pd.DataFrame(data_k[1:], columns=headers)
+                else:
+                    df_k = pd.DataFrame()
             except Exception:
-                # Jika worksheet "Data_Operator" belum ada, gunakan dataframe kosong
-                df_k = pd.DataFrame(columns=["Posisi", "Nama Operator", "Contact Person"])
+                df_k = pd.DataFrame()
 
             return df_j, df_i, df_k
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -560,18 +564,27 @@ if menu == "🏠 Dashboard":
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
                         
-                        # Pencarian data Posisi dan Kontak dari Sheet Data_Operator
+                        # --- PENCARIAN CERDAS (FUZZY MATCHING) UNTUK KOLOM DATA OPERATOR ---
                         posisi_op = "Belum diatur"
                         kontak_op = "-"
-                        if not df_kontak.empty and 'Nama Operator' in df_kontak.columns:
-                            match_op = df_kontak[df_kontak['Nama Operator'].astype(str).str.strip().str.lower() == str(orang).strip().lower()]
-                            if not match_op.empty:
-                                if 'Posisi' in match_op.columns:
-                                    posisi_op = str(match_op.iloc[0]['Posisi']).strip()
-                                if 'Contact Person' in match_op.columns:
-                                    kontak_op = str(match_op.iloc[0]['Contact Person']).strip()
+                        if not df_kontak.empty:
+                            # Cari kolom berdasarkan kemiripan nama
+                            col_nama_k = next((c for c in df_kontak.columns if 'nama' in c.lower() and 'operator' in c.lower()), None)
+                            col_posisi_k = next((c for c in df_kontak.columns if 'posisi' in c.lower()), None)
+                            col_kontak_k = next((c for c in df_kontak.columns if 'contact' in c.lower() or 'kontak' in c.lower()), None)
+
+                            if col_nama_k:
+                                # Proses pencocokan nama
+                                match_op = df_kontak[df_kontak[col_nama_k].astype(str).str.strip().str.lower() == str(orang).strip().lower()]
+                                if not match_op.empty:
+                                    if col_posisi_k:
+                                        val_pos = str(match_op.iloc[0][col_posisi_k]).strip()
+                                        if val_pos and val_pos.lower() != 'nan': posisi_op = val_pos
+                                    if col_kontak_k:
+                                        val_kon = str(match_op.iloc[0][col_kontak_k]).strip()
+                                        if val_kon and val_kon.lower() != 'nan': kontak_op = val_kon
+                        # -------------------------------------------------------------------
                         
-                        # HTML Interaktif Details/Summary (Accordion)
                         st.markdown(f"""
 <details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;">
     <summary>
