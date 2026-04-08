@@ -38,7 +38,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & MOBILE UI) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -63,14 +63,14 @@ st.markdown(f"""
         text-shadow: 0px 2px 4px rgba(0,0,0,0.8); 
     }}
 
-    /* KARTU/MENU MELAYANG (DARK SOFT UI) */
+    /* KARTU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px;
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)) !important; 
         backdrop-filter: blur(16px); 
         border: 1px solid rgba(255, 255, 255, 0.15); 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
-        padding: 20px; /* Sedikit dikurangi untuk mobile */
+        padding: 20px; 
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         animation: fadeIn 0.6s ease-out;
     }}
@@ -82,8 +82,10 @@ st.markdown(f"""
     
     /* TOMBOL MODERN */
     .stButton>button {{
-        border-radius: 10px;
-        font-weight: 600;
+        border-radius: 12px;
+        font-weight: 700;
+        padding: 12px 20px; /* Diperbesar agar mudah ditekan di HP */
+        font-size: 16px;
         background: linear-gradient(135deg, #2563eb, #1d4ed8);
         color: white !important; 
         border: 1px solid rgba(255,255,255,0.2);
@@ -94,33 +96,58 @@ st.markdown(f"""
         background: linear-gradient(135deg, #3b82f6, #2563eb);
         transform: translateY(-2px) scale(1.02);
         box-shadow: 0 7px 14px rgba(37, 99, 235, 0.5);
-        border: 1px solid rgba(255,255,255,0.4);
     }}
     
-    /* KUSTOMISASI TAB NAVIGASI (Segmented Control) AGAR TERLIHAT SEPERTI TOMBOL APLIKASI */
+    /* ========================================================
+       KUSTOMISASI TAB NAVIGASI "CHUNKY" (BESAR & DI TENGAH)
+       ======================================================== */
     div[data-testid="stSegmentedControl"] {{
-        background-color: rgba(15, 23, 42, 0.8);
-        padding: 5px;
-        border-radius: 12px;
+        background-color: rgba(15, 23, 42, 0.6); /* Latar belakang navigasi sedikit lebih transparan */
+        padding: 8px; /* Padding lebih tebal */
+        border-radius: 16px; /* Sudut lebih melengkung */
         border: 1px solid rgba(255,255,255,0.1);
-        margin-bottom: 20px;
+        margin: 10px auto 25px auto; /* Margin auto untuk memastikan di tengah jika layar besar */
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        max-width: 600px; /* Batasi lebar maksimal di layar besar, full di layar HP */
+        width: 100%;
     }}
     div[data-testid="stSegmentedControl"] > div {{
-        border-radius: 8px;
+        border-radius: 10px;
     }}
+    
+    /* Menargetkan tombol individual di dalam Tab Navigasi */
+    div[data-testid="stSegmentedControl"] label {{
+        padding: 12px 10px !important; /* Tinggi tab ditingkatkan */
+        font-size: 16px !important; /* Teks lebih besar */
+        font-weight: 600 !important;
+        transition: all 0.2s ease;
+    }}
+    /* Tampilan Tab saat Aktif/Dipilih */
+    div[data-testid="stSegmentedControl"] div[aria-selected="true"] {{
+        background: linear-gradient(135deg, #0284c7, #0369a1) !important; /* Biru terang menonjol */
+        color: white !important;
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
+    }}
+    div[data-testid="stSegmentedControl"] div[aria-selected="true"] label {{
+        color: white !important;
+    }}
+    /* Tampilan Tab tidak aktif (tulisan abu-abu terang) */
+    div[data-testid="stSegmentedControl"] div[aria-selected="false"] label p {{
+        color: #94a3b8 !important; 
+    }}
+    /* ======================================================== */
     
     /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
         display: flex;
         overflow-x: auto;
-        gap: 12px; /* Dikecilkan sedikit untuk mobile */
+        gap: 12px; 
         padding-bottom: 15px;
         padding-top: 10px;
-        /* Momentum scroll untuk HP */
         -webkit-overflow-scrolling: touch; 
     }}
     .scroll-card {{
-        flex: 0 0 200px; /* Lebar kartu disesuaikan untuk layar HP */
+        flex: 0 0 200px; 
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); 
         border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 14px;
@@ -148,7 +175,7 @@ st.markdown(f"""
     
     .scroll-item {{
         margin-bottom: 10px;
-        font-size: 13px; /* Disesuaikan untuk HP */
+        font-size: 13px; 
         line-height: 1.5;
         padding: 8px;
         border-radius: 8px;
@@ -168,21 +195,21 @@ st.markdown(f"""
     .item-hadir b {{ color: #ffffff !important; }}
     
     /* SCROLLBAR GELAP DI MOBILE */
-    .scroll-container::-webkit-scrollbar {{ height: 4px; }} /* Tipis untuk mobile */
+    .scroll-container::-webkit-scrollbar {{ height: 4px; }} 
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
     
-    /* HEADER UTAMA (RESPONSIF MOBILE) */
+    /* HEADER UTAMA (RESPONSIF MOBILE & RATA TENGAH) */
     .main-title {{
         font-weight: 800;
         background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 28px; /* Diperkecil agar tidak patah di HP */
+        font-size: 26px; 
         margin: 0 0 10px 0;
         padding: 0;
         text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-        text-align: center; /* Rata tengah di mobile */
+        text-align: center; 
     }}
     .date-badge {{
         text-align: center; 
@@ -195,6 +222,14 @@ st.markdown(f"""
         border: 1px solid rgba(255, 255, 255, 0.2);
         display: inline-block;
         font-size: 14px;
+        margin: 0 auto; /* Tengah secara horizontal */
+    }}
+    /* Wrapper untuk membuat tanggal selalu di tengah */
+    .date-wrapper {{
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 15px;
     }}
     
     .section-title {{
@@ -203,7 +238,7 @@ st.markdown(f"""
         margin-bottom: 15px;
         position: relative;
         padding-bottom: 8px;
-        font-size: 20px; /* Ukuran mobile friendly */
+        font-size: 20px; 
     }}
     .section-title::after {{
         content: '';
@@ -273,26 +308,21 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# HEADER ATAS (Rata Tengah untuk Mobile)
+# HEADER ATAS (FULL TENGAH UNTUK MOBILE)
 # ==========================================
+# Menyembunyikan indikator status API agar tampilan atas lebih fokus pada judul & navigasi
 st.markdown("<h1 class='main-title'>FSRU Command Center</h1>", unsafe_allow_html=True)
 
-# Membuat 3 kolom kecil untuk status koneksi & Tanggal agar rapi di atas
-c_date, c_koneksi = st.columns([1, 1])
-with c_date:
-    hari_ini_str = datetime.now().strftime('%d %b %Y')
-    st.markdown(f"<div class='date-badge'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
-with c_koneksi:
-    st.markdown("<div style='text-align: right; font-size:11px; color:#94a3b8; margin-top:10px;'>🟢 API Connected</div>", unsafe_allow_html=True)
+hari_ini_str = datetime.now().strftime('%d %b %Y')
+st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# NAVIGASI HORIZONTAL (PENGGANTI SIDEBAR)
+# NAVIGASI HORIZONTAL (Tengah & Besar/Chunky)
 # ==========================================
-# Menggunakan widget terbaru st.segmented_control yang sangat ramah jari HP
+# Komponen ini dikontrol CSS di atas agar ukurannya membesar
 menu = st.segmented_control(
-    "Pilih Menu Navigasi:",
+    "Navigasi",
     options=["🏠 Dashboard", "📅 Kalender", "🧑‍🔧 Cek OFF"],
     default="🏠 Dashboard",
     label_visibility="collapsed"
@@ -305,7 +335,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==========================================
 if menu == "🏠 Dashboard":
     
-    # Menghapus kolom (st.columns) agar di HP susunannya memanjang ke bawah (vertikal) dengan rapi
     st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
     client = get_gspread_client()
     
@@ -315,7 +344,6 @@ if menu == "🏠 Dashboard":
         st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
         st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
         
-        # Di HP, tombol edit lebih baik ditumpuk ke bawah agar mudah ditekan
         st.link_button("📝 Edit Jadwal Aktual di Spreadsheet", URL_JADWAL_AKTUAL, use_container_width=True)
         st.link_button("📋 Edit Database Izin di Spreadsheet", URL_IZIN, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -460,7 +488,6 @@ elif menu == "📅 Kalender":
             df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
-            # Di HP, tidak pakai kolom agar memanjang ke bawah
             st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
             with st.container(border=True):
                 st.markdown("<div style='background-color: rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(34, 197, 94, 0.4);'><b style='color: #ffffff;'>🟢 Hadir / Shift (" + str(len(df_shift)) + ")</b></div>", unsafe_allow_html=True)
