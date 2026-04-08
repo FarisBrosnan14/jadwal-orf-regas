@@ -37,7 +37,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM DENGAN WHITE HEADER) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -52,69 +52,17 @@ st.markdown(f"""
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
+        /* Menambahkan padding atas agar konten tidak tertutup logo yang absolute */
+        padding-top: 60px; 
     }}
     
     header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
 
-    h2, h3, h4, h5 {{ 
+    h1, h2, h3, h4, h5 {{ 
         color: #ffffff !important; 
         font-family: 'Plus Jakarta Sans', sans-serif; 
         text-shadow: 0px 2px 4px rgba(0,0,0,0.8); 
     }}
-
-    /* ========================================================
-       TOP BAR (HEADER PUTIH UNTUK LOGO PERTAMINA)
-       ======================================================== */
-    .white-top-bar {{
-        background-color: #ffffff;
-        padding: 20px 30px;
-        border-radius: 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        margin-bottom: 25px;
-        margin-top: 10px;
-        animation: fadeIn 0.5s ease-out;
-    }}
-    
-    .white-top-bar img {{
-        max-height: 60px;
-        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
-    }}
-    
-    .white-title {{
-        color: #004D95 !important;
-        font-weight: 800;
-        font-size: 32px;
-        margin: 0;
-        text-shadow: none !important; 
-        text-align: center;
-    }}
-    
-    .white-date-badge {{
-        background-color: #f8fafc;
-        color: #0f172a;
-        padding: 10px 18px;
-        border-radius: 12px;
-        font-weight: 700;
-        border: 1px solid #e2e8f0;
-        font-size: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }}
-
-    @media (max-width: 768px) {{
-        .white-top-bar {{
-            flex-direction: column;
-            gap: 15px;
-            padding: 20px 15px;
-            text-align: center;
-        }}
-        .white-title {{
-            font-size: 24px;
-        }}
-    }}
-    /* ======================================================== */
 
     /* KARTU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
@@ -132,11 +80,13 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* TOMBOL CHUNKY (BESAR & RESPONSIF) */
+    /* ========================================================
+       TOMBOL CHUNKY (BESAR & RESPONSIF)
+       ======================================================== */
     .stButton>button {{
         border-radius: 12px;
         font-weight: 800 !important;
-        padding: 20px 10px !important; 
+        padding: 20px 10px !important; /* PADDING SANGAT BESAR UNTUK HP */
         font-size: 16px !important; 
         transition: all 0.2s ease;
         height: auto !important;
@@ -146,6 +96,7 @@ st.markdown(f"""
         align-items: center;
     }}
     
+    /* Warna Tombol Navigasi Aktif / Tombol Utama */
     button[kind="primary"] {{
         background: linear-gradient(135deg, #0284c7, #0369a1) !important;
         color: #ffffff !important;
@@ -153,6 +104,7 @@ st.markdown(f"""
         box-shadow: 0 6px 15px rgba(2, 132, 199, 0.5) !important;
     }}
     
+    /* Warna Tombol Navigasi Tidak Aktif */
     button[kind="secondary"] {{
         background: rgba(30, 41, 59, 0.7) !important;
         color: #94a3b8 !important;
@@ -165,6 +117,7 @@ st.markdown(f"""
         color: #f8fafc !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }}
+    /* ======================================================== */
     
     /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
@@ -218,9 +171,12 @@ st.markdown(f"""
         100% {{ opacity: 1; transform: scale(1); }}
     }}
     
-    /* INDIKATOR STATUS JADWAL (MERAH, HIJAU, BIRU) */
+    /* INDIKATOR STATUS JADWAL (MERAH, ORANYE, HIJAU, BIRU) */
     .item-absen {{ border-left: 4px solid #ef4444; background-color: rgba(239, 68, 68, 0.15); }}
     .item-absen b {{ color: #ffffff !important; }}
+    
+    .item-dinas {{ border-left: 4px solid #f97316; background-color: rgba(249, 115, 22, 0.15); }}
+    .item-dinas b {{ color: #ffffff !important; }}
     
     .item-hadir {{ border-left: 4px solid #22c55e; background-color: rgba(34, 197, 94, 0.1); }}
     .item-hadir b {{ color: #ffffff !important; }}
@@ -232,6 +188,38 @@ st.markdown(f"""
     .scroll-container::-webkit-scrollbar {{ height: 4px; }} 
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
+    
+    /* HEADER UTAMA (RESPONSIF MOBILE & RATA TENGAH) */
+    .main-title {{
+        font-weight: 800;
+        background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 28px; 
+        margin: 5px 0 15px 0;
+        padding: 0;
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        text-align: center; 
+    }}
+    .date-badge {{
+        text-align: center; 
+        color: #ffffff; 
+        background: rgba(15, 23, 42, 0.8); 
+        padding: 8px 16px; 
+        border-radius: 12px; 
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: inline-block;
+        font-size: 14px;
+        margin: 0 auto; 
+    }}
+    .date-wrapper {{
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 25px;
+    }}
     
     .section-title {{
         font-weight: 800;
@@ -263,8 +251,37 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
+    /* Pengaturan Jarak Kolom Custom Navigasi */
     [data-testid="column"] {{
         padding: 0 5px !important;
+    }}
+
+    /* ========================================================
+       POSISI LOGO ABSOLUTE DI POJOK KIRI ATAS
+       ======================================================== */
+    .logo-container {{
+        position: absolute;
+        top: 15px;
+        left: 20px;
+        z-index: 1000; /* Memastikan logo selalu di atas elemen lain */
+    }}
+    .logo-img {{
+        max-height: 70px; /* Ukuran diperbesar */
+        filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); 
+    }}
+    
+    /* Media query untuk layar HP: Sesuaikan ukuran dan posisi logo */
+    @media (max-width: 768px) {{
+        .logo-container {{
+            top: 10px;
+            left: 10px;
+        }}
+        .logo-img {{
+            max-height: 50px; 
+        }}
+        .stApp {{
+            padding-top: 50px; 
+        }}
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -313,28 +330,27 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# TOP BAR (HEADER PUTIH UNTUK LOGO & JUDUL)
+# RENDER LOGO (ABSOLUTE POSITIONING)
 # ==========================================
 if logo_base64:
-    logo_html = f'<img src="data:image/png;base64,{logo_base64}">'
+    st.markdown(f"""
+        <div class="logo-container">
+            <img src="data:image/png;base64,{logo_base64}" class="logo-img">
+        </div>
+    """, unsafe_allow_html=True)
 else:
-    logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png">'
+    st.markdown("""
+        <div class="logo-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" class="logo-img">
+        </div>
+    """, unsafe_allow_html=True)
 
+# ==========================================
+# HEADER ATAS (JUDUL DI TENGAH)
+# ==========================================
+st.markdown("<h1 class='main-title'>NR ORF Integrated Command</h1>", unsafe_allow_html=True)
 hari_ini_str = datetime.now().strftime('%d %b %Y')
-
-st.markdown(f"""
-    <div class="white-top-bar">
-        <div>
-            {logo_html}
-        </div>
-        <div style="flex-grow: 1;">
-            <h1 class="white-title">NR ORF Integrated Command</h1>
-        </div>
-        <div>
-            <div class="white-date-badge">📅 {hari_ini_str}</div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -346,6 +362,7 @@ if 'active_menu' not in st.session_state:
 def set_menu(menu_name):
     st.session_state.active_menu = menu_name
 
+# Membuat 3 kolom berimbang untuk tombol navigasi
 nav_c1, nav_c2, nav_c3 = st.columns(3)
 
 with nav_c1:
@@ -469,8 +486,8 @@ if menu == "🏠 Dashboard":
     days = [today + timedelta(days=i) for i in range(14)] 
     
     if not df_matrix.empty:
-        # 1. AMBIL DATA PENGGANTI DARI DATABASE IZIN (Hanya yang APPROVED)
-        pengganti_dict = {} # Format: {'2026-05-01': ['Nama1', 'Nama2']}
+        # 1. AMBIL DATA PENGGANTI DARI DATABASE IZIN
+        pengganti_dict = {} 
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
             df_izin_app = df_izin[df_izin['Status Approval'].astype(str).str.upper() == 'APPROVED']
             for _, row in df_izin_app.iterrows():
@@ -498,7 +515,6 @@ if menu == "🏠 Dashboard":
                 df_day = df_matrix[['Nama Operator', d_str]].dropna()
                 df_day = df_day[~df_day[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
                 
-                # Cek siapa saja pengganti di hari ini
                 pengganti_hari_ini = pengganti_dict.get(d_str, [])
                 
                 if not df_day.empty:
@@ -508,15 +524,14 @@ if menu == "🏠 Dashboard":
                         status = str(row[d_str])
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
-                        # LOGIKA HIGHLIGHT WARNA
-                        if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
-                            # MERAH (Yang Izin)
+                        # LOGIKA HIGHLIGHT WARNA (Ditambah Oranye untuk Perjalanan Dinas)
+                        if any(k in status.upper() for k in ["DINAS", "PD"]):
+                            card_content += f'<div class="scroll-item item-dinas" style="animation-delay: {item_delay}s;">🟠 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fdba74; font-size:11px; font-weight:800; background:rgba(249, 115, 22, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
+                        elif any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
                             card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fca5a5; font-size:11px; font-weight:800; background:rgba(239, 68, 68, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         elif nama_lower in pengganti_hari_ini:
-                            # BIRU (Yang Menggantikan)
                             card_content += f'<div class="scroll-item item-pengganti" style="animation-delay: {item_delay}s;">🔵 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#7dd3fc; font-size:11px; font-weight:800; background:rgba(56, 189, 248, 0.2); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">PENGGANTI SHIFT {status.upper()}</span></div>'
                         else:
-                            # HIJAU (Normal)
                             card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#4ade80; font-size:11px; font-weight:800; background:rgba(34, 197, 94, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
                 else:
                     card_content += '<div class="scroll-item" style="color:#94a3b8; font-style:italic; text-align:center; background:none; border:none; box-shadow:none;">Semua Personel OFF</div>'
@@ -551,7 +566,8 @@ elif menu == "📅 Kalender":
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
             df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '<NA>', '', 'NONE'])]
-            df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI', na=False)]
+            # Menggabungkan Izin, Sakit, Cuti, dan Dinas dalam satu pengecekan untuk ringkasan absen
+            df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
             st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
@@ -568,11 +584,12 @@ elif menu == "📅 Kalender":
             
             st.markdown("<div style='animation: fadeIn 0.6s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
             with st.container(border=True):
-                st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Izin / Cuti / Sakit (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
+                # Menambahkan label "Dinas" pada tabel absensi
+                st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Absen / Cuti / Dinas (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
                 if not df_absen.empty:
                     st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
                 else:
-                    st.write("Tidak ada personel yang absen.")
+                    st.write("Tidak ada personel yang absen atau dinas luar.")
             st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.warning(f"⚠️ Data jadwal untuk tanggal **{selected_date.strftime('%d %B %Y')}** belum dirilis atau tidak tersedia di sistem.")
