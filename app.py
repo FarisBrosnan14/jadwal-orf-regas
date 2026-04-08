@@ -7,18 +7,16 @@ import base64
 import os
 
 # --- KONFIGURASI HALAMAN (WIDE LAYOUT & MOBILE OPTIMIZED) ---
-st.set_page_config(page_title="Command Center NR", page_icon="⚓", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NR ORF Integrated Command", page_icon="⚓", layout="wide", initial_sidebar_state="collapsed")
 
-# Menyembunyikan tombol expand sidebar bawaan Streamlit agar benar-benar bersih
+# Menyembunyikan tombol expand sidebar bawaan Streamlit
 st.markdown("""
     <style>
-        [data-testid="collapsedControl"] {
-            display: none;
-        }
+        [data-testid="collapsedControl"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNGSI LOAD BACKGROUND IMAGE (BASE64) ---
+# --- FUNGSI LOAD ASSETS (BASE64) ---
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -28,6 +26,7 @@ def get_base64_of_bin_file(bin_file):
         return None
 
 img_base64 = get_base64_of_bin_file("fsru.jpg")
+logo_base64 = get_base64_of_bin_file("pertamina.png")
 
 # PENGATURAN OPACITY BACKGROUND:
 overlay_opacity = 0.85
@@ -71,8 +70,7 @@ st.markdown(f"""
         border: 1px solid rgba(255, 255, 255, 0.15); 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
         padding: 20px; 
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        animation: fadeIn 0.6s ease-out;
+        animation: fadeIn 0.5s ease-out;
     }}
     
     @keyframes fadeIn {{
@@ -80,60 +78,42 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* TOMBOL MODERN */
+    /* ========================================================
+       TOMBOL CHUNKY (BESAR & RESPONSIF)
+       ======================================================== */
     .stButton>button {{
         border-radius: 12px;
-        font-weight: 700;
-        padding: 12px 20px; /* Diperbesar agar mudah ditekan di HP */
-        font-size: 16px;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white !important; 
-        border: 1px solid rgba(255,255,255,0.2);
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
-    }}
-    .stButton>button:hover {{
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 7px 14px rgba(37, 99, 235, 0.5);
-    }}
-    
-    /* ========================================================
-       KUSTOMISASI TAB NAVIGASI "CHUNKY" (BESAR & DI TENGAH)
-       ======================================================== */
-    div[data-testid="stSegmentedControl"] {{
-        background-color: rgba(15, 23, 42, 0.6); /* Latar belakang navigasi sedikit lebih transparan */
-        padding: 8px; /* Padding lebih tebal */
-        border-radius: 16px; /* Sudut lebih melengkung */
-        border: 1px solid rgba(255,255,255,0.1);
-        margin: 10px auto 25px auto; /* Margin auto untuk memastikan di tengah jika layar besar */
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        max-width: 600px; /* Batasi lebar maksimal di layar besar, full di layar HP */
-        width: 100%;
-    }}
-    div[data-testid="stSegmentedControl"] > div {{
-        border-radius: 10px;
-    }}
-    
-    /* Menargetkan tombol individual di dalam Tab Navigasi */
-    div[data-testid="stSegmentedControl"] label {{
-        padding: 12px 10px !important; /* Tinggi tab ditingkatkan */
-        font-size: 16px !important; /* Teks lebih besar */
-        font-weight: 600 !important;
+        font-weight: 800 !important;
+        padding: 20px 10px !important; /* PADDING SANGAT BESAR UNTUK HP */
+        font-size: 16px !important; 
         transition: all 0.2s ease;
+        height: auto !important;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }}
-    /* Tampilan Tab saat Aktif/Dipilih */
-    div[data-testid="stSegmentedControl"] div[aria-selected="true"] {{
-        background: linear-gradient(135deg, #0284c7, #0369a1) !important; /* Biru terang menonjol */
-        color: white !important;
-        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
+    
+    /* Warna Tombol Navigasi Aktif / Tombol Utama */
+    button[kind="primary"] {{
+        background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(56, 189, 248, 0.5) !important;
+        box-shadow: 0 6px 15px rgba(2, 132, 199, 0.5) !important;
     }}
-    div[data-testid="stSegmentedControl"] div[aria-selected="true"] label {{
-        color: white !important;
+    
+    /* Warna Tombol Navigasi Tidak Aktif */
+    button[kind="secondary"] {{
+        background: rgba(30, 41, 59, 0.7) !important;
+        color: #94a3b8 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
     }}
-    /* Tampilan Tab tidak aktif (tulisan abu-abu terang) */
-    div[data-testid="stSegmentedControl"] div[aria-selected="false"] label p {{
-        color: #94a3b8 !important; 
+    
+    button[kind="secondary"]:hover {{
+        background: rgba(30, 41, 59, 0.9) !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }}
     /* ======================================================== */
     
@@ -205,8 +185,8 @@ st.markdown(f"""
         background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 26px; 
-        margin: 0 0 10px 0;
+        font-size: 28px; 
+        margin: 5px 0 15px 0;
         padding: 0;
         text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
         text-align: center; 
@@ -222,14 +202,13 @@ st.markdown(f"""
         border: 1px solid rgba(255, 255, 255, 0.2);
         display: inline-block;
         font-size: 14px;
-        margin: 0 auto; /* Tengah secara horizontal */
+        margin: 0 auto; 
     }}
-    /* Wrapper untuk membuat tanggal selalu di tengah */
     .date-wrapper {{
         display: flex;
         justify-content: center;
         width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 25px;
     }}
     
     .section-title {{
@@ -261,6 +240,11 @@ st.markdown(f"""
         animation: fadeIn 0.4s ease-out;
         color: #ffffff; 
     }}
+    
+    /* Pengaturan Jarak Kolom Custom Navigasi */
+    [data-testid="column"] {
+        padding: 0 5px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -308,27 +292,51 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# HEADER ATAS (FULL TENGAH UNTUK MOBILE)
+# HEADER ATAS (LOGO & JUDUL DI TENGAH)
 # ==========================================
-# Menyembunyikan indikator status API agar tampilan atas lebih fokus pada judul & navigasi
-st.markdown("<h1 class='main-title'>FSRU Command Center</h1>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
+# Render Logo Pertamina
+if logo_base64:
+    st.markdown(f"<div style='text-align: center;'><img src='data:image/png;base64,{logo_base64}' style='max-height: 50px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
+else:
+    # Cadangan jika file logo lokal tidak ada
+    st.markdown("<div style='text-align: center;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png' style='max-height: 40px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
+
+# Judul & Tanggal
+st.markdown("<h1 class='main-title'>NR ORF Integrated Command</h1>", unsafe_allow_html=True)
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
 
 
 # ==========================================
-# NAVIGASI HORIZONTAL (Tengah & Besar/Chunky)
+# NAVIGASI CUSTOM (CHUNKY BUTTONS)
 # ==========================================
-# Komponen ini dikontrol CSS di atas agar ukurannya membesar
-menu = st.segmented_control(
-    "Navigasi",
-    options=["🏠 Dashboard", "📅 Kalender", "🧑‍🔧 Cek OFF"],
-    default="🏠 Dashboard",
-    label_visibility="collapsed"
-)
+if 'active_menu' not in st.session_state:
+    st.session_state.active_menu = "🏠 Dashboard"
+
+def set_menu(menu_name):
+    st.session_state.active_menu = menu_name
+
+# Membuat 3 kolom berimbang untuk tombol navigasi
+nav_c1, nav_c2, nav_c3 = st.columns(3)
+
+with nav_c1:
+    st.button("🏠 Dashboard", 
+              type="primary" if st.session_state.active_menu == "🏠 Dashboard" else "secondary", 
+              on_click=set_menu, args=("🏠 Dashboard",), use_container_width=True)
+with nav_c2:
+    st.button("📅 Kalender", 
+              type="primary" if st.session_state.active_menu == "📅 Kalender" else "secondary", 
+              on_click=set_menu, args=("📅 Kalender",), use_container_width=True)
+with nav_c3:
+    st.button("🧑‍🔧 Cek OFF", 
+              type="primary" if st.session_state.active_menu == "🧑‍🔧 Cek OFF" else "secondary", 
+              on_click=set_menu, args=("🧑‍🔧 Cek OFF",), use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+menu = st.session_state.active_menu
+
 
 # ==========================================
 # VIEW 1: DASHBOARD INTERAKTIF
@@ -390,7 +398,7 @@ if menu == "🏠 Dashboard":
                                     load_data.clear()
                                     st.rerun()
                         with c_rej:
-                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                            if st.button("❌ Reject", key=f"d_rej_{idx}"):
                                 if client:
                                     client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
                                     load_data.clear()
@@ -401,7 +409,7 @@ if menu == "🏠 Dashboard":
             st.warning("Menunggu sinkronisasi data izin...")
     else:
         with st.container(border=True):
-            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval.</span></div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
