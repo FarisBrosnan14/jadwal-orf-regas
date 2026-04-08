@@ -6,8 +6,17 @@ from google.oauth2.service_account import Credentials
 import base64
 import os
 
-# --- KONFIGURASI HALAMAN (WIDE LAYOUT) ---
-st.set_page_config(page_title="Command Center NR", page_icon="⚓", layout="wide")
+# --- KONFIGURASI HALAMAN (WIDE LAYOUT & MOBILE OPTIMIZED) ---
+st.set_page_config(page_title="Command Center NR", page_icon="⚓", layout="wide", initial_sidebar_state="collapsed")
+
+# Menyembunyikan tombol expand sidebar bawaan Streamlit agar benar-benar bersih
+st.markdown("""
+    <style>
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- FUNGSI LOAD BACKGROUND IMAGE (BASE64) ---
 def get_base64_of_bin_file(bin_file):
@@ -22,23 +31,21 @@ img_base64 = get_base64_of_bin_file("fsru.jpg")
 
 # PENGATURAN OPACITY BACKGROUND:
 overlay_opacity = 0.85
-bg_color = f"rgba(15, 23, 42, {overlay_opacity})" # Warna Navy/Slate gelap
+bg_color = f"rgba(15, 23, 42, {overlay_opacity})" 
 
 if img_base64:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('data:image/jpeg;base64,{img_base64}');"
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & HIGH CONTRAST) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & MOBILE UI) ---
 st.markdown(f"""
     <style>
-    /* Mengimpor Font Modern 'Plus Jakarta Sans' */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    /* Mengatur Font Global & Background Utama */
     html, body, [class*="css"], .stApp {{
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        color: #f8fafc; /* Warna teks global diubah menjadi putih agak kebiruan untuk kontras maksimal */
+        color: #f8fafc; 
     }}
     
     .stApp {{
@@ -48,26 +55,22 @@ st.markdown(f"""
         background-attachment: fixed;
     }}
     
-    /* Mengatur Transparansi Header Bawaan Streamlit */
-    header[data-testid="stHeader"] {{
-        background-color: rgba(0, 0, 0, 0.0) !important;
-    }}
+    header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
 
-    /* Teks Judul dibuat lebih terang */
     h1, h2, h3, h4, h5 {{ 
         color: #ffffff !important; 
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        text-shadow: 0px 2px 4px rgba(0,0,0,0.8); /* Bayangan teks lebih kuat */
+        text-shadow: 0px 2px 4px rgba(0,0,0,0.8); 
     }}
 
     /* KARTU/MENU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px;
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)) !important; /* Opacity ditingkatkan */
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)) !important; 
         backdrop-filter: blur(16px); 
-        border: 1px solid rgba(255, 255, 255, 0.15); /* Border sedikit lebih terlihat */
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Bayangan lebih kuat */
-        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15); 
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+        padding: 20px; /* Sedikit dikurangi untuk mobile */
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         animation: fadeIn 0.6s ease-out;
     }}
@@ -77,40 +80,12 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* Efek Hover Pada Kartu Utama */
-    div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
-        transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-        border-color: rgba(255, 255, 255, 0.25);
-    }}
-    
-    /* SIDEBAR LEBIH MODERN GELAP */
-    [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(2, 6, 23, 0.98) 100%) !important; /* Opacity ditingkatkan mendekati solid */
-        backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-    }}
-    
-    /* Teks Menu di Sidebar - KONTRAS TINGGI */
-    [data-testid="stSidebarNav"] span {{
-        color: #ffffff !important; 
-        font-weight: 600;
-        font-size: 15px;
-    }}
-    [data-testid="stSidebarNav"] label {{
-        color: #ffffff !important; 
-    }}
-    .stRadio > div[role="radiogroup"] > label {{
-        color: #ffffff !important;
-        font-weight: 500;
-    }}
-
-    /* TOMBOL MODERN (GRADIENT & HOVER) */
+    /* TOMBOL MODERN */
     .stButton>button {{
         border-radius: 10px;
         font-weight: 600;
         background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white !important; /* Teks tombol putih */
+        color: white !important; 
         border: 1px solid rgba(255,255,255,0.2);
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
@@ -122,35 +97,35 @@ st.markdown(f"""
         border: 1px solid rgba(255,255,255,0.4);
     }}
     
-    /* BADGE STATUS UMUM */
-    .status-badge {{
-        background-color: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 700;
-        display: inline-block;
-        margin-bottom: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    /* KUSTOMISASI TAB NAVIGASI (Segmented Control) AGAR TERLIHAT SEPERTI TOMBOL APLIKASI */
+    div[data-testid="stSegmentedControl"] {{
+        background-color: rgba(15, 23, 42, 0.8);
+        padding: 5px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 20px;
+    }}
+    div[data-testid="stSegmentedControl"] > div {{
+        border-radius: 8px;
     }}
     
-    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
+    /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
         display: flex;
         overflow-x: auto;
-        gap: 16px;
-        padding-bottom: 20px;
+        gap: 12px; /* Dikecilkan sedikit untuk mobile */
+        padding-bottom: 15px;
         padding-top: 10px;
+        /* Momentum scroll untuk HP */
+        -webkit-overflow-scrolling: touch; 
     }}
     .scroll-card {{
-        flex: 0 0 220px;
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); /* Opacity scroll card ditingkatkan */
+        flex: 0 0 200px; /* Lebar kartu disesuaikan untuk layar HP */
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); 
         border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 14px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
         animation: slideInRight 0.5s ease-out backwards;
     }}
     
@@ -159,94 +134,67 @@ st.markdown(f"""
         100% {{ opacity: 1; transform: translateX(0); }}
     }}
 
-    .scroll-card:hover {{
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-        border-color: rgba(255, 255, 255, 0.3);
-        z-index: 10;
-    }}
     .scroll-header {{
         text-align: center;
         background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
         color: #ffffff;
-        padding: 10px;
+        padding: 8px;
         border-radius: 8px;
         font-weight: 700;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        letter-spacing: 0.5px;
+        font-size: 14px;
     }}
     
-    /* ANIMASI ITEM DI DALAM KARTU */
     .scroll-item {{
-        margin-bottom: 12px;
-        font-size: 14px;
+        margin-bottom: 10px;
+        font-size: 13px; /* Disesuaikan untuk HP */
         line-height: 1.5;
         padding: 8px;
         border-radius: 8px;
         background-color: rgba(255,255,255,0.05);
-        transition: all 0.3s ease;
         animation: popIn 0.4s ease backwards;
-        color: #ffffff; /* Pastikan teks utama putih */
+        color: #ffffff; 
     }}
     
     @keyframes popIn {{
         0% {{ opacity: 0; transform: scale(0.95); }}
         100% {{ opacity: 1; transform: scale(1); }}
     }}
-
-    .scroll-item:hover {{
-        background-color: rgba(255,255,255,0.15);
-        transform: translateX(5px);
-    }}
     
-    /* Indikator Sakit/Izin (Warna Terang untuk Dark Mode - Kontras Tinggi) */
-    .item-absen {{
-        border-left: 4px solid #ef4444;
-        background-color: rgba(239, 68, 68, 0.15); /* Opacity background ditingkatkan */
-    }}
-    /* Teks spesifik untuk item absen (nama orangnya) agar tetap putih */
-    .item-absen b {{
-        color: #ffffff !important; 
-    }}
-    .item-hadir {{
-        border-left: 4px solid #22c55e;
-        background-color: rgba(34, 197, 94, 0.1);
-    }}
-    .item-hadir b {{
-        color: #ffffff !important;
-    }}
+    .item-absen {{ border-left: 4px solid #ef4444; background-color: rgba(239, 68, 68, 0.15); }}
+    .item-absen b {{ color: #ffffff !important; }}
+    .item-hadir {{ border-left: 4px solid #22c55e; background-color: rgba(34, 197, 94, 0.1); }}
+    .item-hadir b {{ color: #ffffff !important; }}
     
-    /* CUSTOM SCROLLBAR GELAP */
-    .scroll-container::-webkit-scrollbar {{ height: 8px; }}
+    /* SCROLLBAR GELAP DI MOBILE */
+    .scroll-container::-webkit-scrollbar {{ height: 4px; }} /* Tipis untuk mobile */
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
-    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(255, 255, 255, 0.5); }}
     
-    /* CLEAN HEADER UTAMA */
+    /* HEADER UTAMA (RESPONSIF MOBILE) */
     .main-title {{
         font-weight: 800;
         background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 34px;
-        margin: 0;
+        font-size: 28px; /* Diperkecil agar tidak patah di HP */
+        margin: 0 0 10px 0;
         padding: 0;
         text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        text-align: center; /* Rata tengah di mobile */
     }}
     .date-badge {{
         text-align: center; 
-        color: #ffffff; /* Teks tanggal putih */
-        background: rgba(15, 23, 42, 0.8); /* Background badge lebih solid */
-        padding: 10px 16px; 
+        color: #ffffff; 
+        background: rgba(15, 23, 42, 0.8); 
+        padding: 8px 16px; 
         border-radius: 12px; 
         font-weight: 700;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        transition: transform 0.2s ease;
-    }}
-    .date-badge:hover {{
-        transform: translateY(-2px);
+        display: inline-block;
+        font-size: 14px;
     }}
     
     .section-title {{
@@ -255,6 +203,7 @@ st.markdown(f"""
         margin-bottom: 15px;
         position: relative;
         padding-bottom: 8px;
+        font-size: 20px; /* Ukuran mobile friendly */
     }}
     .section-title::after {{
         content: '';
@@ -267,24 +216,15 @@ st.markdown(f"""
         border-radius: 2px;
     }}
     
-    /* Penyesuaian st.info, st.success, st.warning, st.error agar teksnya putih */
-    div[data-testid="stAlert"] {{
-        color: #ffffff !important;
-    }}
-    div[data-testid="stAlert"] div[data-testid="stMarkdownContainer"] p {{
-        color: #ffffff !important;
-    }}
-    
-    /* Kotak Mode Standby / Info Tambahan - KONTRAS TINGGI */
     .standby-box {{
-        background: rgba(15, 23, 42, 0.85); /* Latar belakang sangat gelap/hampir solid */
+        background: rgba(15, 23, 42, 0.85); 
         padding: 16px; 
         border-radius: 12px; 
         border-left: 4px solid #38bdf8; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.4); 
         margin-bottom: 20px; 
         animation: fadeIn 0.4s ease-out;
-        color: #ffffff; /* Teks putih */
+        color: #ffffff; 
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -331,140 +271,133 @@ def load_data():
 
 df_matrix, df_izin = load_data()
 
-# ==========================================
-# SIDEBAR (NAVIGASI KIRI)
-# ==========================================
-with st.sidebar:
-    try:
-        st.image("pertamina.png", use_container_width=True)
-    except:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png", use_container_width=True)
-        st.caption("*(Menunggu pertamina.png)*")
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    menu = st.radio("Menu Utama", ["🏠 Dashboard Interaktif", "📅 Kalender Lengkap", "🧑‍🔧 Pencarian Rekan OFF"])
-    
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge'>✅ Firebase: Terhubung</div>", unsafe_allow_html=True)
-    st.markdown("<div class='status-badge'>✅ G-Sheets: Terhubung</div>", unsafe_allow_html=True)
-    st.markdown("<br><p style='font-size:12px; color:#94a3b8; font-weight:600;'>© 2026 PT Nusantara Regas</p>", unsafe_allow_html=True)
 
 # ==========================================
-# HEADER ATAS
+# HEADER ATAS (Rata Tengah untuk Mobile)
 # ==========================================
-col_title, col_profile = st.columns([5.5, 1.5])
-with col_title:
-    st.markdown("<h1 class='main-title'>NR ORF Command Center & Integrated Scheduling</h1>", unsafe_allow_html=True)
-with col_profile:
-    hari_ini_str = datetime.now().strftime('%d %B %Y')
+st.markdown("<h1 class='main-title'>FSRU Command Center</h1>", unsafe_allow_html=True)
+
+# Membuat 3 kolom kecil untuk status koneksi & Tanggal agar rapi di atas
+c_date, c_koneksi = st.columns([1, 1])
+with c_date:
+    hari_ini_str = datetime.now().strftime('%d %b %Y')
     st.markdown(f"<div class='date-badge'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
+with c_koneksi:
+    st.markdown("<div style='text-align: right; font-size:11px; color:#94a3b8; margin-top:10px;'>🟢 API Connected</div>", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ==========================================
+# NAVIGASI HORIZONTAL (PENGGANTI SIDEBAR)
+# ==========================================
+# Menggunakan widget terbaru st.segmented_control yang sangat ramah jari HP
+menu = st.segmented_control(
+    "Pilih Menu Navigasi:",
+    options=["🏠 Dashboard", "📅 Kalender", "🧑‍🔧 Cek OFF"],
+    default="🏠 Dashboard",
+    label_visibility="collapsed"
+)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
 # VIEW 1: DASHBOARD INTERAKTIF
 # ==========================================
-if menu == "🏠 Dashboard Interaktif":
+if menu == "🏠 Dashboard":
     
-    col_antre, col_off = st.columns([2.5, 1.5])
+    # Menghapus kolom (st.columns) agar di HP susunannya memanjang ke bawah (vertikal) dengan rapi
+    st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
+    client = get_gspread_client()
+    
+    pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
+    
+    if pin == "regas123":
+        st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
+        st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
         
-    with col_antre:
-        st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
-        client = get_gspread_client()
-        
-        # Teks input PIN sudah otomatis putih berdasarkan pengaturan global, tapi placeholder bisa diubah jika perlu via tema Streamlit
-        pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
-        
-        if pin == "regas123":
-            # Kotak akses editor diubah menggunakan class standby-box agar kontras tinggi
-            st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
-            st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
-            c_edit1, c_edit2 = st.columns(2)
-            with c_edit1:
-                st.link_button("📝 Edit Jadwal Aktual", URL_JADWAL_AKTUAL, use_container_width=True)
-            with c_edit2:
-                st.link_button("📋 Edit Database Izin", URL_IZIN, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        # Di HP, tombol edit lebih baik ditumpuk ke bawah agar mudah ditekan
+        st.link_button("📝 Edit Jadwal Aktual di Spreadsheet", URL_JADWAL_AKTUAL, use_container_width=True)
+        st.link_button("📋 Edit Database Izin di Spreadsheet", URL_IZIN, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
-            if not df_izin.empty and 'Status Approval' in df_izin.columns:
-                df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
-                pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
-                
-                if not pending.empty:
-                    for idx, row in pending.head(3).iterrows():
-                        anim_delay = idx * 0.1
-                        with st.container(border=True):
-                            # Teks putih dan abu-abu terang untuk kontras
-                            st.markdown(f"""
-                            <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-                                <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                                <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} &nbsp;|&nbsp; <b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:4px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            c_app, c_rej = st.columns(2)
-                            with c_app:
-                                if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
-                                    if client:
-                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
-                                        
-                                        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                                        d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
-                                        d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
-                                        
-                                        for d in pd.date_range(d_start, d_end):
-                                            d_str = d.strftime('%Y-%m-%d')
-                                            if d_str in df_matrix.columns:
-                                                c_idx = list(df_matrix.columns).index(d_str) + 1
-                                                match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
-                                                if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
-                                                nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                                                if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
-                                                    match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
-                                                    if not match_sub.empty: sh_aktual.update_cell(int(match_sub.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
-                                        load_data.clear()
-                                        st.rerun()
-                            with c_rej:
-                                if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
-                                    if client:
-                                        client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
-                                        load_data.clear()
-                                        st.rerun()
-                else:
-                    st.info("✨ Tidak ada antrean persetujuan izin saat ini.")
-            else:
-                st.warning("Menunggu sinkronisasi data izin...")
-        else:
-            with st.container(border=True):
-                st.markdown("<div style='text-align:center; padding:10px;'><span style='font-size:30px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
-
-    with col_off:
-        st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
-        tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
-        
-        if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
-            df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
-            kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
-            tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
+        st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
+        if not df_izin.empty and 'Status Approval' in df_izin.columns:
+            df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
+            pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
             
-            with st.container(border=True):
-                if tersedia:
-                    for i, orang in enumerate(tersedia):
-                        anim_delay = i * 0.05
-                        st.markdown(f"<div style='padding:10px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
-                else:
-                    st.write("Tidak ada personel yang terjadwal OFF hari ini.")
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.link_button("📝 Ajukan Izin (G-Form)", LINK_GFORM, use_container_width=True, type="primary")
+            if not pending.empty:
+                for idx, row in pending.head(3).iterrows():
+                    anim_delay = idx * 0.1
+                    with st.container(border=True):
+                        st.markdown(f"""
+                        <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
+                            <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+                            <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
+                            <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
+                            <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:8px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        c_app, c_rej = st.columns(2)
+                        with c_app:
+                            if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
+                                if client:
+                                    sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
+                                    sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
+                                    
+                                    sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                                    d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
+                                    d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
+                                    
+                                    for d in pd.date_range(d_start, d_end):
+                                        d_str = d.strftime('%Y-%m-%d')
+                                        if d_str in df_matrix.columns:
+                                            c_idx = list(df_matrix.columns).index(d_str) + 1
+                                            match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
+                                            if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
+                                            nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+                                            if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
+                                                match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
+                                                if not match_sub.empty: sh_aktual.update_cell(int(match_sub.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
+                                    load_data.clear()
+                                    st.rerun()
+                        with c_rej:
+                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                                if client:
+                                    client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
+                                    load_data.clear()
+                                    st.rerun()
+            else:
+                st.info("✨ Tidak ada antrean persetujuan izin saat ini.")
+        else:
+            st.warning("Menunggu sinkronisasi data izin...")
+    else:
+        with st.container(border=True):
+            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
+    tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
+    
+    if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
+        df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
+        kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+        tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
+        
+        with st.container(border=True):
+            if tersedia:
+                for i, orang in enumerate(tersedia):
+                    anim_delay = i * 0.05
+                    st.markdown(f"<div style='padding:8px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
+            else:
+                st.write("Tidak ada personel yang terjadwal OFF hari ini.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.link_button("📝 Form Pengajuan Izin / Tukar Shift", LINK_GFORM, use_container_width=True, type="primary")
 
     # ==========================================
     # BAGIAN JADWAL SCROLL HORIZONTAL (14 HARI)
     # ==========================================
-    st.markdown("<br><hr style='opacity:0.2; border-color: rgba(255,255,255,0.2);'><h3 class='section-title'>📅 Jadwal Plotting 14 Hari Kedepan</h3>", unsafe_allow_html=True)
+    st.markdown("<br><hr style='opacity:0.2; border-color: rgba(255,255,255,0.2);'><h3 class='section-title'>📅 Tinjauan 14 Hari Kedepan</h3>", unsafe_allow_html=True)
     
     today = datetime.now().date()
     days = [today + timedelta(days=i) for i in range(14)] 
@@ -488,11 +421,9 @@ if menu == "🏠 Dashboard Interaktif":
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
                         if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
-                            # Teks putih (berkat CSS) dan span warna terang
-                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b>{nama_asli}</b><br><span style="color:#fca5a5; font-size:11px; font-weight:800; background:rgba(239, 68, 68, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
+                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fca5a5; font-size:11px; font-weight:800; background:rgba(239, 68, 68, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         else:
-                            # Teks putih (berkat CSS) dan span warna terang
-                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b>{nama_asli}</b><br><span style="color:#86efac; font-size:11px; font-weight:800; background:rgba(34, 197, 94, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
+                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#4ade80; font-size:11px; font-weight:800; background:rgba(34, 197, 94, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
                 else:
                     card_content += '<div class="scroll-item" style="color:#94a3b8; font-style:italic; text-align:center; background:none; border:none; box-shadow:none;">Semua Personel OFF</div>'
             else:
@@ -509,22 +440,19 @@ if menu == "🏠 Dashboard Interaktif":
 # ==========================================
 # VIEW 2: KALENDER LENGKAP
 # ==========================================
-elif menu == "📅 Kalender Lengkap":
-    st.markdown("<h3 class='section-title'>Tinjauan Jadwal Harian & Bulanan</h3>", unsafe_allow_html=True)
+elif menu == "📅 Kalender":
+    st.markdown("<h3 class='section-title'>Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
     
     with st.container(border=True):
-        c1, c2 = st.columns([1, 3])
-        with c1:
-            selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
-        with c2:
-            st.info("Pilih tanggal di sebelah kiri untuk melihat status seluruh personel secara lengkap pada hari tersebut.")
+        st.info("Pilih tanggal untuk melihat status seluruh personel.")
+        selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
 
     st.markdown("<br>", unsafe_allow_html=True)
     selected_date_str = selected_date.strftime('%Y-%m-%d')
 
     if not df_matrix.empty:
         if selected_date_str in df_matrix.columns:
-            st.markdown(f"<h4 style='color:#ffffff; animation: fadeIn 0.3s ease-out;'>Status Personel pada: <b style='color:#38bdf8;'>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color:#ffffff; animation: fadeIn 0.3s ease-out; font-size:18px;'>Status Personel pada: <b style='color:#38bdf8;'>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
             df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
@@ -532,34 +460,27 @@ elif menu == "📅 Kalender Lengkap":
             df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
-            col_shift, col_off, col_absen = st.columns(3)
+            # Di HP, tidak pakai kolom agar memanjang ke bawah
+            st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<div style='background-color: rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(34, 197, 94, 0.4);'><b style='color: #ffffff;'>🟢 Hadir / Shift (" + str(len(df_shift)) + ")</b></div>", unsafe_allow_html=True)
+                st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
             
-            with col_shift:
-                st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
-                with st.container(border=True):
-                    # Judul lencana putih
-                    st.markdown("<div style='background-color: rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(34, 197, 94, 0.4);'><b style='color: #ffffff;'>🟢 Hadir / Shift (" + str(len(df_shift)) + ")</b></div>", unsafe_allow_html=True)
-                    st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-            with col_off:
-                st.markdown("<div style='animation: fadeIn 0.5s ease-out;'>", unsafe_allow_html=True)
-                with st.container(border=True):
-                    # Judul lencana putih
-                    st.markdown("<div style='background-color: rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(56, 189, 248, 0.4);'><b style='color: #ffffff;'>⚪ Sedang OFF (" + str(len(df_off)) + ")</b></div>", unsafe_allow_html=True)
-                    st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-            with col_absen:
-                st.markdown("<div style='animation: fadeIn 0.6s ease-out;'>", unsafe_allow_html=True)
-                with st.container(border=True):
-                    # Judul lencana putih
-                    st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Izin / Cuti / Sakit (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
-                    if not df_absen.empty:
-                        st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
-                    else:
-                        st.write("Tidak ada personel yang absen.")
-                st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<div style='animation: fadeIn 0.5s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<div style='background-color: rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(56, 189, 248, 0.4);'><b style='color: #ffffff;'>⚪ Sedang OFF (" + str(len(df_off)) + ")</b></div>", unsafe_allow_html=True)
+                st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='animation: fadeIn 0.6s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Izin / Cuti / Sakit (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
+                if not df_absen.empty:
+                    st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
+                else:
+                    st.write("Tidak ada personel yang absen.")
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.warning(f"⚠️ Data jadwal untuk tanggal **{selected_date.strftime('%d %B %Y')}** belum dirilis atau tidak tersedia di sistem.")
     else:
@@ -568,8 +489,8 @@ elif menu == "📅 Kalender Lengkap":
 # ==========================================
 # VIEW 3: PENCARIAN REKAN OFF
 # ==========================================
-elif menu == "🧑‍🔧 Pencarian Rekan OFF":
-    st.markdown("<h3 class='section-title'>Cari Ketersediaan Pengganti Shift</h3>", unsafe_allow_html=True)
+elif menu == "🧑‍🔧 Cek OFF":
+    st.markdown("<h3 class='section-title'>Ketersediaan Pengganti Shift</h3>", unsafe_allow_html=True)
     
     with st.container(border=True):
         tgl_cek = st.date_input("Pilih Tanggal Rencana Izin / Tukar Shift:")
@@ -585,7 +506,7 @@ elif menu == "🧑‍🔧 Pencarian Rekan OFF":
                 st.success(f"Ditemukan **{len(tersedia)} personel** yang sedang OFF di tanggal {tgl_cek_str}:")
                 st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary")
+                st.link_button("📝 Lanjut Ajukan Izin (G-Form)", LINK_GFORM, type="primary", use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.error("Tidak ada rekan yang berstatus OFF pada tanggal tersebut.")
