@@ -20,7 +20,7 @@ def get_base64_of_bin_file(bin_file):
 
 img_base64 = get_base64_of_bin_file("fsru.jpg")
 
-# PENGATURAN OPACITY BACKGROUND (DARK MODE):
+# PENGATURAN OPACITY BACKGROUND:
 overlay_opacity = 0.85
 bg_color = f"rgba(15, 23, 42, {overlay_opacity})" # Warna Navy/Slate gelap
 
@@ -29,7 +29,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & HIGH CONTRAST) ---
 st.markdown(f"""
     <style>
     /* Mengimpor Font Modern 'Plus Jakarta Sans' */
@@ -38,7 +38,7 @@ st.markdown(f"""
     /* Mengatur Font Global & Background Utama */
     html, body, [class*="css"], .stApp {{
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        color: #e2e8f0; /* Warna teks global abu-abu terang */
+        color: #f8fafc; /* Warna teks global diubah menjadi putih agak kebiruan untuk kontras maksimal */
     }}
     
     .stApp {{
@@ -55,18 +55,18 @@ st.markdown(f"""
 
     /* Teks Judul dibuat lebih terang */
     h1, h2, h3, h4, h5 {{ 
-        color: #f8fafc !important; 
+        color: #ffffff !important; 
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        text-shadow: 0px 2px 4px rgba(0,0,0,0.5);
+        text-shadow: 0px 2px 4px rgba(0,0,0,0.8); /* Bayangan teks lebih kuat */
     }}
 
     /* KARTU/MENU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px;
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)) !important;
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)) !important; /* Opacity ditingkatkan */
         backdrop-filter: blur(16px); 
-        border: 1px solid rgba(255, 255, 255, 0.1); /* Border putih transparan */
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); 
+        border: 1px solid rgba(255, 255, 255, 0.15); /* Border sedikit lebih terlihat */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Bayangan lebih kuat */
         padding: 24px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         animation: fadeIn 0.6s ease-out;
@@ -80,15 +80,29 @@ st.markdown(f"""
     /* Efek Hover Pada Kartu Utama */
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
         transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+        border-color: rgba(255, 255, 255, 0.25);
     }}
     
     /* SIDEBAR LEBIH MODERN GELAP */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(2, 6, 23, 0.95) 100%) !important;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(2, 6, 23, 0.98) 100%) !important; /* Opacity ditingkatkan mendekati solid */
         backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    
+    /* Teks Menu di Sidebar - KONTRAS TINGGI */
+    [data-testid="stSidebarNav"] span {{
+        color: #ffffff !important; 
+        font-weight: 600;
+        font-size: 15px;
+    }}
+    [data-testid="stSidebarNav"] label {{
+        color: #ffffff !important; 
+    }}
+    .stRadio > div[role="radiogroup"] > label {{
+        color: #ffffff !important;
+        font-weight: 500;
     }}
 
     /* TOMBOL MODERN (GRADIENT & HOVER) */
@@ -96,30 +110,29 @@ st.markdown(f"""
         border-radius: 10px;
         font-weight: 600;
         background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.1);
+        color: white !important; /* Teks tombol putih */
+        border: 1px solid rgba(255,255,255,0.2);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
     }}
     .stButton>button:hover {{
         background: linear-gradient(135deg, #3b82f6, #2563eb);
         transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 7px 14px rgba(37, 99, 235, 0.4);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 0 7px 14px rgba(37, 99, 235, 0.5);
+        border: 1px solid rgba(255,255,255,0.4);
     }}
     
-    /* BADGE STATUS (Disesuaikan untuk dark mode) */
+    /* BADGE STATUS UMUM */
     .status-badge {{
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #4ade80;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
         padding: 6px 12px;
         border-radius: 20px;
         font-size: 13px;
         font-weight: 700;
         display: inline-block;
         margin-bottom: 5px;
-        border: 1px solid rgba(74, 222, 128, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }}
     
     /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
@@ -132,11 +145,11 @@ st.markdown(f"""
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); 
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); /* Opacity scroll card ditingkatkan */
+        border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 14px;
         padding: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         animation: slideInRight 0.5s ease-out backwards;
     }}
@@ -148,19 +161,19 @@ st.markdown(f"""
 
     .scroll-card:hover {{
         transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+        border-color: rgba(255, 255, 255, 0.3);
         z-index: 10;
     }}
     .scroll-header {{
         text-align: center;
         background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
-        color: #f8fafc;
+        color: #ffffff;
         padding: 10px;
         border-radius: 8px;
         font-weight: 700;
         margin-bottom: 16px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         letter-spacing: 0.5px;
     }}
     
@@ -174,6 +187,7 @@ st.markdown(f"""
         background-color: rgba(255,255,255,0.05);
         transition: all 0.3s ease;
         animation: popIn 0.4s ease backwards;
+        color: #ffffff; /* Pastikan teks utama putih */
     }}
     
     @keyframes popIn {{
@@ -182,45 +196,53 @@ st.markdown(f"""
     }}
 
     .scroll-item:hover {{
-        background-color: rgba(255,255,255,0.1);
+        background-color: rgba(255,255,255,0.15);
         transform: translateX(5px);
     }}
     
-    /* Indikator Sakit/Izin (Warna Terang untuk Dark Mode) */
+    /* Indikator Sakit/Izin (Warna Terang untuk Dark Mode - Kontras Tinggi) */
     .item-absen {{
-        border-left: 4px solid #f87171;
-        background-color: rgba(248, 113, 113, 0.05);
+        border-left: 4px solid #ef4444;
+        background-color: rgba(239, 68, 68, 0.15); /* Opacity background ditingkatkan */
+    }}
+    /* Teks spesifik untuk item absen (nama orangnya) agar tetap putih */
+    .item-absen b {{
+        color: #ffffff !important; 
     }}
     .item-hadir {{
-        border-left: 4px solid #4ade80;
+        border-left: 4px solid #22c55e;
+        background-color: rgba(34, 197, 94, 0.1);
+    }}
+    .item-hadir b {{
+        color: #ffffff !important;
     }}
     
     /* CUSTOM SCROLLBAR GELAP */
     .scroll-container::-webkit-scrollbar {{ height: 8px; }}
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
-    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.2); border-radius: 10px; }}
-    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(255, 255, 255, 0.4); }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
+    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(255, 255, 255, 0.5); }}
     
     /* CLEAN HEADER UTAMA */
     .main-title {{
         font-weight: 800;
-        background: -webkit-linear-gradient(45deg, #38bdf8, #f8fafc);
+        background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 34px;
         margin: 0;
         padding: 0;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
     }}
     .date-badge {{
         text-align: center; 
-        color: #38bdf8; 
-        background: rgba(15, 23, 42, 0.6); 
+        color: #ffffff; /* Teks tanggal putih */
+        background: rgba(15, 23, 42, 0.8); /* Background badge lebih solid */
         padding: 10px 16px; 
         border-radius: 12px; 
         font-weight: 700;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         transition: transform 0.2s ease;
     }}
     .date-badge:hover {{
@@ -229,7 +251,7 @@ st.markdown(f"""
     
     .section-title {{
         font-weight: 800;
-        color: #f8fafc !important;
+        color: #ffffff !important;
         margin-bottom: 15px;
         position: relative;
         padding-bottom: 8px;
@@ -243,6 +265,26 @@ st.markdown(f"""
         height: 4px;
         background: linear-gradient(90deg, #38bdf8, transparent);
         border-radius: 2px;
+    }}
+    
+    /* Penyesuaian st.info, st.success, st.warning, st.error agar teksnya putih */
+    div[data-testid="stAlert"] {{
+        color: #ffffff !important;
+    }}
+    div[data-testid="stAlert"] div[data-testid="stMarkdownContainer"] p {{
+        color: #ffffff !important;
+    }}
+    
+    /* Kotak Mode Standby / Info Tambahan - KONTRAS TINGGI */
+    .standby-box {{
+        background: rgba(15, 23, 42, 0.85); /* Latar belakang sangat gelap/hampir solid */
+        padding: 16px; 
+        border-radius: 12px; 
+        border-left: 4px solid #38bdf8; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4); 
+        margin-bottom: 20px; 
+        animation: fadeIn 0.4s ease-out;
+        color: #ffffff; /* Teks putih */
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -306,7 +348,7 @@ with st.sidebar:
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<div class='status-badge'>✅ Firebase: Terhubung</div>", unsafe_allow_html=True)
     st.markdown("<div class='status-badge'>✅ G-Sheets: Terhubung</div>", unsafe_allow_html=True)
-    st.markdown("<br><p style='font-size:12px; color:#64748b; font-weight:600;'>© 2026 PT Nusantara Regas</p>", unsafe_allow_html=True)
+    st.markdown("<br><p style='font-size:12px; color:#94a3b8; font-weight:600;'>© 2026 PT Nusantara Regas</p>", unsafe_allow_html=True)
 
 # ==========================================
 # HEADER ATAS
@@ -331,10 +373,12 @@ if menu == "🏠 Dashboard Interaktif":
         st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
         client = get_gspread_client()
         
+        # Teks input PIN sudah otomatis putih berdasarkan pengaturan global, tapi placeholder bisa diubah jika perlu via tema Streamlit
         pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
         
         if pin == "regas123":
-            st.markdown("<div style='background: rgba(30, 41, 59, 0.6); padding:16px; border-radius:12px; border-left: 4px solid #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-bottom:20px; animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
+            # Kotak akses editor diubah menggunakan class standby-box agar kontras tinggi
+            st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
             st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
@@ -343,7 +387,7 @@ if menu == "🏠 Dashboard Interaktif":
                 st.link_button("📋 Edit Database Izin", URL_IZIN, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<h4 style='color:#f8fafc; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
@@ -352,11 +396,12 @@ if menu == "🏠 Dashboard Interaktif":
                     for idx, row in pending.head(3).iterrows():
                         anim_delay = idx * 0.1
                         with st.container(border=True):
+                            # Teks putih dan abu-abu terang untuk kontras
                             st.markdown(f"""
                             <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-                                <b style='font-size:16px; color:#e2e8f0;'>{row['Nama Lengkap Operator']}</b> <span style='color:#94a3b8; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                                <div style='font-size:14px; margin-top:8px; color:#cbd5e1;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} &nbsp;|&nbsp; <b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                                <div style='font-size:14px; color:#f87171; font-weight:700; margin-top:4px; margin-bottom:12px; background: rgba(248, 113, 113, 0.1); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+                                <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+                                <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} &nbsp;|&nbsp; <b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
+                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:4px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
                             </div>
                             """, unsafe_allow_html=True)
                             
@@ -395,7 +440,7 @@ if menu == "🏠 Dashboard Interaktif":
                 st.warning("Menunggu sinkronisasi data izin...")
         else:
             with st.container(border=True):
-                st.markdown("<div style='text-align:center; padding:10px;'><span style='font-size:30px;'>🔒</span><br><span style='color:#94a3b8; font-weight:500;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center; padding:10px;'><span style='font-size:30px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
 
     with col_off:
         st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
@@ -410,7 +455,7 @@ if menu == "🏠 Dashboard Interaktif":
                 if tersedia:
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
-                        st.markdown(f"<div style='padding:10px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.05); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#e2e8f0;'>{orang}</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='padding:10px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
                 else:
                     st.write("Tidak ada personel yang terjadwal OFF hari ini.")
             st.markdown("<br>", unsafe_allow_html=True)
@@ -419,7 +464,7 @@ if menu == "🏠 Dashboard Interaktif":
     # ==========================================
     # BAGIAN JADWAL SCROLL HORIZONTAL (14 HARI)
     # ==========================================
-    st.markdown("<br><hr style='opacity:0.2; border-color: rgba(255,255,255,0.1);'><h3 class='section-title'>📅 Jadwal Plotting 14 Hari Kedepan</h3>", unsafe_allow_html=True)
+    st.markdown("<br><hr style='opacity:0.2; border-color: rgba(255,255,255,0.2);'><h3 class='section-title'>📅 Jadwal Plotting 14 Hari Kedepan</h3>", unsafe_allow_html=True)
     
     today = datetime.now().date()
     days = [today + timedelta(days=i) for i in range(14)] 
@@ -443,9 +488,11 @@ if menu == "🏠 Dashboard Interaktif":
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
                         if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
-                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#f87171; font-size:11px; font-weight:800; background:rgba(248, 113, 113, 0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
+                            # Teks putih (berkat CSS) dan span warna terang
+                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b>{nama_asli}</b><br><span style="color:#fca5a5; font-size:11px; font-weight:800; background:rgba(239, 68, 68, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         else:
-                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#4ade80; font-size:11px; font-weight:800; background:rgba(74, 222, 128, 0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
+                            # Teks putih (berkat CSS) dan span warna terang
+                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b>{nama_asli}</b><br><span style="color:#86efac; font-size:11px; font-weight:800; background:rgba(34, 197, 94, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
                 else:
                     card_content += '<div class="scroll-item" style="color:#94a3b8; font-style:italic; text-align:center; background:none; border:none; box-shadow:none;">Semua Personel OFF</div>'
             else:
@@ -477,7 +524,7 @@ elif menu == "📅 Kalender Lengkap":
 
     if not df_matrix.empty:
         if selected_date_str in df_matrix.columns:
-            st.markdown(f"<h4 style='color:#f8fafc; animation: fadeIn 0.3s ease-out;'>Status Personel pada: <b style='color:#38bdf8;'>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color:#ffffff; animation: fadeIn 0.3s ease-out;'>Status Personel pada: <b style='color:#38bdf8;'>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
             df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
@@ -490,21 +537,24 @@ elif menu == "📅 Kalender Lengkap":
             with col_shift:
                 st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.success(f"🟢 **Hadir / Shift ({len(df_shift)})**")
+                    # Judul lencana putih
+                    st.markdown("<div style='background-color: rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(34, 197, 94, 0.4);'><b style='color: #ffffff;'>🟢 Hadir / Shift (" + str(len(df_shift)) + ")</b></div>", unsafe_allow_html=True)
                     st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
             with col_off:
                 st.markdown("<div style='animation: fadeIn 0.5s ease-out;'>", unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.info(f"⚪ **Sedang OFF ({len(df_off)})**")
+                    # Judul lencana putih
+                    st.markdown("<div style='background-color: rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(56, 189, 248, 0.4);'><b style='color: #ffffff;'>⚪ Sedang OFF (" + str(len(df_off)) + ")</b></div>", unsafe_allow_html=True)
                     st.dataframe(df_off[['Nama Operator']], hide_index=True, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
             with col_absen:
                 st.markdown("<div style='animation: fadeIn 0.6s ease-out;'>", unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.error(f"🔴 **Izin / Cuti / Sakit ({len(df_absen)})**")
+                    # Judul lencana putih
+                    st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Izin / Cuti / Sakit (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
                     if not df_absen.empty:
                         st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
                     else:
