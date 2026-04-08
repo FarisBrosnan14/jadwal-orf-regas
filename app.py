@@ -199,7 +199,7 @@ with st.sidebar:
 # ==========================================
 col_title, col_profile = st.columns([5.5, 1.5])
 with col_title:
-    st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 12px 25px; border-radius: 12px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-size: 30px;'>FSRU Command Center & Integrated Scheduling</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='background-color: rgba(255,255,255,0.98); padding: 12px 25px; border-radius: 12px; display: inline-block; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-size: 30px;'>NR ORF Command Center & Integrated Scheduling</h1>", unsafe_allow_html=True)
 with col_profile:
     hari_ini_str = datetime.now().strftime('%d %B %Y')
     st.markdown(f"<div style='text-align:center; color:#004D95; background-color: rgba(255,255,255,0.98); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.9); font-weight: bold;'>📅 {hari_ini_str}</div>", unsafe_allow_html=True)
