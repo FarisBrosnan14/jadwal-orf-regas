@@ -371,35 +371,28 @@ def load_data():
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
             
-            # 3. Load Data Operator LINTAS SPREADSHEET (Sangat Agresif)
+            # 3. Load Data Operator DENGAN PEMINDAI BARIS OTOMATIS
+            df_k = pd.DataFrame()
             try:
-                sheet_target = None
-                # Cek di Spreadsheet Jadwal Dulu
-                spreadsheet_jadwal = client.open_by_key(ID_SHEET_JADWAL)
-                for ws in spreadsheet_jadwal.worksheets():
-                    if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
-                        sheet_target = ws
-                        break
-                
-                # Jika tidak ada, cek di Spreadsheet Izin
-                if not sheet_target:
-                    spreadsheet_izin = client.open_by_key(ID_SHEET_IZIN)
-                    for ws in spreadsheet_izin.worksheets():
-                        if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
-                            sheet_target = ws
+                # Memastikan mencari di sheet Jadwal dulu
+                sheet_target = client.open_by_key(ID_SHEET_JADWAL).worksheet("Data_Operator")
+                data_k = sheet_target.get_all_values()
+                if len(data_k) > 0:
+                    df_temp = pd.DataFrame(data_k)
+                    header_row_idx = -1
+                    
+                    # Mencari baris mana yang memuat tulisan 'Nama Operator'
+                    for i, row in df_temp.iterrows():
+                        if any('nama' in str(v).lower() and 'operator' in str(v).lower() for v in row.values):
+                            header_row_idx = i
                             break
-
-                if sheet_target:
-                    data_k = sheet_target.get_all_values()
-                    if len(data_k) > 1:
-                        headers = [str(h).strip() for h in data_k[0]]
-                        df_k = pd.DataFrame(data_k[1:], columns=headers)
-                    else:
-                        df_k = pd.DataFrame()
-                else:
-                    df_k = pd.DataFrame()
+                    
+                    # Jika baris judul ditemukan, jadikan itu sebagai header dan potong datanya
+                    if header_row_idx != -1:
+                        headers = df_temp.iloc[header_row_idx].astype(str).str.strip().tolist()
+                        df_k = pd.DataFrame(df_temp.values[header_row_idx+1:], columns=headers)
             except Exception:
-                df_k = pd.DataFrame()
+                pass # Jika terjadi error (sheet tidak ada), abaikan dan kembalikan DF kosong
 
             return df_j, df_i, df_k
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -429,21 +422,14 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
+# Membuat HTML Header Satu Baris Penuh Tanpa Indentasi (Cegah Bocor Markdown)
 if pending_count > 0:
-    notif_html = f'<div class="notif-wrapper" title="Ada {pending_count} ajuan izin menunggu persetujuan"><span class="notif-bell">🔔</span><span class="notif-badge">{pending_count}</span></div>'
+    notif_html = f'<div class="notif-wrapper" title="Ada {pending_count} ajuan menunggu"><span class="notif-bell">🔔</span><span class="notif-badge">{pending_count}</span></div>'
 else:
     notif_html = '<div class="notif-wrapper" style="opacity: 0.3;" title="Tidak ada antrean"><span class="notif-bell">🔔</span></div>'
 
-st.markdown(f"""
-<div class="header-bar">
-<div>{logo_html}</div>
-<h1 class="header-title">NR ORF Integrated Command</h1>
-<div style="display: flex; align-items: center;">
-{notif_html}
-<div class="header-date">📅 {hari_ini_str}</div>
-</div>
-</div>
-""", unsafe_allow_html=True)
+header_html_code = f'<div class="header-bar"><div>{logo_html}</div><h1 class="header-title">NR ORF Integrated Command</h1><div style="display: flex; align-items: center;">{notif_html}<div class="header-date">📅 {hari_ini_str}</div></div></div>'
+st.markdown(header_html_code, unsafe_allow_html=True)
 
 
 # ==========================================
@@ -515,18 +501,8 @@ if menu == "🏠 Dashboard":
                             bukti_html = "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
 
                         with st.container(border=True):
-                            st.markdown(f"""
-<div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-<b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-<div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
-<div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-<div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'>
-<div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{alasan_izin}</div>
-<div style='font-size:13px;'>{bukti_html}</div>
-</div>
-<div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
-</div>
-""", unsafe_allow_html=True)
+                            html_antrean = f"<div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'><b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span><div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div><div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div><div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'><div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{alasan_izin}</div><div style='font-size:13px;'>{bukti_html}</div></div><div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div></div>"
+                            st.markdown(html_antrean, unsafe_allow_html=True)
                             
                             c_app, c_rej = st.columns(2)
                             with c_app:
@@ -572,18 +548,10 @@ if menu == "🏠 Dashboard":
                         status_bg = "rgba(34, 197, 94, 0.2)" if status_lama == "APPROVED" else "rgba(239, 68, 68, 0.2)"
                         
                         with st.container(border=True):
-                            st.markdown(f"""
-<div style='display:flex; justify-content:space-between; align-items:center;'>
-    <div>
-        <b style='font-size:14px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b>
-        <div style='font-size:12px; color:#cbd5e1;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
-    </div>
-    <div style='background:{status_bg}; color:{status_color}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;'>
-        {status_lama}
-    </div>
-</div>
-""", unsafe_allow_html=True)
-                            if st.button("↩️ Batalkan & Kembalikan Jadwal", key=f"undo_{idx}", use_container_width=True):
+                            html_history = f"<div style='display:flex; justify-content:space-between; align-items:center;'><div><b style='font-size:14px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b><div style='font-size:12px; color:#cbd5e1;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div></div><div style='background:{status_bg}; color:{status_color}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;'>{status_lama}</div></div>"
+                            st.markdown(html_history, unsafe_allow_html=True)
+                            
+                            if st.button("↩️ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True):
                                 if client:
                                     sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
                                     sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "")
@@ -597,11 +565,9 @@ if menu == "🏠 Dashboard":
                                             d_str = d.strftime('%Y-%m-%d')
                                             if d_str in df_matrix.columns:
                                                 c_idx = list(df_matrix.columns).index(d_str) + 1
-                                                
                                                 match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
                                                 if not match_p.empty: 
                                                     sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
-                                                
                                                 nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
                                                 if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
                                                     match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
@@ -636,23 +602,19 @@ if menu == "🏠 Dashboard":
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
                         
-                        # --- PENCARIAN KONTAK CERDAS (FUZZY MATCHING LINTAS SHEET) ---
+                        # --- PENCARIAN KONTAK CERDAS ---
                         orang_bersih = str(orang).replace('*', '').strip().lower()
                         kontak_op = "Belum diinput"
                         
                         if df_kontak.empty:
-                            kontak_op = "Sheet Data_Operator belum ada"
+                            kontak_op = "(Data belum ada)"
                         else:
                             col_nama_k = next((c for c in df_kontak.columns if 'nama' in c.lower() or 'operator' in c.lower()), None)
-                            col_kontak_k = next((c for c in df_kontak.columns if 'contact' in c.lower() or 'kontak' in c.lower() or 'hp' in c.lower() or 'telepon' in c.lower() or 'no' in c.lower()), None)
+                            col_kontak_k = next((c for c in df_kontak.columns if 'contact' in c.lower() or 'kontak' in c.lower() or 'hp' in c.lower() or 'telepon' in c.lower()), None)
 
                             if col_nama_k and col_kontak_k:
                                 clean_db_names = df_kontak[col_nama_k].astype(str).str.replace('*', '', regex=False).str.strip().str.lower()
-                                
-                                # Coba match sama persis dulu
                                 match_op = df_kontak[clean_db_names == orang_bersih]
-                                
-                                # Jika gagal, coba match yang mengandung nama tersebut (partial match)
                                 if match_op.empty:
                                     match_op = df_kontak[clean_db_names.str.contains(orang_bersih, na=False)]
 
@@ -660,22 +622,10 @@ if menu == "🏠 Dashboard":
                                     val_kon = str(match_op.iloc[0][col_kontak_k]).strip()
                                     if val_kon and val_kon.lower() not in ['nan', 'none', '']:
                                         kontak_op = val_kon
-                            else:
-                                kontak_op = "Kolom Kontak tidak terdeteksi"
-                        # -------------------------------------------------------------
+                        # -------------------------------
                         
-                        st.markdown(f"""
-<details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;">
-    <summary>
-        <b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> 
-        <span>{orang}</span>
-        <span style="margin-left:auto; font-size:10px; color:#94a3b8; border: 1px solid rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">▼ Kontak</span>
-    </summary>
-    <div class="off-details-content">
-        <div><span style="color:#94a3b8;">📞 No. Handphone:</span> <b style="color:#38bdf8; font-size:15px;">{kontak_op}</b></div>
-    </div>
-</details>
-""", unsafe_allow_html=True)
+                        html_off = f'<details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;"><summary><b style="color:#38bdf8; font-size:12px; margin-right:8px;">OFF</b><span>{orang}</span><span style="margin-left:auto; font-size:10px; color:#94a3b8; border: 1px solid rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">▼ Kontak</span></summary><div class="off-details-content"><div><span style="color:#94a3b8;">📞 No. Handphone:</span> <b style="color:#38bdf8; font-size:15px;">{kontak_op}</b></div></div></details>'
+                        st.markdown(html_off, unsafe_allow_html=True)
                 else:
                     st.write("Tidak ada personel yang terjadwal OFF pada tanggal ini.")
         else:
