@@ -39,7 +39,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & WHITE HEADER) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -67,52 +67,53 @@ st.markdown(f"""
     /* ========================================================
        TOP BAR (HEADER PUTIH UNTUK LOGO PERTAMINA)
        ======================================================== */
-    .header-bar {{
+    .white-top-bar {{
         background-color: #ffffff;
+        padding: 20px 30px;
         border-radius: 16px;
-        padding: 15px 30px;
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        align-items: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        margin-bottom: 25px;
+        margin-top: 10px;
+        animation: fadeIn 0.5s ease-out;
     }}
     
-    .header-logo {{
+    .white-top-bar img {{
         max-height: 60px;
-        display: block;
+        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
     }}
     
-    .header-title {{
-        color: #004D95 !important; 
+    .white-title {{
+        color: #004D95 !important;
         font-weight: 800;
         font-size: 32px;
         margin: 0;
-        text-align: center;
-        flex-grow: 1;
         text-shadow: none !important; 
-        letter-spacing: -0.5px;
+        text-align: center;
     }}
     
-    .header-date {{
-        background-color: #f1f5f9;
-        color: #0f172a !important;
-        padding: 10px 20px;
-        border-radius: 10px;
+    .white-date-badge {{
+        background-color: #f8fafc;
+        color: #0f172a;
+        padding: 10px 18px;
+        border-radius: 12px;
         font-weight: 700;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #e2e8f0;
         font-size: 15px;
-        white-space: nowrap;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }}
 
     @media (max-width: 768px) {{
-        .header-bar {{
+        .white-top-bar {{
             flex-direction: column;
             gap: 15px;
             padding: 20px 15px;
+            text-align: center;
         }}
-        .header-title {{
-            font-size: 22px;
+        .white-title {{
+            font-size: 24px;
         }}
     }}
     /* ======================================================== */
@@ -326,7 +327,6 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
-# Merender Blok Putih di Paling Atas
 st.markdown(f"""
     <div class="header-bar">
         <div>
@@ -339,7 +339,7 @@ st.markdown(f"""
 
 
 # ==========================================
-# NAVIGASI CUSTOM (CHUNKY BUTTONS)
+# NAVIGASI CUSTOM (CHUNKY BUTTONS - 2 TAB)
 # ==========================================
 if 'active_menu' not in st.session_state:
     st.session_state.active_menu = "🏠 Dashboard"
@@ -347,20 +347,17 @@ if 'active_menu' not in st.session_state:
 def set_menu(menu_name):
     st.session_state.active_menu = menu_name
 
-nav_c1, nav_c2, nav_c3 = st.columns(3)
+# Mengubah menjadi 2 kolom karena menu Cek OFF digabungkan
+nav_c1, nav_c2 = st.columns(2)
 
 with nav_c1:
     st.button("🏠 Dashboard", 
               type="primary" if st.session_state.active_menu == "🏠 Dashboard" else "secondary", 
               on_click=set_menu, args=("🏠 Dashboard",), use_container_width=True)
 with nav_c2:
-    st.button("📅 Kalender", 
+    st.button("📅 Kalender Lengkap", 
               type="primary" if st.session_state.active_menu == "📅 Kalender" else "secondary", 
               on_click=set_menu, args=("📅 Kalender",), use_container_width=True)
-with nav_c3:
-    st.button("🧑‍🔧 Cek OFF", 
-              type="primary" if st.session_state.active_menu == "🧑‍🔧 Cek OFF" else "secondary", 
-              on_click=set_menu, args=("🧑‍🔧 Cek OFF",), use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 menu = st.session_state.active_menu
@@ -443,21 +440,30 @@ if menu == "🏠 Dashboard":
                 st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
 
     with col_off:
-        st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
-        tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
+        st.markdown("<h3 class='section-title'>👥 Cari Personel OFF</h3>", unsafe_allow_html=True)
         
-        if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
+        # Integrasi Cek OFF: Tambahkan Input Tanggal
+        tgl_cek_off = st.date_input("Pilih Tanggal Pengecekan:", value=datetime.now().date(), key="cek_off_date")
+        tgl_cek_off_str = tgl_cek_off.strftime('%Y-%m-%d')
+        
+        if not df_matrix.empty and tgl_cek_off_str in df_matrix.columns:
             df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
-            kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+            kondisi_off = df_valid_names[tgl_cek_off_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
             tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
             
             with st.container(border=True):
+                st.markdown(f"<div style='margin-bottom:12px; color:#94a3b8; font-size:13px; font-weight:600;'>Status OFF pada: <span style='color:#38bdf8;'>{tgl_cek_off.strftime('%d %b %Y')}</span></div>", unsafe_allow_html=True)
+                
                 if tersedia:
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
                         st.markdown(f"<div style='padding:8px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
                 else:
-                    st.write("Tidak ada personel yang terjadwal OFF hari ini.")
+                    st.write("Tidak ada personel yang terjadwal OFF pada tanggal ini.")
+        else:
+            with st.container(border=True):
+                st.warning("Data jadwal untuk tanggal ini belum tersedia di sistem.")
+                
         st.markdown("<br>", unsafe_allow_html=True)
         st.link_button("📝 Form Pengajuan Izin / Tukar Shift", LINK_GFORM, use_container_width=True, type="primary")
 
@@ -508,7 +514,6 @@ if menu == "🏠 Dashboard":
                         status = str(row[d_str])
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
-                        # LOGIKA HIGHLIGHT WARNA (Ditambah Oranye untuk Perjalanan Dinas, Biru untuk Pengganti)
                         if any(k in status.upper() for k in ["DINAS", "PD"]):
                             card_content += f'<div class="scroll-item item-dinas" style="animation-delay: {item_delay}s;">🟠 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fdba74; font-size:11px; font-weight:800; background:rgba(249, 115, 22, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         elif any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
@@ -537,8 +542,8 @@ elif menu == "📅 Kalender":
     st.markdown("<h3 class='section-title'>Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
     
     with st.container(border=True):
-        st.info("Pilih tanggal untuk melihat status seluruh personel.")
-        selected_date = st.date_input("Pilih Tanggal Pengecekan:", key="cal_date")
+        st.info("Pilih tanggal untuk melihat rekapitulasi status seluruh personel.")
+        selected_date = st.date_input("Pilih Tanggal:", key="cal_date")
 
     st.markdown("<br>", unsafe_allow_html=True)
     selected_date_str = selected_date.strftime('%Y-%m-%d')
@@ -550,7 +555,6 @@ elif menu == "📅 Kalender":
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
             df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '<NA>', '', 'NONE'])]
-            # Menggabungkan Izin, Sakit, Cuti, dan Dinas dalam satu pengecekan untuk ringkasan absen
             df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
@@ -568,7 +572,6 @@ elif menu == "📅 Kalender":
             
             st.markdown("<div style='animation: fadeIn 0.6s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
             with st.container(border=True):
-                # Menambahkan label "Dinas" pada tabel absensi
                 st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Absen / Cuti / Dinas (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
                 if not df_absen.empty:
                     st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
@@ -579,28 +582,3 @@ elif menu == "📅 Kalender":
             st.warning(f"⚠️ Data jadwal untuk tanggal **{selected_date.strftime('%d %B %Y')}** belum dirilis atau tidak tersedia di sistem.")
     else:
         st.error("❌ Data matrix jadwal gagal dimuat. Silakan muat ulang halaman.")
-
-# ==========================================
-# VIEW 3: PENCARIAN REKAN OFF
-# ==========================================
-elif menu == "🧑‍🔧 Cek OFF":
-    st.markdown("<h3 class='section-title'>Ketersediaan Pengganti Shift</h3>", unsafe_allow_html=True)
-    
-    with st.container(border=True):
-        tgl_cek = st.date_input("Pilih Tanggal Rencana Izin / Tukar Shift:")
-        tgl_cek_str = tgl_cek.strftime('%Y-%m-%d')
-
-        if not df_matrix.empty and tgl_cek_str in df_matrix.columns:
-            df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
-            kondisi_off = df_valid_names[tgl_cek_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
-            tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
-            
-            if tersedia:
-                st.markdown("<div style='animation: slideInRight 0.4s ease-out;'>", unsafe_allow_html=True)
-                st.success(f"Ditemukan **{len(tersedia)} personel** yang sedang OFF di tanggal {tgl_cek_str}:")
-                st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.link_button("📝 Lanjut Ajukan Izin (G-Form)", LINK_GFORM, type="primary", use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.error("Tidak ada rekan yang berstatus OFF pada tanggal tersebut.")
