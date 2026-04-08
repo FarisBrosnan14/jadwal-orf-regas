@@ -142,9 +142,10 @@ st.markdown(f"""
         .header-title {{ font-size: 22px; }}
         .notif-wrapper {{ margin-right: 10px; }}
     }}
-    /* ======================================================== */
 
-    /* KARTU MELAYANG (DARK SOFT UI) */
+    /* ========================================================
+       KARTU MELAYANG & NAVIGASI
+       ======================================================== */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px;
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)) !important; 
@@ -160,7 +161,6 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* TOMBOL CHUNKY (BESAR & RESPONSIF) */
     .stButton>button {{
         border-radius: 12px;
         font-weight: 800 !important;
@@ -194,6 +194,42 @@ st.markdown(f"""
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }}
     
+    /* ========================================================
+       ACCORDION MENU UNTUK INFO PERSONEL OFF (KLIK/SENTUH)
+       ======================================================== */
+    details.off-personnel {{
+        background: rgba(56, 189, 248, 0.05);
+        border-left: 3px solid #38bdf8;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }}
+    details.off-personnel summary {{
+        padding: 12px 15px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f8fafc;
+        list-style: none; 
+        display: flex;
+        align-items: center;
+    }}
+    details.off-personnel summary::-webkit-details-marker {{
+        display: none;
+    }}
+    details.off-personnel[open] {{
+        background: rgba(56, 189, 248, 0.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }}
+    .off-details-content {{
+        padding: 10px 15px 15px 15px;
+        border-top: 1px dashed rgba(255,255,255,0.1);
+        font-size: 13px;
+        color: #e2e8f0;
+        animation: fadeIn 0.3s ease-in-out;
+    }}
+
     /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
         display: flex;
@@ -246,16 +282,13 @@ st.markdown(f"""
         100% {{ opacity: 1; transform: scale(1); }}
     }}
     
-    /* INDIKATOR STATUS JADWAL (MERAH, ORANYE, HIJAU, BIRU) */
+    /* INDIKATOR STATUS JADWAL */
     .item-absen {{ border-left: 4px solid #ef4444; background-color: rgba(239, 68, 68, 0.15); }}
     .item-absen b {{ color: #ffffff !important; }}
-    
     .item-dinas {{ border-left: 4px solid #f97316; background-color: rgba(249, 115, 22, 0.15); }}
     .item-dinas b {{ color: #ffffff !important; }}
-    
     .item-hadir {{ border-left: 4px solid #22c55e; background-color: rgba(34, 197, 94, 0.1); }}
     .item-hadir b {{ color: #ffffff !important; }}
-    
     .item-pengganti {{ border-left: 4px solid #38bdf8; background-color: rgba(56, 189, 248, 0.15); }}
     .item-pengganti b {{ color: #ffffff !important; }}
     
@@ -325,26 +358,33 @@ def load_data():
     try:
         client = get_gspread_client()
         if client:
+            # 1. Load Jadwal
             data_j = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
             df_j = pd.DataFrame(data_j[1:], columns=data_j[0]) if len(data_j) > 1 else pd.DataFrame(columns=data_j[0] if data_j else [])
-            
             if 'Nama Operator' in df_j.columns:
                 df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
             
+            # 2. Load Izin
             data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
             df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
-            
-            # --- FILTER DATA IZIN KOSONG ---
             if 'Nama Lengkap Operator' in df_i.columns:
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
             
-            return df_j, df_i
-        return pd.DataFrame(), pd.DataFrame()
-    except Exception as e:
-        return pd.DataFrame(), pd.DataFrame()
+            # 3. Load Data Operator (Posisi & Kontak) - Menggunakan Try Except agar tidak error jika sheet belum dibuat
+            try:
+                data_k = client.open_by_key(ID_SHEET_JADWAL).worksheet("Data_Operator").get_all_values()
+                df_k = pd.DataFrame(data_k[1:], columns=data_k[0]) if len(data_k) > 1 else pd.DataFrame(columns=["Posisi", "Nama Operator", "Contact Person"])
+            except Exception:
+                # Jika worksheet "Data_Operator" belum ada, gunakan dataframe kosong
+                df_k = pd.DataFrame(columns=["Posisi", "Nama Operator", "Contact Person"])
 
-df_matrix, df_izin = load_data()
+            return df_j, df_i, df_k
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    except Exception as e:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+df_matrix, df_izin, df_kontak = load_data()
 
 
 # ==========================================
@@ -432,7 +472,6 @@ if menu == "🏠 Dashboard":
             st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 
-                # Cerdas mencari kolom 'Alasan' dan 'Upload Dokumen' apa pun namanya di form
                 col_alasan = next((c for c in df_izin.columns if any(k in c.lower() for k in ['alasan', 'keterangan', 'keperluan'])), 'Alasan Izin')
                 col_bukti = next((c for c in df_izin.columns if any(k in c.lower() for k in ['upload', 'dokumen pendukung', 'bukti', 'file'])), 'Bukti Izin')
 
@@ -520,7 +559,32 @@ if menu == "🏠 Dashboard":
                 if tersedia:
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
-                        st.markdown(f"<div style='padding:8px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
+                        
+                        # Pencarian data Posisi dan Kontak dari Sheet Data_Operator
+                        posisi_op = "Belum diatur"
+                        kontak_op = "-"
+                        if not df_kontak.empty and 'Nama Operator' in df_kontak.columns:
+                            match_op = df_kontak[df_kontak['Nama Operator'].astype(str).str.strip().str.lower() == str(orang).strip().lower()]
+                            if not match_op.empty:
+                                if 'Posisi' in match_op.columns:
+                                    posisi_op = str(match_op.iloc[0]['Posisi']).strip()
+                                if 'Contact Person' in match_op.columns:
+                                    kontak_op = str(match_op.iloc[0]['Contact Person']).strip()
+                        
+                        # HTML Interaktif Details/Summary (Accordion)
+                        st.markdown(f"""
+<details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;">
+    <summary>
+        <b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> 
+        <span>{orang}</span>
+        <span style="margin-left:auto; font-size:10px; color:#94a3b8; border: 1px solid rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">▼ Info</span>
+    </summary>
+    <div class="off-details-content">
+        <div style="margin-bottom:6px;"><span style="color:#94a3b8;">Posisi Saat Ini:</span> <b style="color:#f8fafc;">{posisi_op}</b></div>
+        <div><span style="color:#94a3b8;">No. Handphone:</span> <b style="color:#38bdf8;">{kontak_op}</b></div>
+    </div>
+</details>
+""", unsafe_allow_html=True)
                 else:
                     st.write("Tidak ada personel yang terjadwal OFF pada tanggal ini.")
         else:
