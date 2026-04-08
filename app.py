@@ -37,7 +37,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM DENGAN WHITE HEADER) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -52,17 +52,70 @@ st.markdown(f"""
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-        /* Menambahkan padding atas agar konten tidak tertutup logo yang absolute */
-        padding-top: 60px; 
     }}
     
     header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
 
-    h1, h2, h3, h4, h5 {{ 
+    h2, h3, h4, h5 {{ 
         color: #ffffff !important; 
         font-family: 'Plus Jakarta Sans', sans-serif; 
         text-shadow: 0px 2px 4px rgba(0,0,0,0.8); 
     }}
+
+    /* ========================================================
+       TOP BAR (HEADER PUTIH UNTUK LOGO PERTAMINA)
+       ======================================================== */
+    .white-top-bar {{
+        background-color: #ffffff;
+        padding: 20px 30px;
+        border-radius: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        margin-bottom: 25px;
+        margin-top: 10px;
+        animation: fadeIn 0.5s ease-out;
+    }}
+    
+    .white-top-bar img {{
+        max-height: 60px;
+        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+    }}
+    
+    .white-title {{
+        color: #004D95 !important;
+        font-weight: 800;
+        font-size: 32px;
+        margin: 0;
+        text-shadow: none !important; /* Hapus shadow agar teks bersih di latar putih */
+        text-align: center;
+    }}
+    
+    .white-date-badge {{
+        background-color: #f8fafc;
+        color: #0f172a;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        border: 1px solid #e2e8f0;
+        font-size: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }}
+
+    /* Media query untuk menyusun header ke bawah di HP */
+    @media (max-width: 768px) {{
+        .white-top-bar {{
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px 15px;
+            text-align: center;
+        }}
+        .white-title {{
+            font-size: 24px;
+        }}
+    }}
+    /* ======================================================== */
 
     /* KARTU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
@@ -80,13 +133,11 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* ========================================================
-       TOMBOL CHUNKY (BESAR & RESPONSIF)
-       ======================================================== */
+    /* TOMBOL CHUNKY (BESAR & RESPONSIF) */
     .stButton>button {{
         border-radius: 12px;
         font-weight: 800 !important;
-        padding: 20px 10px !important; /* PADDING SANGAT BESAR UNTUK HP */
+        padding: 20px 10px !important; 
         font-size: 16px !important; 
         transition: all 0.2s ease;
         height: auto !important;
@@ -96,7 +147,6 @@ st.markdown(f"""
         align-items: center;
     }}
     
-    /* Warna Tombol Navigasi Aktif / Tombol Utama */
     button[kind="primary"] {{
         background: linear-gradient(135deg, #0284c7, #0369a1) !important;
         color: #ffffff !important;
@@ -104,7 +154,6 @@ st.markdown(f"""
         box-shadow: 0 6px 15px rgba(2, 132, 199, 0.5) !important;
     }}
     
-    /* Warna Tombol Navigasi Tidak Aktif */
     button[kind="secondary"] {{
         background: rgba(30, 41, 59, 0.7) !important;
         color: #94a3b8 !important;
@@ -117,7 +166,6 @@ st.markdown(f"""
         color: #f8fafc !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }}
-    /* ======================================================== */
     
     /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
@@ -181,38 +229,6 @@ st.markdown(f"""
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
     
-    /* HEADER UTAMA (RESPONSIF MOBILE & RATA TENGAH) */
-    .main-title {{
-        font-weight: 800;
-        background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 28px; 
-        margin: 5px 0 15px 0;
-        padding: 0;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-        text-align: center; 
-    }}
-    .date-badge {{
-        text-align: center; 
-        color: #ffffff; 
-        background: rgba(15, 23, 42, 0.8); 
-        padding: 8px 16px; 
-        border-radius: 12px; 
-        font-weight: 700;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        display: inline-block;
-        font-size: 14px;
-        margin: 0 auto; 
-    }}
-    .date-wrapper {{
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin-bottom: 25px;
-    }}
-    
     .section-title {{
         font-weight: 800;
         color: #ffffff !important;
@@ -243,38 +259,9 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
-    /* Pengaturan Jarak Kolom Custom Navigasi */
+    /* Pengaturan Jarak Kolom Custom Navigasi (Perbaikan Error Padding) */
     [data-testid="column"] {{
         padding: 0 5px !important;
-    }}
-
-    /* ========================================================
-       POSISI LOGO ABSOLUTE DI POJOK KIRI ATAS
-       ======================================================== */
-    .logo-container {{
-        position: absolute;
-        top: 15px;
-        left: 20px;
-        z-index: 1000; /* Memastikan logo selalu di atas elemen lain */
-    }}
-    .logo-img {{
-        max-height: 70px; /* Ukuran diperbesar */
-        /* Menambahkan efek bayangan halus agar logo menonjol di latar gelap */
-        filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); 
-    }}
-    
-    /* Media query untuk layar HP: Sesuaikan ukuran dan posisi logo jika perlu */
-    @media (max-width: 768px) {{
-        .logo-container {{
-            top: 10px;
-            left: 10px;
-        }}
-        .logo-img {{
-            max-height: 50px; /* Sedikit dikecilkan di HP agar tidak terlalu memakan ruang */
-        }}
-        .stApp {{
-            padding-top: 50px; 
-        }}
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -323,30 +310,29 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# RENDER LOGO (ABSOLUTE POSITIONING)
+# TOP BAR (HEADER PUTIH UNTUK LOGO & JUDUL)
 # ==========================================
 if logo_base64:
-    # Render HTML logo dengan class yang sudah diset absolute positioning di CSS
-    st.markdown(f"""
-        <div class="logo-container">
-            <img src="data:image/png;base64,{logo_base64}" class="logo-img">
-        </div>
-    """, unsafe_allow_html=True)
+    logo_html = f'<img src="data:image/png;base64,{logo_base64}">'
 else:
-    # Cadangan jika logo gagal dimuat
-    st.markdown("""
-        <div class="logo-container">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" class="logo-img">
-        </div>
-    """, unsafe_allow_html=True)
+    logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png">'
 
-# ==========================================
-# HEADER ATAS (JUDUL DI TENGAH)
-# ==========================================
-# Tidak perlu st.markdown("<br>") lagi karena sudah diatur margin CSS
-st.markdown("<h1 class='main-title'>NR ORF Integrated Command</h1>", unsafe_allow_html=True)
 hari_ini_str = datetime.now().strftime('%d %b %Y')
-st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
+
+# Merender HTML Top Bar Putih
+st.markdown(f"""
+    <div class="white-top-bar">
+        <div>
+            {logo_html}
+        </div>
+        <div style="flex-grow: 1;">
+            <h1 class="white-title">NR ORF Integrated Command</h1>
+        </div>
+        <div>
+            <div class="white-date-badge">📅 {hari_ini_str}</div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -438,7 +424,7 @@ if menu == "🏠 Dashboard":
                                     load_data.clear()
                                     st.rerun()
                         with c_rej:
-                            if st.button("❌ Reject", key=f"d_rej_{idx}"):
+                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
                                 if client:
                                     client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
                                     load_data.clear()
@@ -581,7 +567,7 @@ elif menu == "🧑‍🔧 Cek OFF":
                 st.success(f"Ditemukan **{len(tersedia)} personel** yang sedang OFF di tanggal {tgl_cek_str}:")
                 st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.link_button("📝 Lanjut Ajukan Izin (G-Form)", LINK_GFORM, type="primary", use_container_width=True)
+                st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary", use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.error("Tidak ada rekan yang berstatus OFF pada tanggal tersebut.")
