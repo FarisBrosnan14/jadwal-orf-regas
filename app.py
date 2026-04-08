@@ -431,6 +431,11 @@ if menu == "🏠 Dashboard":
 
             st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
+                
+                # Cerdas mencari kolom 'Alasan' dan 'Upload Dokumen' apa pun namanya di form
+                col_alasan = next((c for c in df_izin.columns if any(k in c.lower() for k in ['alasan', 'keterangan', 'keperluan'])), 'Alasan Izin')
+                col_bukti = next((c for c in df_izin.columns if any(k in c.lower() for k in ['upload', 'dokumen pendukung', 'bukti', 'file'])), 'Bukti Izin')
+
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
                 
@@ -438,17 +443,16 @@ if menu == "🏠 Dashboard":
                     for idx, row in pending.head(5).iterrows():
                         anim_delay = idx * 0.1
                         
-                        alasan_izin = str(row.get('Alasan Izin', '-')).strip()
+                        alasan_izin = str(row.get(col_alasan, '-')).strip()
                         if alasan_izin.lower() == 'nan' or alasan_izin == '': alasan_izin = 'Tidak ada keterangan'
                         
-                        link_bukti = str(row.get('Bukti Izin', '')).strip()
+                        link_bukti = str(row.get(col_bukti, '')).strip()
                         if link_bukti.lower() != 'nan' and link_bukti != '' and link_bukti.startswith('http'):
-                            bukti_html = f"<a href='{link_bukti}' target='_blank' style='color:#38bdf8; text-decoration:none; font-weight:700;'>📎 Buka Lampiran Bukti Pendukung</a>"
+                            bukti_html = f"<a href='{link_bukti}' target='_blank' style='color:#38bdf8; text-decoration:none; font-weight:700;'>📎 Buka Lampiran Dokumen</a>"
                         else:
                             bukti_html = "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
 
                         with st.container(border=True):
-                            # PERHATIAN: HTML DI BAWAH INI SENGAJA DIRATAKAN KIRI (TANPA SPASI) AGAR TIDAK BOCOR KE MARKDOWN
                             st.markdown(f"""
 <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
 <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
