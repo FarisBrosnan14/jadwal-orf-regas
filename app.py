@@ -371,12 +371,31 @@ def load_data():
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
             
-            # 3. Load Data Operator (Kontak)
+            # 3. Load Data Operator LINTAS SPREADSHEET (Sangat Agresif)
             try:
-                data_k = client.open_by_key(ID_SHEET_JADWAL).worksheet("Data_Operator").get_all_values()
-                if len(data_k) > 1:
-                    headers = [str(h).strip() for h in data_k[0]]
-                    df_k = pd.DataFrame(data_k[1:], columns=headers)
+                sheet_target = None
+                # Cek di Spreadsheet Jadwal Dulu
+                spreadsheet_jadwal = client.open_by_key(ID_SHEET_JADWAL)
+                for ws in spreadsheet_jadwal.worksheets():
+                    if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
+                        sheet_target = ws
+                        break
+                
+                # Jika tidak ada, cek di Spreadsheet Izin
+                if not sheet_target:
+                    spreadsheet_izin = client.open_by_key(ID_SHEET_IZIN)
+                    for ws in spreadsheet_izin.worksheets():
+                        if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
+                            sheet_target = ws
+                            break
+
+                if sheet_target:
+                    data_k = sheet_target.get_all_values()
+                    if len(data_k) > 1:
+                        headers = [str(h).strip() for h in data_k[0]]
+                        df_k = pd.DataFrame(data_k[1:], columns=headers)
+                    else:
+                        df_k = pd.DataFrame()
                 else:
                     df_k = pd.DataFrame()
             except Exception:
@@ -543,11 +562,10 @@ if menu == "🏠 Dashboard":
 
                 # --- TAB HISTORY (BATALKAN PERSETUJUAN) ---
                 st.markdown("<hr style='opacity:0.2; border-color: rgba(255,255,255,0.2);'>", unsafe_allow_html=True)
-                st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700;'>Riwayat Keputusan Terakhir (Bisa Dibatalkan):</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700;'>Riwayat Keputusan Terakhir:</h4>", unsafe_allow_html=True)
                 
                 history_df = df_izin_valid[df_izin_valid['Status Approval'].isin(['APPROVED', 'REJECTED'])]
                 if not history_df.empty:
-                    # Tampilkan 5 riwayat terbaru (urutan dibalik dari bawah ke atas tabel)
                     for idx, row in history_df.tail(5).iloc[::-1].iterrows():
                         status_lama = str(row['Status Approval']).upper()
                         status_color = "#4ade80" if status_lama == "APPROVED" else "#fca5a5"
@@ -567,11 +585,9 @@ if menu == "🏠 Dashboard":
 """, unsafe_allow_html=True)
                             if st.button("↩️ Batalkan & Kembalikan Jadwal", key=f"undo_{idx}", use_container_width=True):
                                 if client:
-                                    # 1. Hapus Status di Sheet Izin
                                     sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
                                     sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "")
                                     
-                                    # 2. Jika APPROVED, kembalikan jadwal Shift seperti semula
                                     if status_lama == 'APPROVED':
                                         sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
                                         d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
@@ -582,12 +598,10 @@ if menu == "🏠 Dashboard":
                                             if d_str in df_matrix.columns:
                                                 c_idx = list(df_matrix.columns).index(d_str) + 1
                                                 
-                                                # Mengembalikan shift asli pemohon
                                                 match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
                                                 if not match_p.empty: 
                                                     sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
                                                 
-                                                # Mencopot pengganti dan mengembalikannya ke OFF
                                                 nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
                                                 if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
                                                     match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
@@ -622,18 +636,33 @@ if menu == "🏠 Dashboard":
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
                         
-                        # Hanya memanggil nomor Handphone
-                        kontak_op = "-"
-                        if not df_kontak.empty:
-                            col_nama_k = next((c for c in df_kontak.columns if 'nama' in c.lower() and 'operator' in c.lower()), None)
-                            col_kontak_k = next((c for c in df_kontak.columns if 'contact' in c.lower() or 'kontak' in c.lower()), None)
+                        # --- PENCARIAN KONTAK CERDAS (FUZZY MATCHING LINTAS SHEET) ---
+                        orang_bersih = str(orang).replace('*', '').strip().lower()
+                        kontak_op = "Belum diinput"
+                        
+                        if df_kontak.empty:
+                            kontak_op = "Sheet Data_Operator belum ada"
+                        else:
+                            col_nama_k = next((c for c in df_kontak.columns if 'nama' in c.lower() or 'operator' in c.lower()), None)
+                            col_kontak_k = next((c for c in df_kontak.columns if 'contact' in c.lower() or 'kontak' in c.lower() or 'hp' in c.lower() or 'telepon' in c.lower() or 'no' in c.lower()), None)
 
-                            if col_nama_k:
-                                match_op = df_kontak[df_kontak[col_nama_k].astype(str).str.strip().str.lower() == str(orang).strip().lower()]
+                            if col_nama_k and col_kontak_k:
+                                clean_db_names = df_kontak[col_nama_k].astype(str).str.replace('*', '', regex=False).str.strip().str.lower()
+                                
+                                # Coba match sama persis dulu
+                                match_op = df_kontak[clean_db_names == orang_bersih]
+                                
+                                # Jika gagal, coba match yang mengandung nama tersebut (partial match)
+                                if match_op.empty:
+                                    match_op = df_kontak[clean_db_names.str.contains(orang_bersih, na=False)]
+
                                 if not match_op.empty:
-                                    if col_kontak_k:
-                                        val_kon = str(match_op.iloc[0][col_kontak_k]).strip()
-                                        if val_kon and val_kon.lower() != 'nan': kontak_op = val_kon
+                                    val_kon = str(match_op.iloc[0][col_kontak_k]).strip()
+                                    if val_kon and val_kon.lower() not in ['nan', 'none', '']:
+                                        kontak_op = val_kon
+                            else:
+                                kontak_op = "Kolom Kontak tidak terdeteksi"
+                        # -------------------------------------------------------------
                         
                         st.markdown(f"""
 <details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;">
