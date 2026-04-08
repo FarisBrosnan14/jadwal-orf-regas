@@ -13,6 +13,8 @@ st.set_page_config(page_title="NR ORF Integrated Command", page_icon="⚓", layo
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] { display: none; }
+        /* Menghilangkan padding atas bawaan streamlit agar header putih bisa lebih pas ke atas */
+        .block-container { padding-top: 2rem !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,7 +39,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & WHITE HEADER) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -52,17 +54,69 @@ st.markdown(f"""
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-        /* Menambahkan padding atas agar konten tidak tertutup logo yang absolute */
-        padding-top: 60px; 
     }}
     
     header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
 
-    h1, h2, h3, h4, h5 {{ 
+    h2, h3, h4, h5 {{ 
         color: #ffffff !important; 
         font-family: 'Plus Jakarta Sans', sans-serif; 
         text-shadow: 0px 2px 4px rgba(0,0,0,0.8); 
     }}
+
+    /* ========================================================
+       TOP HEADER PUTIH (LOGO + JUDUL + TANGGAL)
+       ======================================================== */
+    .header-bar {{
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 15px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }}
+    
+    .header-logo {{
+        max-height: 60px; /* Ukuran Logo Proporsional */
+        display: block;
+    }}
+    
+    .header-title {{
+        color: #004D95 !important; /* Biru Pertamina */
+        font-weight: 800;
+        font-size: 32px;
+        margin: 0;
+        text-align: center;
+        flex-grow: 1;
+        text-shadow: none !important; /* Hapus bayangan agar teks rapi di atas putih */
+        letter-spacing: -0.5px;
+    }}
+    
+    .header-date {{
+        background-color: #f1f5f9;
+        color: #0f172a !important;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+        border: 1px solid #cbd5e1;
+        font-size: 15px;
+        white-space: nowrap;
+    }}
+
+    /* Responsif untuk Layar HP */
+    @media (max-width: 768px) {{
+        .header-bar {{
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px 15px;
+        }}
+        .header-title {{
+            font-size: 22px;
+        }}
+    }}
+    /* ======================================================== */
 
     /* KARTU MELAYANG (DARK SOFT UI) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
@@ -80,13 +134,11 @@ st.markdown(f"""
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* ========================================================
-       TOMBOL CHUNKY (BESAR & RESPONSIF)
-       ======================================================== */
+    /* TOMBOL CHUNKY (BESAR & RESPONSIF) */
     .stButton>button {{
         border-radius: 12px;
         font-weight: 800 !important;
-        padding: 20px 10px !important; /* PADDING SANGAT BESAR UNTUK HP */
+        padding: 20px 10px !important; 
         font-size: 16px !important; 
         transition: all 0.2s ease;
         height: auto !important;
@@ -96,7 +148,6 @@ st.markdown(f"""
         align-items: center;
     }}
     
-    /* Warna Tombol Navigasi Aktif / Tombol Utama */
     button[kind="primary"] {{
         background: linear-gradient(135deg, #0284c7, #0369a1) !important;
         color: #ffffff !important;
@@ -104,7 +155,6 @@ st.markdown(f"""
         box-shadow: 0 6px 15px rgba(2, 132, 199, 0.5) !important;
     }}
     
-    /* Warna Tombol Navigasi Tidak Aktif */
     button[kind="secondary"] {{
         background: rgba(30, 41, 59, 0.7) !important;
         color: #94a3b8 !important;
@@ -117,7 +167,6 @@ st.markdown(f"""
         color: #f8fafc !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }}
-    /* ======================================================== */
     
     /* === CSS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
@@ -189,38 +238,6 @@ st.markdown(f"""
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
     
-    /* HEADER UTAMA (RESPONSIF MOBILE & RATA TENGAH) */
-    .main-title {{
-        font-weight: 800;
-        background: -webkit-linear-gradient(45deg, #7dd3fc, #ffffff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 28px; 
-        margin: 5px 0 15px 0;
-        padding: 0;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-        text-align: center; 
-    }}
-    .date-badge {{
-        text-align: center; 
-        color: #ffffff; 
-        background: rgba(15, 23, 42, 0.8); 
-        padding: 8px 16px; 
-        border-radius: 12px; 
-        font-weight: 700;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        display: inline-block;
-        font-size: 14px;
-        margin: 0 auto; 
-    }}
-    .date-wrapper {{
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin-bottom: 25px;
-    }}
-    
     .section-title {{
         font-weight: 800;
         color: #ffffff !important;
@@ -251,37 +268,8 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
-    /* Pengaturan Jarak Kolom Custom Navigasi */
     [data-testid="column"] {{
         padding: 0 5px !important;
-    }}
-
-    /* ========================================================
-       POSISI LOGO ABSOLUTE DI POJOK KIRI ATAS
-       ======================================================== */
-    .logo-container {{
-        position: absolute;
-        top: 15px;
-        left: 20px;
-        z-index: 1000; /* Memastikan logo selalu di atas elemen lain */
-    }}
-    .logo-img {{
-        max-height: 70px; /* Ukuran diperbesar */
-        filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); 
-    }}
-    
-    /* Media query untuk layar HP: Sesuaikan ukuran dan posisi logo */
-    @media (max-width: 768px) {{
-        .logo-container {{
-            top: 10px;
-            left: 10px;
-        }}
-        .logo-img {{
-            max-height: 50px; 
-        }}
-        .stApp {{
-            padding-top: 50px; 
-        }}
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -330,27 +318,25 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# RENDER LOGO (ABSOLUTE POSITIONING)
+# TOP HEADER BERSATU (PUTIH SOLID)
 # ==========================================
 if logo_base64:
-    st.markdown(f"""
-        <div class="logo-container">
-            <img src="data:image/png;base64,{logo_base64}" class="logo-img">
-        </div>
-    """, unsafe_allow_html=True)
+    logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="header-logo">'
 else:
-    st.markdown("""
-        <div class="logo-container">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" class="logo-img">
-        </div>
-    """, unsafe_allow_html=True)
+    logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" class="header-logo">'
 
-# ==========================================
-# HEADER ATAS (JUDUL DI TENGAH)
-# ==========================================
-st.markdown("<h1 class='main-title'>NR ORF Integrated Command</h1>", unsafe_allow_html=True)
 hari_ini_str = datetime.now().strftime('%d %b %Y')
-st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
+
+# Merender Blok Putih di Paling Atas
+st.markdown(f"""
+    <div class="header-bar">
+        <div>
+            {logo_html}
+        </div>
+        <h1 class="header-title">NR ORF Integrated Command</h1>
+        <div class="header-date">📅 {hari_ini_str}</div>
+    </div>
+""", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -362,7 +348,6 @@ if 'active_menu' not in st.session_state:
 def set_menu(menu_name):
     st.session_state.active_menu = menu_name
 
-# Membuat 3 kolom berimbang untuk tombol navigasi
 nav_c1, nav_c2, nav_c3 = st.columns(3)
 
 with nav_c1:
