@@ -367,33 +367,22 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
-# Membuat Elemen Notifikasi HTML
+# Menggunakan format string satu baris agar tidak ada spasi/indentasi yang mengganggu markdown
 if pending_count > 0:
-    notif_html = f"""
-    <div class="notif-wrapper" title="Ada {pending_count} ajuan izin menunggu persetujuan">
-        <span class="notif-bell">🔔</span>
-        <span class="notif-badge">{pending_count}</span>
-    </div>
-    """
+    notif_html = f'<div class="notif-wrapper" title="Ada {pending_count} ajuan izin menunggu persetujuan"><span class="notif-bell">🔔</span><span class="notif-badge">{pending_count}</span></div>'
 else:
-    notif_html = f"""
-    <div class="notif-wrapper" style="opacity: 0.3;" title="Tidak ada antrean">
-        <span class="notif-bell">🔔</span>
-    </div>
-    """
+    notif_html = '<div class="notif-wrapper" style="opacity: 0.3;" title="Tidak ada antrean"><span class="notif-bell">🔔</span></div>'
 
-# Merender Header Putih Lengkap
+# HTML Utama Header juga dirender rapat ke kiri tanpa indentasi mendalam
 st.markdown(f"""
-    <div class="header-bar">
-        <div>
-            {logo_html}
-        </div>
-        <h1 class="header-title">NR ORF Integrated Command</h1>
-        <div style="display: flex; align-items: center;">
-            {notif_html}
-            <div class="header-date">📅 {hari_ini_str}</div>
-        </div>
+<div class="header-bar">
+    <div>{logo_html}</div>
+    <h1 class="header-title">NR ORF Integrated Command</h1>
+    <div style="display: flex; align-items: center;">
+        {notif_html}
+        <div class="header-date">📅 {hari_ini_str}</div>
     </div>
+</div>
 """, unsafe_allow_html=True)
 
 
@@ -451,8 +440,6 @@ if menu == "🏠 Dashboard":
                     for idx, row in pending.head(5).iterrows():
                         anim_delay = idx * 0.1
                         
-                        # --- EKSTRAKSI ALASAN & LINK BUKTI ---
-                        # NOTE: Ubah 'Alasan Izin' dan 'Bukti Izin' dengan nama kolom yang tepat di Google Form Anda!
                         alasan_izin = str(row.get('Alasan Izin', '-')).strip()
                         if alasan_izin.lower() == 'nan' or alasan_izin == '': alasan_izin = 'Tidak ada keterangan'
                         
@@ -461,7 +448,6 @@ if menu == "🏠 Dashboard":
                             bukti_html = f"<a href='{link_bukti}' target='_blank' style='color:#38bdf8; text-decoration:none; font-weight:700;'>📎 Buka Lampiran Bukti Pendukung</a>"
                         else:
                             bukti_html = "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
-                        # ------------------------------------
 
                         with st.container(border=True):
                             st.markdown(f"""
