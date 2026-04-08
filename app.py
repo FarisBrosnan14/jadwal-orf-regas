@@ -39,7 +39,7 @@ if img_base64:
 else:
     bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & CHUNKY MOBILE UI) ---
+# --- KUSTOMISASI CSS (DARK GLASSMORPHISM & WHITE HEADER) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -67,53 +67,53 @@ st.markdown(f"""
     /* ========================================================
        TOP BAR (HEADER PUTIH UNTUK LOGO PERTAMINA)
        ======================================================== */
-    .white-top-bar {{
+    .header-bar {{
         background-color: #ffffff;
-        padding: 20px 30px;
         border-radius: 16px;
+        padding: 15px 30px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        margin-bottom: 25px;
-        margin-top: 10px;
-        animation: fadeIn 0.5s ease-out;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     }}
     
-    .white-top-bar img {{
-        max-height: 60px;
-        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+    .header-logo {{
+        max-height: 60px; /* Ukuran Logo Proporsional */
+        display: block;
     }}
     
-    .white-title {{
-        color: #004D95 !important;
+    .header-title {{
+        color: #004D95 !important; /* Biru Pertamina */
         font-weight: 800;
         font-size: 32px;
         margin: 0;
-        text-shadow: none !important; 
         text-align: center;
+        flex-grow: 1;
+        text-shadow: none !important; /* Hapus bayangan agar teks rapi di atas putih */
+        letter-spacing: -0.5px;
     }}
     
-    .white-date-badge {{
-        background-color: #f8fafc;
-        color: #0f172a;
-        padding: 10px 18px;
-        border-radius: 12px;
+    .header-date {{
+        background-color: #f1f5f9;
+        color: #0f172a !important;
+        padding: 10px 20px;
+        border-radius: 10px;
         font-weight: 700;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #cbd5e1;
         font-size: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        white-space: nowrap;
     }}
 
+    /* Responsif untuk Layar HP */
     @media (max-width: 768px) {{
-        .white-top-bar {{
+        .header-bar {{
             flex-direction: column;
             gap: 15px;
             padding: 20px 15px;
-            text-align: center;
         }}
-        .white-title {{
-            font-size: 24px;
+        .header-title {{
+            font-size: 22px;
         }}
     }}
     /* ======================================================== */
@@ -309,6 +309,12 @@ def load_data():
             data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
             df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
             
+            # --- FILTER DATA IZIN KOSONG (BUG FIX) ---
+            if 'Nama Lengkap Operator' in df_i.columns:
+                df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
+                df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+            # -----------------------------------------
+            
             return df_j, df_i
         return pd.DataFrame(), pd.DataFrame()
     except Exception as e:
@@ -327,6 +333,7 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
+# Merender Blok Putih di Paling Atas
 st.markdown(f"""
     <div class="header-bar">
         <div>
@@ -514,6 +521,7 @@ if menu == "🏠 Dashboard":
                         status = str(row[d_str])
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
+                        # LOGIKA HIGHLIGHT WARNA (Ditambah Oranye untuk Perjalanan Dinas, Biru untuk Pengganti)
                         if any(k in status.upper() for k in ["DINAS", "PD"]):
                             card_content += f'<div class="scroll-item item-dinas" style="animation-delay: {item_delay}s;">🟠 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fdba74; font-size:11px; font-weight:800; background:rgba(249, 115, 22, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         elif any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
@@ -538,7 +546,7 @@ if menu == "🏠 Dashboard":
 # ==========================================
 # VIEW 2: KALENDER LENGKAP
 # ==========================================
-elif menu == "📅 Kalender":
+elif menu == "📅 Kalender Lengkap":
     st.markdown("<h3 class='section-title'>Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
     
     with st.container(border=True):
@@ -555,6 +563,7 @@ elif menu == "📅 Kalender":
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
             df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '<NA>', '', 'NONE'])]
+            # Menggabungkan Izin, Sakit, Cuti, dan Dinas dalam satu pengecekan untuk ringkasan absen
             df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
@@ -572,6 +581,7 @@ elif menu == "📅 Kalender":
             
             st.markdown("<div style='animation: fadeIn 0.6s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
             with st.container(border=True):
+                # Menambahkan label "Dinas" pada tabel absensi
                 st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Absen / Cuti / Dinas (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
                 if not df_absen.empty:
                     st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
