@@ -18,18 +18,21 @@ def get_base64_of_bin_file(bin_file):
     except Exception:
         return None
 
-img_base64 = get_base64_of_bin_file("fsru.jpg")
+# Ubah nama file ini sesuai dengan gambar batik yang kamu miliki
+img_base64 = get_base64_of_bin_file("batik_emas.jpg")
 
-# PENGATURAN OPACITY BACKGROUND:
-overlay_opacity = 0.88
-bg_color = f"rgba(245, 248, 250, {overlay_opacity})"
+# PENGATURAN OPACITY BACKGROUND (TEMA HITAM/ABU GELAP):
+# Menggunakan gradient hitam pekat dan abu-abu gelap dengan transparansi 85% - 90%
+bg_color_top = "rgba(15, 15, 15, 0.85)"
+bg_color_bottom = "rgba(30, 30, 30, 0.95)"
 
 if img_base64:
-    bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('data:image/jpeg;base64,{img_base64}');"
+    bg_image_css = f"background-image: linear-gradient({bg_color_top}, {bg_color_bottom}), url('data:image/jpeg;base64,{img_base64}');"
 else:
-    bg_image_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
+    # Fallback: Jika file batik_emas.jpg tidak ada, gunakan tekstur gelap online
+    bg_image_css = f"background-image: linear-gradient({bg_color_top}, {bg_color_bottom}), url('https://images.unsplash.com/photo-1605639156481-244775d6f803?q=80&w=1920&auto=format&fit=crop');"
 
-# --- KUSTOMISASI CSS (MODERN ENTERPRISE UI DENGAN ANIMASI) ---
+# --- KUSTOMISASI CSS (DARK MODE + GOLD BATIK UI) ---
 st.markdown(f"""
     <style>
     /* Mengimpor Font Modern 'Plus Jakarta Sans' */
@@ -38,6 +41,7 @@ st.markdown(f"""
     /* Mengatur Font Global & Background Utama */
     html, body, [class*="css"], .stApp {{
         font-family: 'Plus Jakarta Sans', sans-serif !important;
+        color: #E0E0E0 !important; /* Warna teks dasar terang */
     }}
     
     .stApp {{
@@ -49,20 +53,26 @@ st.markdown(f"""
     
     /* Mengatur Transparansi Header Bawaan Streamlit */
     header[data-testid="stHeader"] {{
-        background-color: rgba(255, 255, 255, 0.0) !important;
+        background-color: rgba(0, 0, 0, 0.0) !important;
     }}
 
-    /* KARTU/MENU MELAYANG (SOFT UI DENGAN ANIMASI) */
+    /* Teks Judul & Subjudul (Warna Emas) */
+    h1, h2, h3, h4 {{ 
+        color: #D4AF37 !important; /* Premium Gold */
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }}
+
+    /* KARTU/MENU MELAYANG (DARK GLASSMORPHISM) */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px;
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95)) !important;
+        background: linear-gradient(145deg, rgba(40, 40, 40, 0.8), rgba(15, 15, 15, 0.9)) !important;
         backdrop-filter: blur(12px); 
-        border: 1px solid rgba(0, 77, 149, 0.1);
-        box-shadow: 0 10px 30px rgba(0, 32, 90, 0.05); 
+        border: 1px solid rgba(212, 175, 55, 0.3); /* Border Emas Tipis */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); 
         padding: 24px;
-        /* Animasi Transisi Halus */
         transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-        animation: fadeIn 0.6s ease-out; /* Efek muncul saat dirender */
+        animation: fadeIn 0.6s ease-out;
     }}
     
     @keyframes fadeIn {{
@@ -73,72 +83,71 @@ st.markdown(f"""
     /* Efek Hover Pada Kartu Utama */
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
         transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 32, 90, 0.12);
-        border-color: rgba(0, 77, 149, 0.2);
+        box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.6);
     }}
     
-    /* SIDEBAR LEBIH MODERN */
+    /* SIDEBAR GELAP */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, rgba(250, 252, 255, 0.95) 0%, rgba(240, 245, 250, 0.95) 100%) !important;
+        background: linear-gradient(180deg, rgba(20, 20, 20, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%) !important;
         backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(0, 0, 0, 0.05);
+        border-right: 1px solid rgba(212, 175, 55, 0.2);
     }}
 
-    /* TOMBOL MODERN (GRADIENT & HOVER) */
+    /* TOMBOL MODERN (GOLD GRADIENT & HOVER) */
     .stButton>button {{
         border-radius: 10px;
-        font-weight: 600;
-        background: linear-gradient(135deg, #004D95, #0073e6);
-        color: white;
+        font-weight: 700;
+        background: linear-gradient(135deg, #D4AF37, #AA8000);
+        color: #000000 !important; /* Teks Hitam di atas Emas */
         border: none;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        box-shadow: 0 4px 6px rgba(0, 77, 149, 0.2);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     }}
     .stButton>button:hover {{
-        background: linear-gradient(135deg, #003366, #004D95);
+        background: linear-gradient(135deg, #FFD700, #D4AF37);
         transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 7px 14px rgba(0, 77, 149, 0.4);
-        color: white;
+        box-shadow: 0 7px 15px rgba(212, 175, 55, 0.4);
+        color: #000000 !important;
     }}
     .stButton>button:active {{
         transform: translateY(1px);
-        box-shadow: 0 2px 4px rgba(0, 77, 149, 0.2);
+        box-shadow: 0 2px 5px rgba(212, 175, 55, 0.2);
     }}
     
     /* BADGE STATUS */
     .status-badge {{
-        background-color: #e8f5e9;
-        color: #2e7d32;
+        background-color: rgba(212, 175, 55, 0.1);
+        color: #D4AF37;
         padding: 6px 12px;
         border-radius: 20px;
         font-size: 13px;
         font-weight: 700;
         display: inline-block;
         margin-bottom: 5px;
-        border: 1px solid #c8e6c9;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }}
     
-    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL (DENGAN ANIMASI) === */
+    /* === CSS KHUSUS HORIZONTAL SCROLL JADWAL === */
     .scroll-container {{
         display: flex;
         overflow-x: auto;
         gap: 16px;
         padding-bottom: 20px;
-        padding-top: 10px; /* Ruang untuk bayangan hover */
+        padding-top: 10px;
     }}
     .scroll-card {{
         flex: 0 0 220px;
-        background: linear-gradient(145deg, #ffffff, #f8fafd); 
-        border: 1px solid rgba(0, 77, 149, 0.1);
+        background: linear-gradient(145deg, rgba(40,40,40,0.9), rgba(20,20,20,0.95)); 
+        border: 1px solid rgba(212, 175, 55, 0.2);
         border-radius: 14px;
         padding: 16px;
-        box-shadow: 0 4px 12px rgba(0, 32, 90, 0.04);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
         animation: slideInRight 0.5s ease-out backwards;
     }}
     
-    /* Efek Bergeser Masuk (Staggered sedikit ilusi) */
     @keyframes slideInRight {{
         0% {{ opacity: 0; transform: translateX(20px); }}
         100% {{ opacity: 1; transform: translateX(0); }}
@@ -146,32 +155,32 @@ st.markdown(f"""
 
     .scroll-card:hover {{
         transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 12px 24px rgba(0, 32, 90, 0.12);
-        border-color: rgba(0, 77, 149, 0.3);
-        z-index: 10; /* Memastikan kartu yang dihover berada di atas */
+        box-shadow: 0 12px 25px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.6);
+        z-index: 10;
     }}
     .scroll-header {{
         text-align: center;
-        background: linear-gradient(135deg, #004D95, #0066cc);
-        color: white;
+        background: linear-gradient(135deg, #D4AF37, #AA8000);
+        color: #000000; /* Teks Hitam */
         padding: 10px;
         border-radius: 8px;
-        font-weight: 700;
+        font-weight: 800;
         margin-bottom: 16px;
-        box-shadow: 0 4px 10px rgba(0, 77, 149, 0.15);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
         letter-spacing: 0.5px;
     }}
     
-    /* ANIMASI ITEM DI DALAM KARTU (Misal: Pergantian Pemain) */
     .scroll-item {{
         margin-bottom: 12px;
         font-size: 14px;
         line-height: 1.5;
         padding: 8px;
         border-radius: 8px;
-        background-color: rgba(255,255,255,0.5);
+        background-color: rgba(0,0,0,0.4);
         transition: all 0.3s ease;
         animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+        color: #E0E0E0;
     }}
     
     @keyframes popIn {{
@@ -180,69 +189,82 @@ st.markdown(f"""
     }}
 
     .scroll-item:hover {{
-        background-color: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        transform: translateX(5px); /* Efek geser saat disentuh */
+        background-color: rgba(212, 175, 55, 0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        transform: translateX(5px); 
     }}
     
     /* Indikator Sakit/Izin (Berbeda Visual) */
     .item-absen {{
-        border-left: 4px solid #d93025;
-        background-color: rgba(217, 48, 37, 0.05);
+        border-left: 4px solid #FF5252;
+        background-color: rgba(255, 82, 82, 0.1);
     }}
     .item-hadir {{
-        border-left: 4px solid #008b45;
+        border-left: 4px solid #D4AF37; /* Garis hadir warna Emas */
     }}
     
-    /* CUSTOM SCROLLBAR */
+    /* CUSTOM SCROLLBAR GELAP/EMAS */
     .scroll-container::-webkit-scrollbar {{ height: 8px; }}
-    .scroll-container::-webkit-scrollbar-track {{ background: rgba(0, 0, 0, 0.03); border-radius: 10px; }}
-    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(0, 77, 149, 0.2); border-radius: 10px; }}
-    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(0, 77, 149, 0.5); }}
+    .scroll-container::-webkit-scrollbar-track {{ background: rgba(0, 0, 0, 0.3); border-radius: 10px; }}
+    .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(212, 175, 55, 0.4); border-radius: 10px; }}
+    .scroll-container::-webkit-scrollbar-thumb:hover {{ background: rgba(212, 175, 55, 0.8); }}
     
     /* CLEAN HEADER UTAMA */
     .main-title {{
         font-weight: 800;
-        background: -webkit-linear-gradient(45deg, #003366, #0073e6);
+        background: -webkit-linear-gradient(45deg, #FFD700, #D4AF37);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 34px;
         margin: 0;
         padding: 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.05); /* Bayangan teks lebih solid */
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.8); 
     }}
     .date-badge {{
         text-align: center; 
-        color: #004D95; 
-        background: white; 
+        color: #FFD700; 
+        background: rgba(20,20,20,0.8); 
         padding: 10px 16px; 
         border-radius: 12px; 
         font-weight: 700;
-        box-shadow: 0 4px 15px rgba(0, 32, 90, 0.06);
-        border: 1px solid rgba(0, 77, 149, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(212, 175, 55, 0.4);
         transition: transform 0.2s ease;
     }}
     .date-badge:hover {{
         transform: translateY(-2px);
+        border-color: #FFD700;
     }}
     
     .section-title {{
         font-weight: 800;
-        color: #003366;
+        color: #D4AF37 !important;
         margin-bottom: 15px;
         position: relative;
         padding-bottom: 8px;
     }}
-    /* Garis bawah pada judul seksi */
+    /* Garis bawah emas pada judul seksi */
     .section-title::after {{
         content: '';
         position: absolute;
         left: 0;
         bottom: 0;
-        width: 40px;
+        width: 50px;
         height: 4px;
-        background: linear-gradient(90deg, #004D95, transparent);
+        background: linear-gradient(90deg, #D4AF37, transparent);
         border-radius: 2px;
+    }}
+    
+    /* Memaksa Link Button menjadi Emas */
+    a > button {{
+        background: rgba(212, 175, 55, 0.1) !important;
+        color: #D4AF37 !important;
+        border: 1px solid rgba(212, 175, 55, 0.5) !important;
+    }}
+    a > button:hover {{
+        background: rgba(212, 175, 55, 0.3) !important;
+        color: #FFD700 !important;
+        border: 1px solid #FFD700 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -334,8 +356,8 @@ if menu == "🏠 Dashboard Interaktif":
         pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
         
         if pin == "regas123":
-            st.markdown("<div style='background: linear-gradient(to right, #f0f7ff, #ffffff); padding:16px; border-radius:12px; border-left: 4px solid #004D95; box-shadow: 0 4px 10px rgba(0,0,0,0.03); margin-bottom:20px; animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
-            st.markdown("🛠️ <b style='color:#004D95;'>Akses Editor Database</b>", unsafe_allow_html=True)
+            st.markdown("<div style='background: rgba(20,20,20,0.8); padding:16px; border-radius:12px; border-left: 4px solid #D4AF37; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom:20px; animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
+            st.markdown("🛠️ <b style='color:#D4AF37;'>Akses Editor Database</b>", unsafe_allow_html=True)
             c_edit1, c_edit2 = st.columns(2)
             with c_edit1:
                 st.link_button("📝 Edit Jadwal Aktual", URL_JADWAL_AKTUAL, use_container_width=True)
@@ -343,21 +365,20 @@ if menu == "🏠 Dashboard Interaktif":
                 st.link_button("📋 Edit Database Izin", URL_IZIN, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<h4 style='color:#003366; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#D4AF37; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
             if not df_izin.empty and 'Status Approval' in df_izin.columns:
                 df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
                 
                 if not pending.empty:
                     for idx, row in pending.head(3).iterrows():
-                        # Menambahkan delay animasi berdasarkan urutan agar tidak muncul serentak
                         anim_delay = idx * 0.1
                         with st.container(border=True):
                             st.markdown(f"""
                             <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-                                <b style='font-size:16px; color:#003366;'>{row['Nama Lengkap Operator']}</b> <span style='color:#666; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                                <div style='font-size:14px; margin-top:8px; color:#444;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} &nbsp;|&nbsp; <b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                                <div style='font-size:14px; color:#d93025; font-weight:700; margin-top:4px; margin-bottom:12px; background: rgba(217, 48, 37, 0.05); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+                                <b style='font-size:16px; color:#FFD700;'>{row['Nama Lengkap Operator']}</b> <span style='color:#AAA; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+                                <div style='font-size:14px; margin-top:8px; color:#CCC;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} &nbsp;|&nbsp; <b style='color:#D4AF37;'>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
+                                <div style='font-size:14px; color:#FF5252; font-weight:700; margin-top:4px; margin-bottom:12px; background: rgba(255, 82, 82, 0.1); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
                             </div>
                             """, unsafe_allow_html=True)
                             
@@ -396,7 +417,7 @@ if menu == "🏠 Dashboard Interaktif":
                 st.warning("Menunggu sinkronisasi data izin...")
         else:
             with st.container(border=True):
-                st.markdown("<div style='text-align:center; padding:10px;'><span style='font-size:30px;'>🔒</span><br><span style='color:#666; font-weight:500;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center; padding:10px;'><span style='font-size:30px;'>🔒</span><br><span style='color:#AAA; font-weight:500;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
 
     with col_off:
         st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
@@ -410,9 +431,8 @@ if menu == "🏠 Dashboard Interaktif":
             with st.container(border=True):
                 if tersedia:
                     for i, orang in enumerate(tersedia):
-                        # Animasi masuk bertahap (Staggered animation)
                         anim_delay = i * 0.05
-                        st.markdown(f"<div style='padding:10px 12px; margin-bottom:6px; border-radius:8px; background: rgba(0,77,149,0.03); border-left: 3px solid #004D95; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#004D95; font-size:12px; margin-right:8px;'>OFF</b> {orang}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='padding:10px 12px; margin-bottom:6px; border-radius:8px; background: rgba(212,175,55,0.05); border-left: 3px solid #D4AF37; animation: slideInRight 0.3s {anim_delay}s ease-out backwards; color:#E0E0E0;'><b style='color:#D4AF37; font-size:12px; margin-right:8px;'>OFF</b> {orang}</div>", unsafe_allow_html=True)
                 else:
                     st.write("Tidak ada personel yang terjadwal OFF hari ini.")
             st.markdown("<br>", unsafe_allow_html=True)
@@ -421,7 +441,7 @@ if menu == "🏠 Dashboard Interaktif":
     # ==========================================
     # BAGIAN JADWAL SCROLL HORIZONTAL (14 HARI)
     # ==========================================
-    st.markdown("<br><hr style='opacity:0.1;'><h3 class='section-title'>📅 Jadwal Plotting 14 Hari Kedepan</h3>", unsafe_allow_html=True)
+    st.markdown("<br><hr style='border-color: rgba(212,175,55,0.2);'><h3 class='section-title'>📅 Jadwal Plotting 14 Hari Kedepan</h3>", unsafe_allow_html=True)
     
     today = datetime.now().date()
     days = [today + timedelta(days=i) for i in range(14)] 
@@ -431,7 +451,6 @@ if menu == "🏠 Dashboard Interaktif":
         
         for i, d in enumerate(days):
             d_str = d.strftime('%Y-%m-%d')
-            # Delay animasi per kartu agar muncul seperti domino
             card_delay = i * 0.05
             card_content = f'<div class="scroll-card" style="animation-delay: {card_delay}s;"><div class="scroll-header">{d.strftime("%d %b %Y")}</div>'
             
@@ -443,13 +462,12 @@ if menu == "🏠 Dashboard Interaktif":
                     for item_idx, (_, row) in enumerate(df_day.iterrows()):
                         nama_asli = str(row['Nama Operator']).replace('*', '').strip()
                         status = str(row[d_str])
-                        item_delay = (i * 0.05) + (item_idx * 0.02) # Animasi item di dalam kartu
+                        item_delay = (i * 0.05) + (item_idx * 0.02) 
                         
                         if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
-                            # Menggunakan class CSS khusus untuk membedakan visual (animasi pergantian/sakit)
-                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#d93025;">{nama_asli}</b><br><span style="color:#d93025; font-size:11px; font-weight:800; background:rgba(217,48,37,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
+                            card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#FF5252;">{nama_asli}</b><br><span style="color:#FF5252; font-size:11px; font-weight:800; background:rgba(255,82,82,0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
                         else:
-                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b>{nama_asli}</b><br><span style="color:#008b45; font-size:11px; font-weight:800; background:rgba(0,139,69,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
+                            card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟡 <b style="color:#FFD700;">{nama_asli}</b><br><span style="color:#D4AF37; font-size:11px; font-weight:800; background:rgba(212,175,55,0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
                 else:
                     card_content += '<div class="scroll-item" style="color:#888; font-style:italic; text-align:center; background:none; border:none; box-shadow:none;">Semua Personel OFF</div>'
             else:
@@ -481,7 +499,7 @@ elif menu == "📅 Kalender Lengkap":
 
     if not df_matrix.empty:
         if selected_date_str in df_matrix.columns:
-            st.markdown(f"<h4 style='color:#003366; animation: fadeIn 0.3s ease-out;'>Status Personel pada: <b>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color:#D4AF37; animation: fadeIn 0.3s ease-out;'>Status Personel pada: <b style='color:#FFD700;'>{selected_date.strftime('%d %B %Y')}</b></h4>", unsafe_allow_html=True)
             df_day = df_matrix[['Nama Operator', selected_date_str]].dropna(subset=['Nama Operator'])
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
@@ -491,11 +509,10 @@ elif menu == "📅 Kalender Lengkap":
 
             col_shift, col_off, col_absen = st.columns(3)
             
-            # Membungkus setiap kolom dengan HTML untuk memberikan animasi stagger masuk dari bawah
             with col_shift:
                 st.markdown("<div style='animation: fadeIn 0.4s ease-out;'>", unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.success(f"🟢 **Hadir / Shift ({len(df_shift)})**")
+                    st.success(f"🟡 **Hadir / Shift ({len(df_shift)})**")
                     st.dataframe(df_shift[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
