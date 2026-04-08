@@ -13,7 +13,6 @@ st.set_page_config(page_title="NR ORF Integrated Command", page_icon="⚓", layo
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] { display: none; }
-        /* Menghilangkan padding atas bawaan streamlit agar header putih bisa lebih pas ke atas */
         .block-container { padding-top: 2rem !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -79,14 +78,14 @@ st.markdown(f"""
     }}
     
     .header-logo {{
-        max-height: 60px;
+        max-height: 55px;
         display: block;
     }}
     
     .header-title {{
         color: #004D95 !important; 
         font-weight: 800;
-        font-size: 32px;
+        font-size: 30px;
         margin: 0;
         text-align: center;
         flex-grow: 1;
@@ -95,14 +94,43 @@ st.markdown(f"""
     }}
     
     .header-date {{
-        background-color: #f1f5f9;
+        background-color: #f8fafc;
         color: #0f172a !important;
-        padding: 10px 20px;
-        border-radius: 10px;
+        padding: 10px 18px;
+        border-radius: 12px;
         font-weight: 700;
-        border: 1px solid #cbd5e1;
-        font-size: 15px;
+        border: 1px solid #e2e8f0;
+        font-size: 14px;
         white-space: nowrap;
+    }}
+
+    /* === NOTIFIKASI LONCENG === */
+    .notif-wrapper {{
+        position: relative;
+        display: inline-block;
+        margin-right: 15px;
+        cursor: help;
+    }}
+    .notif-bell {{
+        font-size: 24px;
+    }}
+    .notif-badge {{
+        position: absolute;
+        top: -5px;
+        right: -8px;
+        background-color: #ef4444;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 7px;
+        font-size: 11px;
+        font-weight: 800;
+        box-shadow: 0 2px 5px rgba(239, 68, 68, 0.5);
+        animation: pulseRed 2s infinite;
+    }}
+    @keyframes pulseRed {{
+        0% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
+        70% {{ transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }}
+        100% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
     }}
 
     @media (max-width: 768px) {{
@@ -111,9 +139,8 @@ st.markdown(f"""
             gap: 15px;
             padding: 20px 15px;
         }}
-        .header-title {{
-            font-size: 22px;
-        }}
+        .header-title {{ font-size: 22px; }}
+        .notif-wrapper {{ margin-right: 10px; }}
     }}
     /* ======================================================== */
 
@@ -232,7 +259,6 @@ st.markdown(f"""
     .item-pengganti {{ border-left: 4px solid #38bdf8; background-color: rgba(56, 189, 248, 0.15); }}
     .item-pengganti b {{ color: #ffffff !important; }}
     
-    /* SCROLLBAR GELAP DI MOBILE */
     .scroll-container::-webkit-scrollbar {{ height: 4px; }} 
     .scroll-container::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     .scroll-container::-webkit-scrollbar-thumb {{ background: rgba(255, 255, 255, 0.3); border-radius: 10px; }}
@@ -308,11 +334,10 @@ def load_data():
             data_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
             df_i = pd.DataFrame(data_i[1:], columns=data_i[0]) if len(data_i) > 1 else pd.DataFrame(columns=data_i[0] if data_i else [])
             
-            # --- FILTER DATA IZIN KOSONG (BUG FIX) ---
+            # --- FILTER DATA IZIN KOSONG ---
             if 'Nama Lengkap Operator' in df_i.columns:
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
-            # -----------------------------------------
             
             return df_j, df_i
         return pd.DataFrame(), pd.DataFrame()
@@ -323,7 +348,17 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# TOP HEADER BERSATU (PUTIH SOLID)
+# MENGHITUNG JUMLAH ANTREAN IZIN UNTUK NOTIFIKASI
+# ==========================================
+pending_count = 0
+if not df_izin.empty and 'Status Approval' in df_izin.columns:
+    df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
+    pending_df = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
+    pending_count = len(pending_df)
+
+
+# ==========================================
+# TOP HEADER BERSATU (PUTIH SOLID + NOTIFIKASI)
 # ==========================================
 if logo_base64:
     logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="header-logo">'
@@ -332,14 +367,32 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
-# Merender Blok Putih di Paling Atas
+# Membuat Elemen Notifikasi HTML
+if pending_count > 0:
+    notif_html = f"""
+    <div class="notif-wrapper" title="Ada {pending_count} ajuan izin menunggu persetujuan">
+        <span class="notif-bell">🔔</span>
+        <span class="notif-badge">{pending_count}</span>
+    </div>
+    """
+else:
+    notif_html = f"""
+    <div class="notif-wrapper" style="opacity: 0.3;" title="Tidak ada antrean">
+        <span class="notif-bell">🔔</span>
+    </div>
+    """
+
+# Merender Header Putih Lengkap
 st.markdown(f"""
     <div class="header-bar">
         <div>
             {logo_html}
         </div>
         <h1 class="header-title">NR ORF Integrated Command</h1>
-        <div class="header-date">📅 {hari_ini_str}</div>
+        <div style="display: flex; align-items: center;">
+            {notif_html}
+            <div class="header-date">📅 {hari_ini_str}</div>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -353,16 +406,13 @@ if 'active_menu' not in st.session_state:
 def set_menu(menu_name):
     st.session_state.active_menu = menu_name
 
-# Mengubah menjadi 2 kolom karena menu Cek OFF digabungkan
 nav_c1, nav_c2 = st.columns(2)
 
 with nav_c1:
-    # PERBAIKAN: args disesuaikan dengan nama yang benar
     st.button("🏠 Dashboard", 
               type="primary" if st.session_state.active_menu == "🏠 Dashboard" else "secondary", 
               on_click=set_menu, args=("🏠 Dashboard",), use_container_width=True)
 with nav_c2:
-    # PERBAIKAN: args disesuaikan secara konsisten menjadi "📅 Kalender Lengkap"
     st.button("📅 Kalender Lengkap", 
               type="primary" if st.session_state.active_menu == "📅 Kalender Lengkap" else "secondary", 
               on_click=set_menu, args=("📅 Kalender Lengkap",), use_container_width=True)
@@ -398,15 +448,34 @@ if menu == "🏠 Dashboard":
                 pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
                 
                 if not pending.empty:
-                    for idx, row in pending.head(3).iterrows():
+                    for idx, row in pending.head(5).iterrows():
                         anim_delay = idx * 0.1
+                        
+                        # --- EKSTRAKSI ALASAN & LINK BUKTI ---
+                        # NOTE: Ubah 'Alasan Izin' dan 'Bukti Izin' dengan nama kolom yang tepat di Google Form Anda!
+                        alasan_izin = str(row.get('Alasan Izin', '-')).strip()
+                        if alasan_izin.lower() == 'nan' or alasan_izin == '': alasan_izin = 'Tidak ada keterangan'
+                        
+                        link_bukti = str(row.get('Bukti Izin', '')).strip()
+                        if link_bukti.lower() != 'nan' and link_bukti != '' and link_bukti.startswith('http'):
+                            bukti_html = f"<a href='{link_bukti}' target='_blank' style='color:#38bdf8; text-decoration:none; font-weight:700;'>📎 Buka Lampiran Bukti Pendukung</a>"
+                        else:
+                            bukti_html = "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
+                        # ------------------------------------
+
                         with st.container(border=True):
                             st.markdown(f"""
                             <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
                                 <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
                                 <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
                                 <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:8px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+                                
+                                <div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'>
+                                    <div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{alasan_izin}</div>
+                                    <div style='font-size:13px;'>{bukti_html}</div>
+                                </div>
+                                
+                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
                             </div>
                             """, unsafe_allow_html=True)
                             
@@ -450,7 +519,6 @@ if menu == "🏠 Dashboard":
     with col_off:
         st.markdown("<h3 class='section-title'>👥 Cari Personel OFF</h3>", unsafe_allow_html=True)
         
-        # Integrasi Cek OFF: Tambahkan Input Tanggal
         tgl_cek_off = st.date_input("Pilih Tanggal Pengecekan:", value=datetime.now().date(), key="cek_off_date")
         tgl_cek_off_str = tgl_cek_off.strftime('%Y-%m-%d')
         
@@ -484,7 +552,6 @@ if menu == "🏠 Dashboard":
     days = [today + timedelta(days=i) for i in range(14)] 
     
     if not df_matrix.empty:
-        # 1. AMBIL DATA PENGGANTI DARI DATABASE IZIN
         pengganti_dict = {} 
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
             df_izin_app = df_izin[df_izin['Status Approval'].astype(str).str.upper() == 'APPROVED']
@@ -563,7 +630,6 @@ elif menu == "📅 Kalender Lengkap":
             df_day['Status'] = df_day[selected_date_str].fillna('').astype(str).str.strip().str.upper()
 
             df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '<NA>', '', 'NONE'])]
-            # Menggabungkan Izin, Sakit, Cuti, dan Dinas dalam satu pengecekan untuk ringkasan absen
             df_absen = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
             df_shift = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_absen['Nama Operator'])]
 
@@ -581,7 +647,6 @@ elif menu == "📅 Kalender Lengkap":
             
             st.markdown("<div style='animation: fadeIn 0.6s ease-out; margin-top:15px;'>", unsafe_allow_html=True)
             with st.container(border=True):
-                # Menambahkan label "Dinas" pada tabel absensi
                 st.markdown("<div style='background-color: rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(239, 68, 68, 0.4);'><b style='color: #ffffff;'>🔴 Absen / Cuti / Dinas (" + str(len(df_absen)) + ")</b></div>", unsafe_allow_html=True)
                 if not df_absen.empty:
                     st.dataframe(df_absen[['Nama Operator', 'Status']], hide_index=True, use_container_width=True)
