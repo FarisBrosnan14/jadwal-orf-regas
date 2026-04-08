@@ -241,10 +241,10 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
-    /* Pengaturan Jarak Kolom Custom Navigasi */
-    [data-testid="column"] {
+    /* Pengaturan Jarak Kolom Custom Navigasi (DIPERBAIKI) */
+    [data-testid="column"] {{
         padding: 0 5px !important;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -398,7 +398,7 @@ if menu == "🏠 Dashboard":
                                     load_data.clear()
                                     st.rerun()
                         with c_rej:
-                            if st.button("❌ Reject", key=f"d_rej_{idx}"):
+                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
                                 if client:
                                     client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
                                     load_data.clear()
@@ -409,7 +409,7 @@ if menu == "🏠 Dashboard":
             st.warning("Menunggu sinkronisasi data izin...")
     else:
         with st.container(border=True):
-            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval.</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
