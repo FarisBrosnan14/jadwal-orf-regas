@@ -52,6 +52,8 @@ st.markdown(f"""
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
+        /* Menambahkan padding atas agar konten tidak tertutup logo yang absolute */
+        padding-top: 60px; 
     }}
     
     header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
@@ -241,9 +243,38 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
-    /* Pengaturan Jarak Kolom Custom Navigasi (DIPERBAIKI) */
+    /* Pengaturan Jarak Kolom Custom Navigasi */
     [data-testid="column"] {{
         padding: 0 5px !important;
+    }}
+
+    /* ========================================================
+       POSISI LOGO ABSOLUTE DI POJOK KIRI ATAS
+       ======================================================== */
+    .logo-container {{
+        position: absolute;
+        top: 15px;
+        left: 20px;
+        z-index: 1000; /* Memastikan logo selalu di atas elemen lain */
+    }}
+    .logo-img {{
+        max-height: 70px; /* Ukuran diperbesar */
+        /* Menambahkan efek bayangan halus agar logo menonjol di latar gelap */
+        filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); 
+    }}
+    
+    /* Media query untuk layar HP: Sesuaikan ukuran dan posisi logo jika perlu */
+    @media (max-width: 768px) {{
+        .logo-container {{
+            top: 10px;
+            left: 10px;
+        }}
+        .logo-img {{
+            max-height: 50px; /* Sedikit dikecilkan di HP agar tidak terlalu memakan ruang */
+        }}
+        .stApp {{
+            padding-top: 50px; 
+        }}
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -292,18 +323,27 @@ df_matrix, df_izin = load_data()
 
 
 # ==========================================
-# HEADER ATAS (LOGO & JUDUL DI TENGAH)
+# RENDER LOGO (ABSOLUTE POSITIONING)
 # ==========================================
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Render Logo Pertamina
 if logo_base64:
-    st.markdown(f"<div style='text-align: center;'><img src='data:image/png;base64,{logo_base64}' style='max-height: 50px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
+    # Render HTML logo dengan class yang sudah diset absolute positioning di CSS
+    st.markdown(f"""
+        <div class="logo-container">
+            <img src="data:image/png;base64,{logo_base64}" class="logo-img">
+        </div>
+    """, unsafe_allow_html=True)
 else:
-    # Cadangan jika file logo lokal tidak ada
-    st.markdown("<div style='text-align: center;'><img src='https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png' style='max-height: 40px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
+    # Cadangan jika logo gagal dimuat
+    st.markdown("""
+        <div class="logo-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" class="logo-img">
+        </div>
+    """, unsafe_allow_html=True)
 
-# Judul & Tanggal
+# ==========================================
+# HEADER ATAS (JUDUL DI TENGAH)
+# ==========================================
+# Tidak perlu st.markdown("<br>") lagi karena sudah diatur margin CSS
 st.markdown("<h1 class='main-title'>NR ORF Integrated Command</h1>", unsafe_allow_html=True)
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 st.markdown(f"<div class='date-wrapper'><div class='date-badge'>📅 {hari_ini_str}</div></div>", unsafe_allow_html=True)
@@ -398,7 +438,7 @@ if menu == "🏠 Dashboard":
                                     load_data.clear()
                                     st.rerun()
                         with c_rej:
-                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                            if st.button("❌ Reject", key=f"d_rej_{idx}"):
                                 if client:
                                     client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
                                     load_data.clear()
