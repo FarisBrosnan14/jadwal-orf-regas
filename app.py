@@ -88,7 +88,7 @@ st.markdown(f"""
         font-weight: 800;
         font-size: 32px;
         margin: 0;
-        text-shadow: none !important; /* Hapus shadow agar teks bersih di latar putih */
+        text-shadow: none !important; 
         text-align: center;
     }}
     
@@ -103,7 +103,6 @@ st.markdown(f"""
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }}
 
-    /* Media query untuk menyusun header ke bawah di HP */
     @media (max-width: 768px) {{
         .white-top-bar {{
             flex-direction: column;
@@ -219,10 +218,15 @@ st.markdown(f"""
         100% {{ opacity: 1; transform: scale(1); }}
     }}
     
+    /* INDIKATOR STATUS JADWAL (MERAH, HIJAU, BIRU) */
     .item-absen {{ border-left: 4px solid #ef4444; background-color: rgba(239, 68, 68, 0.15); }}
     .item-absen b {{ color: #ffffff !important; }}
+    
     .item-hadir {{ border-left: 4px solid #22c55e; background-color: rgba(34, 197, 94, 0.1); }}
     .item-hadir b {{ color: #ffffff !important; }}
+    
+    .item-pengganti {{ border-left: 4px solid #38bdf8; background-color: rgba(56, 189, 248, 0.15); }}
+    .item-pengganti b {{ color: #ffffff !important; }}
     
     /* SCROLLBAR GELAP DI MOBILE */
     .scroll-container::-webkit-scrollbar {{ height: 4px; }} 
@@ -259,7 +263,6 @@ st.markdown(f"""
         color: #ffffff; 
     }}
     
-    /* Pengaturan Jarak Kolom Custom Navigasi (Perbaikan Error Padding) */
     [data-testid="column"] {{
         padding: 0 5px !important;
     }}
@@ -319,7 +322,6 @@ else:
 
 hari_ini_str = datetime.now().strftime('%d %b %Y')
 
-# Merender HTML Top Bar Putih
 st.markdown(f"""
     <div class="white-top-bar">
         <div>
@@ -344,7 +346,6 @@ if 'active_menu' not in st.session_state:
 def set_menu(menu_name):
     st.session_state.active_menu = menu_name
 
-# Membuat 3 kolom berimbang untuk tombol navigasi
 nav_c1, nav_c2, nav_c3 = st.columns(3)
 
 with nav_c1:
@@ -369,90 +370,93 @@ menu = st.session_state.active_menu
 # ==========================================
 if menu == "🏠 Dashboard":
     
-    st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
-    client = get_gspread_client()
-    
-    pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
-    
-    if pin == "regas123":
-        st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
-        st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
+    col_antre, col_off = st.columns([2.5, 1.5])
         
-        st.link_button("📝 Edit Jadwal Aktual di Spreadsheet", URL_JADWAL_AKTUAL, use_container_width=True)
-        st.link_button("📋 Edit Database Izin di Spreadsheet", URL_IZIN, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
-        if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
-            pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
+    with col_antre:
+        st.markdown("<h3 class='section-title'>🔔 Panel Manajer</h3>", unsafe_allow_html=True)
+        client = get_gspread_client()
+        
+        pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
+        
+        if pin == "regas123":
+            st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
+            st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
             
-            if not pending.empty:
-                for idx, row in pending.head(3).iterrows():
-                    anim_delay = idx * 0.1
-                    with st.container(border=True):
-                        st.markdown(f"""
-                        <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
-                            <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                            <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
-                            <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                            <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:8px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        c_app, c_rej = st.columns(2)
-                        with c_app:
-                            if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
-                                if client:
-                                    sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-                                    sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
-                                    
-                                    sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                                    d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
-                                    d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
-                                    
-                                    for d in pd.date_range(d_start, d_end):
-                                        d_str = d.strftime('%Y-%m-%d')
-                                        if d_str in df_matrix.columns:
-                                            c_idx = list(df_matrix.columns).index(d_str) + 1
-                                            match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
-                                            if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
-                                            nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                                            if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
-                                                match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
-                                                if not match_sub.empty: sh_aktual.update_cell(int(match_sub.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
-                                    load_data.clear()
-                                    st.rerun()
-                        with c_rej:
-                            if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
-                                if client:
-                                    client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
-                                    load_data.clear()
-                                    st.rerun()
-            else:
-                st.info("✨ Tidak ada antrean persetujuan izin saat ini.")
-        else:
-            st.warning("Menunggu sinkronisasi data izin...")
-    else:
-        with st.container(border=True):
-            st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+            st.link_button("📝 Edit Jadwal Aktual di Spreadsheet", URL_JADWAL_AKTUAL, use_container_width=True)
+            st.link_button("📋 Edit Database Izin di Spreadsheet", URL_IZIN, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
-    tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
-    
-    if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
-        df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
-        kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
-        tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
-        
-        with st.container(border=True):
-            if tersedia:
-                for i, orang in enumerate(tersedia):
-                    anim_delay = i * 0.05
-                    st.markdown(f"<div style='padding:8px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700; margin-top:10px;'>Antrean Persetujuan Izin:</h4>", unsafe_allow_html=True)
+            if not df_izin.empty and 'Status Approval' in df_izin.columns:
+                df_izin_valid = df_izin.dropna(subset=['Nama Lengkap Operator'])
+                pending = df_izin_valid[df_izin_valid['Status Approval'].isna() | (df_izin_valid['Status Approval'] == "")]
+                
+                if not pending.empty:
+                    for idx, row in pending.head(3).iterrows():
+                        anim_delay = idx * 0.1
+                        with st.container(border=True):
+                            st.markdown(f"""
+                            <div style='animation: slideInRight 0.4s {anim_delay}s ease-out backwards;'>
+                                <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+                                <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
+                                <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
+                                <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:8px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            c_app, c_rej = st.columns(2)
+                            with c_app:
+                                if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
+                                    if client:
+                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
+                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
+                                        
+                                        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                                        d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
+                                        d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
+                                        
+                                        for d in pd.date_range(d_start, d_end):
+                                            d_str = d.strftime('%Y-%m-%d')
+                                            if d_str in df_matrix.columns:
+                                                c_idx = list(df_matrix.columns).index(d_str) + 1
+                                                match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
+                                                if not match_p.empty: sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row['Jenis Izin yang Diajukan']).upper())
+                                                nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+                                                if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
+                                                    match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
+                                                    if not match_sub.empty: sh_aktual.update_cell(int(match_sub.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
+                                        load_data.clear()
+                                        st.rerun()
+                            with c_rej:
+                                if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                                    if client:
+                                        client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
+                                        load_data.clear()
+                                        st.rerun()
+                else:
+                    st.info("✨ Tidak ada antrean persetujuan izin saat ini.")
             else:
-                st.write("Tidak ada personel yang terjadwal OFF hari ini.")
+                st.warning("Menunggu sinkronisasi data izin...")
+        else:
+            with st.container(border=True):
+                st.markdown("<div style='text-align:center; padding:5px;'><span style='font-size:24px;'>🔒</span><br><span style='color:#cbd5e1; font-weight:500; font-size:14px;'>Masukkan PIN keamanan untuk mengakses Panel Approval & Editor Sheet.</span></div>", unsafe_allow_html=True)
+
+    with col_off:
+        st.markdown("<h3 class='section-title'>👥 Personel OFF Hari Ini</h3>", unsafe_allow_html=True)
+        tgl_hari_ini_sys = datetime.now().strftime('%Y-%m-%d')
+        
+        if not df_matrix.empty and tgl_hari_ini_sys in df_matrix.columns:
+            df_valid_names = df_matrix.dropna(subset=['Nama Operator'])
+            kondisi_off = df_valid_names[tgl_hari_ini_sys].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])
+            tersedia = df_valid_names[kondisi_off]["Nama Operator"].astype(str).tolist()
+            
+            with st.container(border=True):
+                if tersedia:
+                    for i, orang in enumerate(tersedia):
+                        anim_delay = i * 0.05
+                        st.markdown(f"<div style='padding:8px 12px; margin-bottom:6px; border-radius:8px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; animation: slideInRight 0.3s {anim_delay}s ease-out backwards;'><b style='color:#38bdf8; font-size:12px; margin-right:8px;'>OFF</b> <span style='color:#ffffff; font-weight: 500;'>{orang}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.write("Tidak ada personel yang terjadwal OFF hari ini.")
         st.markdown("<br>", unsafe_allow_html=True)
         st.link_button("📝 Form Pengajuan Izin / Tukar Shift", LINK_GFORM, use_container_width=True, type="primary")
 
@@ -465,6 +469,24 @@ if menu == "🏠 Dashboard":
     days = [today + timedelta(days=i) for i in range(14)] 
     
     if not df_matrix.empty:
+        # 1. AMBIL DATA PENGGANTI DARI DATABASE IZIN (Hanya yang APPROVED)
+        pengganti_dict = {} # Format: {'2026-05-01': ['Nama1', 'Nama2']}
+        if not df_izin.empty and 'Status Approval' in df_izin.columns:
+            df_izin_app = df_izin[df_izin['Status Approval'].astype(str).str.upper() == 'APPROVED']
+            for _, row in df_izin_app.iterrows():
+                try:
+                    nama_pengganti = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+                    if nama_pengganti and nama_pengganti not in ['nan', 'tidak ada', '']:
+                        d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
+                        d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
+                        for d in pd.date_range(d_start, d_end):
+                            d_str = d.strftime('%Y-%m-%d')
+                            if d_str not in pengganti_dict:
+                                pengganti_dict[d_str] = []
+                            pengganti_dict[d_str].append(nama_pengganti)
+                except:
+                    pass
+
         html_cards = '<div class="scroll-container">'
         
         for i, d in enumerate(days):
@@ -476,15 +498,25 @@ if menu == "🏠 Dashboard":
                 df_day = df_matrix[['Nama Operator', d_str]].dropna()
                 df_day = df_day[~df_day[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
                 
+                # Cek siapa saja pengganti di hari ini
+                pengganti_hari_ini = pengganti_dict.get(d_str, [])
+                
                 if not df_day.empty:
                     for item_idx, (_, row) in enumerate(df_day.iterrows()):
                         nama_asli = str(row['Nama Operator']).replace('*', '').strip()
+                        nama_lower = nama_asli.lower()
                         status = str(row[d_str])
                         item_delay = (i * 0.05) + (item_idx * 0.02)
                         
+                        # LOGIKA HIGHLIGHT WARNA
                         if any(k in status.upper() for k in ["IZIN", "SAKIT", "CUTI"]):
+                            # MERAH (Yang Izin)
                             card_content += f'<div class="scroll-item item-absen" style="animation-delay: {item_delay}s;">🔴 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#fca5a5; font-size:11px; font-weight:800; background:rgba(239, 68, 68, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">{status.upper()}</span></div>'
+                        elif nama_lower in pengganti_hari_ini:
+                            # BIRU (Yang Menggantikan)
+                            card_content += f'<div class="scroll-item item-pengganti" style="animation-delay: {item_delay}s;">🔵 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#7dd3fc; font-size:11px; font-weight:800; background:rgba(56, 189, 248, 0.2); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">PENGGANTI SHIFT {status.upper()}</span></div>'
                         else:
+                            # HIJAU (Normal)
                             card_content += f'<div class="scroll-item item-hadir" style="animation-delay: {item_delay}s;">🟢 <b style="color:#e2e8f0;">{nama_asli}</b><br><span style="color:#4ade80; font-size:11px; font-weight:800; background:rgba(34, 197, 94, 0.3); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">SHIFT {status.upper()}</span></div>'
                 else:
                     card_content += '<div class="scroll-item" style="color:#94a3b8; font-style:italic; text-align:center; background:none; border:none; box-shadow:none;">Semua Personel OFF</div>'
@@ -567,7 +599,7 @@ elif menu == "🧑‍🔧 Cek OFF":
                 st.success(f"Ditemukan **{len(tersedia)} personel** yang sedang OFF di tanggal {tgl_cek_str}:")
                 st.dataframe(pd.DataFrame({"Nama Personel (Status: OFF)": tersedia}), use_container_width=True, hide_index=True)
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.link_button("📝 Lanjut Ajukan Izin di Google Form", LINK_GFORM, type="primary", use_container_width=True)
+                st.link_button("📝 Lanjut Ajukan Izin (G-Form)", LINK_GFORM, type="primary", use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.error("Tidak ada rekan yang berstatus OFF pada tanggal tersebut.")
