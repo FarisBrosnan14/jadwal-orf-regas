@@ -371,28 +371,23 @@ def load_data():
                 df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
             
-            # 3. Load Data Operator DENGAN PEMINDAI BARIS OTOMATIS
+            # 3. Load Data Operator
             df_k = pd.DataFrame()
             try:
-                # Memastikan mencari di sheet Jadwal dulu
                 sheet_target = client.open_by_key(ID_SHEET_JADWAL).worksheet("Data_Operator")
                 data_k = sheet_target.get_all_values()
                 if len(data_k) > 0:
                     df_temp = pd.DataFrame(data_k)
                     header_row_idx = -1
-                    
-                    # Mencari baris mana yang memuat tulisan 'Nama Operator'
                     for i, row in df_temp.iterrows():
                         if any('nama' in str(v).lower() and 'operator' in str(v).lower() for v in row.values):
                             header_row_idx = i
                             break
-                    
-                    # Jika baris judul ditemukan, jadikan itu sebagai header dan potong datanya
                     if header_row_idx != -1:
                         headers = df_temp.iloc[header_row_idx].astype(str).str.strip().tolist()
                         df_k = pd.DataFrame(df_temp.values[header_row_idx+1:], columns=headers)
             except Exception:
-                pass # Jika terjadi error (sheet tidak ada), abaikan dan kembalikan DF kosong
+                pass 
 
             return df_j, df_i, df_k
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -470,6 +465,18 @@ if menu == "🏠 Dashboard":
         pin = st.text_input("🔑 PIN Verifikasi Manajer", type="password", key="pin_dash", placeholder="Masukkan PIN...")
         
         if pin == "regas123":
+            
+            # --- INPUT NAMA MANAJER (AUDIT TRAIL) DENGAN NAMA BARU ---
+            daftar_manajer = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
+            
+            approver_name = st.selectbox("👨‍💼 Nama Manajer / Approver:", daftar_manajer)
+            
+            # Kunci tombol jika belum memilih nama
+            is_locked = approver_name == "-- Pilih Nama Anda --"
+            
+            if is_locked:
+                st.info("⚠️ Silakan pilih Nama Anda terlebih dahulu untuk membuka kunci persetujuan.")
+            
             st.markdown("<div class='standby-box'>", unsafe_allow_html=True)
             st.markdown("🛠️ <b style='color:#38bdf8;'>Akses Editor Database</b>", unsafe_allow_html=True)
             
@@ -506,10 +513,12 @@ if menu == "🏠 Dashboard":
                             
                             c_app, c_rej = st.columns(2)
                             with c_app:
-                                if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True):
+                                if st.button("✅ Approve", key=f"d_app_{idx}", type="primary", use_container_width=True, disabled=is_locked):
                                     if client:
                                         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "APPROVED")
+                                        # Menyimpan status dengan nama approver
+                                        status_update = f"APPROVED by {approver_name}"
+                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, status_update)
                                         
                                         sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
                                         d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
@@ -528,9 +537,12 @@ if menu == "🏠 Dashboard":
                                         load_data.clear()
                                         st.rerun()
                             with c_rej:
-                                if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True):
+                                if st.button("❌ Reject", key=f"d_rej_{idx}", use_container_width=True, disabled=is_locked):
                                     if client:
-                                        client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "REJECTED")
+                                        sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
+                                        # Menyimpan status dengan nama approver
+                                        status_update = f"REJECTED by {approver_name}"
+                                        sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, status_update)
                                         load_data.clear()
                                         st.rerun()
                 else:
@@ -540,12 +552,16 @@ if menu == "🏠 Dashboard":
                 st.markdown("<hr style='opacity:0.2; border-color: rgba(255,255,255,0.2);'>", unsafe_allow_html=True)
                 st.markdown("<h4 style='color:#ffffff; font-size:16px; font-weight:700;'>Riwayat Keputusan Terakhir:</h4>", unsafe_allow_html=True)
                 
-                history_df = df_izin_valid[df_izin_valid['Status Approval'].isin(['APPROVED', 'REJECTED'])]
+                # Mencari status yang mengandung kata APPROVED atau REJECTED
+                history_df = df_izin_valid[df_izin_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
+                
                 if not history_df.empty:
                     for idx, row in history_df.tail(5).iloc[::-1].iterrows():
                         status_lama = str(row['Status Approval']).upper()
-                        status_color = "#4ade80" if status_lama == "APPROVED" else "#fca5a5"
-                        status_bg = "rgba(34, 197, 94, 0.2)" if status_lama == "APPROVED" else "rgba(239, 68, 68, 0.2)"
+                        is_approved = "APPROVED" in status_lama
+                        
+                        status_color = "#4ade80" if is_approved else "#fca5a5"
+                        status_bg = "rgba(34, 197, 94, 0.2)" if is_approved else "rgba(239, 68, 68, 0.2)"
                         
                         with st.container(border=True):
                             html_history = f"<div style='display:flex; justify-content:space-between; align-items:center;'><div><b style='font-size:14px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b><div style='font-size:12px; color:#cbd5e1;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div></div><div style='background:{status_bg}; color:{status_color}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;'>{status_lama}</div></div>"
@@ -556,7 +572,8 @@ if menu == "🏠 Dashboard":
                                     sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
                                     sh_izin.update_cell(int(idx)+2, df_izin.columns.get_loc('Status Approval') + 1, "")
                                     
-                                    if status_lama == 'APPROVED':
+                                    # Jika yang dibatalkan adalah APPROVED, kembalikan jadwal
+                                    if is_approved:
                                         sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
                                         d_start = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date()
                                         d_end = pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
@@ -565,9 +582,11 @@ if menu == "🏠 Dashboard":
                                             d_str = d.strftime('%Y-%m-%d')
                                             if d_str in df_matrix.columns:
                                                 c_idx = list(df_matrix.columns).index(d_str) + 1
+                                                
                                                 match_p = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == str(row['Nama Lengkap Operator']).strip().lower()]
                                                 if not match_p.empty: 
                                                     sh_aktual.update_cell(int(match_p.index[0])+2, c_idx, str(row.get('Shift Izin', 'PG')).title())
+                                                
                                                 nama_sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
                                                 if nama_sub and nama_sub not in ['nan', 'tidak ada', '']:
                                                     match_sub = df_matrix[df_matrix.iloc[:,0].astype(str).str.strip().str.lower() == nama_sub]
@@ -602,7 +621,6 @@ if menu == "🏠 Dashboard":
                     for i, orang in enumerate(tersedia):
                         anim_delay = i * 0.05
                         
-                        # --- PENCARIAN KONTAK CERDAS ---
                         orang_bersih = str(orang).replace('*', '').strip().lower()
                         kontak_op = "Belum diinput"
                         
@@ -622,7 +640,6 @@ if menu == "🏠 Dashboard":
                                     val_kon = str(match_op.iloc[0][col_kontak_k]).strip()
                                     if val_kon and val_kon.lower() not in ['nan', 'none', '']:
                                         kontak_op = val_kon
-                        # -------------------------------
                         
                         html_off = f'<details class="off-personnel" style="animation: slideInRight 0.3s {anim_delay}s ease-out backwards;"><summary><b style="color:#38bdf8; font-size:12px; margin-right:8px;">OFF</b><span>{orang}</span><span style="margin-left:auto; font-size:10px; color:#94a3b8; border: 1px solid rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">▼ Kontak</span></summary><div class="off-details-content"><div><span style="color:#94a3b8;">📞 No. Handphone:</span> <b style="color:#38bdf8; font-size:15px;">{kontak_op}</b></div></div></details>'
                         st.markdown(html_off, unsafe_allow_html=True)
@@ -646,7 +663,8 @@ if menu == "🏠 Dashboard":
     if not df_matrix.empty:
         pengganti_dict = {} 
         if not df_izin.empty and 'Status Approval' in df_izin.columns:
-            df_izin_app = df_izin[df_izin['Status Approval'].astype(str).str.upper() == 'APPROVED']
+            # Memastikan kita mengambil status yang MENGANDUNG kata APPROVED (karena formatnya sekarang "APPROVED by [Nama]")
+            df_izin_app = df_izin[df_izin['Status Approval'].astype(str).str.upper().str.contains('APPROVED', na=False)]
             for _, row in df_izin_app.iterrows():
                 try:
                     nama_pengganti = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
