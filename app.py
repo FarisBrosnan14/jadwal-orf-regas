@@ -84,19 +84,34 @@ def load_all_data():
                 leave_df = leave_df[leave_df['Nama Lengkap Operator'].astype(str).str.strip() != '']
                 leave_df = leave_df[~leave_df['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
 
-        # Load Operator Data (Pemindai Baris Otomatis)
+        # Load Operator Data (Pemindai Baris Otomatis Lintas Sheet)
         try:
-            raw_operator = client.open_by_key(SHEET_ID_SCHEDULE).worksheet("Data_Operator").get_all_values()
-            if len(raw_operator) > 0:
-                temp_df = pd.DataFrame(raw_operator)
-                header_idx = -1
-                for i, row in temp_df.iterrows():
-                    if any('nama' in str(v).lower() and 'operator' in str(v).lower() for v in row.values):
-                        header_idx = i
+            sheet_target = None
+            spreadsheet_jadwal = client.open_by_key(SHEET_ID_SCHEDULE)
+            for ws in spreadsheet_jadwal.worksheets():
+                if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
+                    sheet_target = ws
+                    break
+            
+            if not sheet_target:
+                spreadsheet_izin = client.open_by_key(SHEET_ID_LEAVE)
+                for ws in spreadsheet_izin.worksheets():
+                    if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
+                        sheet_target = ws
                         break
-                if header_idx != -1:
-                    headers = temp_df.iloc[header_idx].astype(str).str.strip().tolist()
-                    operator_df = pd.DataFrame(temp_df.values[header_idx+1:], columns=headers)
+
+            if sheet_target:
+                raw_operator = sheet_target.get_all_values()
+                if len(raw_operator) > 0:
+                    temp_df = pd.DataFrame(raw_operator)
+                    header_idx = -1
+                    for i, row in temp_df.iterrows():
+                        if any('nama' in str(v).lower() and 'operator' in str(v).lower() for v in row.values):
+                            header_idx = i
+                            break
+                    if header_idx != -1:
+                        headers = temp_df.iloc[header_idx].astype(str).str.strip().tolist()
+                        operator_df = pd.DataFrame(temp_df.values[header_idx+1:], columns=headers)
         except Exception:
             pass # Abaikan jika sheet Data_Operator belum dibuat
 
@@ -188,51 +203,102 @@ def undo_leave_approval(row_index: int, row_data: pd.Series, schedule_df: pd.Dat
 
 
 # ==========================================
-# 5. UI COMPONENTS (VIEW)
+# 5. UI COMPONENTS & CSS STYLING
 # ==========================================
 def inject_custom_css(bg_base64: str):
-    """Menyuntikkan pengaturan tampilan CSS ke dalam aplikasi."""
+    """Menyuntikkan pengaturan tampilan CSS yang Responsif untuk Laptop & Mobile."""
     bg_color = "rgba(15, 23, 42, 0.85)"
     bg_css = f"background-image: linear-gradient({bg_color}, {bg_color}), url('data:image/jpeg;base64,{bg_base64}');" if bg_base64 else f"background-image: linear-gradient({bg_color}, {bg_color}), url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19?q=80&w=1920&auto=format&fit=crop');"
 
     css = f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
     html, body, [class*="css"], .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
+    
+    /* GLOBAL BACKGROUND */
     .stApp {{ {bg_css} background-size: cover; background-position: center; background-attachment: fixed; }}
-    header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; }}
+    
+    /* RESPONSIVE LAYOUT CONTAINER: Mencegah melebar ekstrem di Monitor Laptop/Ultrawide */
+    .block-container {{
+        max-width: 1200px !important; 
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+        margin: 0 auto;
+    }}
+    
+    header[data-testid="stHeader"] {{ background-color: rgba(0, 0, 0, 0.0) !important; display: none; }}
     h2, h3, h4, h5 {{ color: #ffffff !important; text-shadow: 0px 2px 4px rgba(0,0,0,0.8); }}
     
-    /* Header Top Bar */
-    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }}
-    .header-logo {{ max-height: 55px; display: block; }}
-    .header-title {{ color: #004D95 !important; font-weight: 800; font-size: 30px; margin: 0; text-align: center; flex-grow: 1; text-shadow: none !important; letter-spacing: -0.5px; }}
+    /* ====================================
+       TOP BAR (HEADER PUTIH)
+       ==================================== */
+    .header-bar {{ 
+        background-color: #ffffff; 
+        border-radius: 16px; 
+        padding: 15px 30px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        margin-bottom: 30px; 
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
+    }}
+    .header-logo {{ max-height: 55px; display: block; transition: all 0.3s; }}
+    .header-title {{ 
+        color: #004D95 !important; 
+        font-weight: 800; 
+        /* Fluid Typography: Menyesuaikan ukuran berdasarkan lebar layar */
+        font-size: clamp(20px, 3vw, 32px) !important; 
+        margin: 0; 
+        text-align: center; 
+        flex-grow: 1; 
+        text-shadow: none !important; 
+        letter-spacing: -0.5px; 
+    }}
     .header-date {{ background-color: #f8fafc; color: #0f172a !important; padding: 10px 18px; border-radius: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-size: 14px; white-space: nowrap; }}
     
-    /* Notifications */
+    /* NOTIFIKASI LONCENG */
     .notif-wrapper {{ position: relative; display: inline-block; margin-right: 15px; cursor: help; }}
     .notif-bell {{ font-size: 24px; }}
     .notif-badge {{ position: absolute; top: -5px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 7px; font-size: 11px; font-weight: 800; box-shadow: 0 2px 5px rgba(239,68,68,0.5); animation: pulseRed 2s infinite; }}
     @keyframes pulseRed {{ 0% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }} 70% {{ transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239,68,68,0); }} 100% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0); }} }}
     
-    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 15px; padding: 20px 15px; }} .header-title {{ font-size: 22px; }} .notif-wrapper {{ margin-right: 10px; }} }}
+    /* ====================================
+       MEDIA QUERIES (KHUSUS MOBILE / HP)
+       ==================================== */
+    @media (max-width: 768px) {{ 
+        .block-container {{ padding-top: 1rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }}
+        .header-bar {{ flex-direction: column; gap: 12px; padding: 20px 15px; }} 
+        .header-logo {{ max-height: 45px; }}
+        .notif-wrapper {{ margin-right: 10px; margin-bottom: 5px; }}
+        
+        /* Tombol menjadi lebih compact di layar kecil */
+        .stButton>button {{ padding: 15px 10px !important; font-size: 14px !important; }}
+    }}
 
-    /* Cards & Buttons */
+    /* ====================================
+       KARTU MELAYANG & NAVIGASI
+       ==================================== */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); padding: 20px; animation: fadeIn 0.5s ease-out; }}
     @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-    .stButton>button {{ border-radius: 12px; font-weight: 800 !important; padding: 20px 10px !important; font-size: 16px !important; transition: all 0.2s ease; height: auto !important; width: 100%; display: flex; justify-content: center; align-items: center; }}
+    
+    .stButton>button {{ border-radius: 12px; font-weight: 800 !important; padding: 20px 10px; font-size: 16px; transition: all 0.2s ease; height: auto !important; width: 100%; display: flex; justify-content: center; align-items: center; }}
     button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: #ffffff !important; border: 1px solid rgba(56,189,248,0.5) !important; box-shadow: 0 6px 15px rgba(2,132,199,0.5) !important; }}
     button[kind="secondary"] {{ background: rgba(30,41,59,0.7) !important; color: #94a3b8 !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; }}
     button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
     
-    /* Accordion OFF Personnel */
+    /* ====================================
+       ACCORDION MENU INFO PERSONEL OFF
+       ==================================== */
     details.off-personnel {{ background: rgba(56,189,248,0.05); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 8px; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
     details.off-personnel summary {{ padding: 12px 15px; cursor: pointer; font-size: 14px; font-weight: 600; color: #f8fafc; list-style: none; display: flex; align-items: center; }}
     details.off-personnel summary::-webkit-details-marker {{ display: none; }}
     details.off-personnel[open] {{ background: rgba(56,189,248,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }}
     .off-details-content {{ padding: 10px 15px 15px 15px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 14px; color: #e2e8f0; animation: fadeIn 0.3s ease-in-out; }}
 
-    /* Horizontal Scroll & Status Indicators */
+    /* ====================================
+       HORIZONTAL SCROLL JADWAL 14 HARI
+       ==================================== */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 12px; padding-bottom: 15px; padding-top: 10px; -webkit-overflow-scrolling: touch; }}
     .scroll-card {{ flex: 0 0 200px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideInRight 0.5s ease-out backwards; }}
     @keyframes slideInRight {{ 0% {{ opacity: 0; transform: translateX(20px); }} 100% {{ opacity: 1; transform: translateX(0); }} }}
@@ -240,6 +306,7 @@ def inject_custom_css(bg_base64: str):
     .scroll-item {{ margin-bottom: 10px; font-size: 13px; line-height: 1.5; padding: 8px; border-radius: 8px; background-color: rgba(255,255,255,0.05); animation: popIn 0.4s ease backwards; color: #ffffff; }}
     @keyframes popIn {{ 0% {{ opacity: 0; transform: scale(0.95); }} 100% {{ opacity: 1; transform: scale(1); }} }}
     
+    /* INDIKATOR STATUS JADWAL */
     .item-absen {{ border-left: 4px solid #ef4444; background-color: rgba(239,68,68,0.15); }}
     .item-dinas {{ border-left: 4px solid #f97316; background-color: rgba(249,115,22,0.15); }}
     .item-hadir {{ border-left: 4px solid #22c55e; background-color: rgba(34,197,94,0.1); }}
@@ -252,7 +319,9 @@ def inject_custom_css(bg_base64: str):
     .section-title {{ font-weight: 800; color: #ffffff !important; margin-bottom: 15px; position: relative; padding-bottom: 8px; font-size: 20px; }}
     .section-title::after {{ content: ''; position: absolute; left: 0; bottom: 0; width: 40px; height: 4px; background: linear-gradient(90deg, #38bdf8, transparent); border-radius: 2px; }}
     .standby-box {{ background: rgba(15,23,42,0.85); padding: 16px; border-radius: 12px; border-left: 4px solid #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.4); margin-bottom: 20px; color: #ffffff; }}
-    [data-testid="column"] {{ padding: 0 5px !important; }}
+    
+    /* Mencegah tabrak padding antar kolom di Streamlit */
+    [data-testid="column"] {{ padding: 0 8px !important; }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
@@ -313,18 +382,7 @@ def render_manager_panel(leave_df: pd.DataFrame, schedule_df: pd.DataFrame):
             proof_html = f"<a href='{proof_link}' target='_blank' style='color:#38bdf8; text-decoration:none; font-weight:700;'>📎 Buka Lampiran Dokumen</a>" if proof_link.startswith('http') else "<span style='color:#64748b; font-style:italic;'>Tidak ada file bukti terlampir</span>"
 
             with st.container(border=True):
-                html_card = f"""
-                <div style='animation: slideInRight 0.4s ease-out backwards;'>
-                    <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
-                    <div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div>
-                    <div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div>
-                    <div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'>
-                        <div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{reason_text}</div>
-                        <div style='font-size:13px;'>{proof_html}</div>
-                    </div>
-                    <div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
-                </div>
-                """
+                html_card = f"""<div style='animation: slideInRight 0.4s ease-out backwards;'><b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> <span style='color:#cbd5e1; font-weight:500;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span><div style='font-size:14px; margin-top:8px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</div><div style='font-size:14px; color:#e2e8f0; margin-top:2px;'><b>Shift:</b> {row.get('Shift Izin', 'Pg')}</div><div style='margin-top:10px; background: rgba(255,255,255,0.05); border-left: 3px solid #94a3b8; padding: 10px; border-radius: 4px;'><div style='font-size:13px; color:#cbd5e1; margin-bottom:5px;'><b>📝 Alasan / Keterangan:</b><br>{reason_text}</div><div style='font-size:13px;'>{proof_html}</div></div><div style='font-size:14px; color:#fca5a5; font-weight:700; margin-top:12px; margin-bottom:12px; background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div></div>"""
                 st.markdown(html_card, unsafe_allow_html=True)
                 
                 c_app, c_rej = st.columns(2)
