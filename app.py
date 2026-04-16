@@ -22,6 +22,7 @@ URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
+# Database Sederhana untuk Hari Libur / Event Nasional (Bisa ditambah)
 EVENT_KALENDER = {
     "01-01": "Tahun Baru Masehi",
     "02-08": "Isra Mikraj Nabi Muhammad",
@@ -273,12 +274,12 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Jam Berdetik, Kalender Event, dan Cuaca (Open-Meteo)"""
+    """WIDGET HUD JS: Jam Berdetik, Kalender Event, dan Cuaca ORF Muara Karang (Open-Meteo)"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     
-    # Koordinat Area Jakarta / Teluk Jakarta
-    lat, lon = "-6.15", "106.82"
+    # Koordinat ORF Muara Karang, Jakarta Utara
+    lat, lon = "-6.1115", "106.7932"
     
     components.html(f"""
     <style>
@@ -325,7 +326,7 @@ def ui_live_hud_widget():
         </div>
         
         <div class="hud-section border-left-divider" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
-            <div class="weather-box">
+            <div class="weather-box" title="Cuaca ORF Muara Karang">
                 <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:24px;">partly_cloudy_day</span>
                 <div style="display:flex; flex-direction:column; gap:2px;">
                     <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat...</span>
@@ -353,7 +354,7 @@ def ui_live_hud_widget():
         }}
         setInterval(updateTime, 1000); updateTime();
 
-        // Fetch Cuaca dari Open-Meteo (Gratis, Tanpa API Key)
+        // Fetch Cuaca dari Open-Meteo untuk Muara Karang
         async function fetchWeather() {{
             try {{
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true');
@@ -558,6 +559,7 @@ if __name__ == "__main__":
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
+    # Navigasi Profesional Tanpa Emoji
     st.markdown("<br>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
