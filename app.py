@@ -186,18 +186,59 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
 
 
 # =====================================================================
-# 4. CSS PROFESIONAL & ANIMASI UI
+# 4. CSS PROFESIONAL, SPLASH SCREEN, & ANIMASI UI
 # =====================================================================
-def inject_custom_css(bg_base64):
+def inject_custom_css(bg_base64, logo_base64):
     st.markdown("""<style>[data-testid="collapsedControl"] { display: none; } .block-container { padding-top: 2rem !important; }</style>""", unsafe_allow_html=True)
     bg_color = "rgba(15, 23, 42, 0.88)"
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else "url('https://images.unsplash.com/photo-1583508108422-0a13d712ce19')"
     
+    logo_src = f"data:image/png;base64,{logo_base64}" if logo_base64 else "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png"
+    
+    # INJEKSI SPLASH SCREEN & CSS
     st.markdown(f"""
+    <div id="splash-overlay">
+        <div class="splash-content">
+            <img src="{logo_src}" class="splash-logo" alt="Logo">
+            <h2 class="splash-title">NR ORF COMMAND</h2>
+            <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+        </div>
+    </div>
+
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
+    /* ==============================================
+       SPLASH SCREEN ANIMATIONS
+       ============================================== */
+    #splash-overlay {{
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        z-index: 9999999; 
+        display: flex; justify-content: center; align-items: center;
+        animation: splashFadeOut 0.8s cubic-bezier(0.8, 0, 0.2, 1) 2s forwards; 
+    }}
+    .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; }}
+    .splash-logo {{ max-height: 70px; margin-bottom: 25px; animation: floatLogo 2s ease-in-out infinite alternate; }}
+    .splash-title {{ color: #ffffff; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: 2px; margin: 0; }}
+    .splash-subtitle {{ color: #38bdf8; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 10px; opacity: 0.8; }}
+    .loading-bar-container {{ width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 25px; overflow: hidden; position: relative; }}
+    .loading-bar {{ position: absolute; top: 0; left: 0; height: 100%; width: 40%; background: #38bdf8; border-radius: 4px; animation: loadingSwipe 1.2s ease-in-out infinite; box-shadow: 0 0 10px rgba(56,189,248,0.8); }}
+    
+    @keyframes splashFadeOut {{
+        0% {{ opacity: 1; visibility: visible; backdrop-filter: blur(10px); transform: scale(1); }}
+        100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); transform: scale(1.05); pointer-events: none; }}
+    }}
+    @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6)); }} }}
+    @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
+
+    /* ==============================================
+       GLOBAL STYLES
+       ============================================== */
     html, body, [class*="css"], .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
     .stApp {{ background-image: linear-gradient({bg_color}, {bg_color}), {bg_img}; background-size: cover; background-attachment: fixed; }}
     .block-container {{ max-width: 1200px !important; margin: 0 auto; }}
@@ -221,8 +262,7 @@ def inject_custom_css(bg_base64):
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
     
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
-    @keyframes pulseRed {{ 0% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }} 70% {{ box-shadow: 0 0 0 8px rgba(239,68,68,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0); }} }}
-
+    
     details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
     details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
     details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
@@ -273,58 +313,33 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Carousel Horizontal (Mencegah terpotong di HP)"""
+    """WIDGET HUD JS: Jam GPS Berdetik, Kalender Event, Cuaca Berdasarkan Lokasi Perangkat"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
-    
-    # Koordinat ORF Muara Karang (Fallback)
     fallback_lat, fallback_lon = "-6.1115", "106.7932"
     
-    # Perhatikan CSS `.hud-container` yang diubah menjadi korsel gulir horizontal
     components.html(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
-        body {{
-            margin: 0; padding: 5px; font-family: 'Plus Jakarta Sans', sans-serif;
-            overflow: hidden; /* Mencegah munculnya scrollbar vertikal bawaan iframe */
-        }}
+        body {{ margin: 0; padding: 5px; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }}
         .hud-container {{
             display: flex; align-items: center; justify-content: flex-start; gap: 20px;
             background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1));
             border: 1px solid rgba(56,189,248,0.4); border-radius: 16px; 
-            padding: 12px 20px; box-sizing: border-box;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4); color: #f8fafc;
-            
-            /* Kunci agar jadi Horizontal Swipe di HP */
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; 
+            padding: 12px 20px; box-sizing: border-box; box-shadow: 0 8px 20px rgba(0,0,0,0.4); color: #f8fafc;
+            flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; 
         }}
-        .hud-container::-webkit-scrollbar {{ display: none; }} /* Sembunyikan scrollbar di Chrome/Safari */
-        
+        .hud-container::-webkit-scrollbar {{ display: none; }}
         .hud-section {{ display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }}
-        
         .clock {{ font-size: 26px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-shadow: 0 0 12px rgba(56,189,248,0.4); }}
         .date {{ font-size: 15px; font-weight: 600; color: #e2e8f0; }}
-        
-        .box-hud {{
-            display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); 
-            padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-            position: relative;
-        }}
+        .box-hud {{ display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); position: relative; }}
         .stat-group {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
         .stat-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
-        
         .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 6px 14px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
-        
-        #loc-status {{
-            position: absolute; top: -6px; right: -6px; background: #3b82f6; width: 14px; height: 14px;
-            border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center;
-        }}
+        #loc-status {{ position: absolute; top: -6px; right: -6px; background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center; }}
         .border-left-divider {{ border-left: 2px solid rgba(255,255,255,0.1); padding-left: 20px; }}
-        
         #compass-needle {{ transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: center center; }}
     </style>
 
@@ -335,7 +350,6 @@ def ui_live_hud_widget():
             <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 4px;"></div>
             <span class="date" id="live-date">Memuat...</span>
         </div>
-        
         <div class="hud-section border-left-divider">
             <div class="box-hud" title="Lokasi dan Arah Mata Angin">
                 <span class="material-symbols-rounded" id="compass-needle" style="color:#f87171; font-size:26px;">navigation</span>
@@ -350,7 +364,6 @@ def ui_live_hud_widget():
                 </div>
             </div>
         </div>
-
         <div class="hud-section border-left-divider">
             <div class="box-hud">
                 <div id="loc-status" title="Status GPS"><span class="material-symbols-rounded" style="font-size:10px; color:white;" id="loc-icon">location_searching</span></div>
@@ -364,7 +377,6 @@ def ui_live_hud_widget():
                 </div>
             </div>
         </div>
-        
         <div class="hud-section border-left-divider">
             <span class="event"><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> {event_hari_ini}</span>
         </div>
@@ -453,7 +465,7 @@ def ui_live_hud_widget():
             }}, true);
         }}
     </script>
-    """, height=115) # Menggunakan tinggi 115px agar pas untuk satu baris swipeable
+    """, height=115)
 
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -613,7 +625,7 @@ def ui_timeline(df_j, df_i):
 # 6. ROUTER & MAIN EXECUTION
 # =====================================================================
 if __name__ == "__main__":
-    inject_custom_css(get_base64_image("fsru.jpg"))
+    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"))
     df_j, df_i, df_k = load_all_data()
 
     pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
@@ -621,13 +633,12 @@ if __name__ == "__main__":
     ui_header(get_base64_image("pertamina.png"), pending_count)
     
     # -------------------------------------
-    # RENDER WIDGET HUD REAL-TIME GPS (FIXED SCROLL)
+    # RENDER WIDGET HUD REAL-TIME GPS
     # -------------------------------------
     ui_live_hud_widget() 
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
-    # Navigasi Profesional Tanpa Emoji
     st.markdown("<br>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
