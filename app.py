@@ -22,7 +22,6 @@ URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
-# Database Hari Libur / Event Nasional
 EVENT_KALENDER = {
     "01-01": "Tahun Baru Masehi",
     "02-08": "Isra Mikraj Nabi Muhammad",
@@ -42,7 +41,6 @@ EVENT_KALENDER = {
     "09-16": "Maulid Nabi Muhammad SAW",
     "12-25": "Hari Raya Natal"
 }
-
 
 # =====================================================================
 # 2. FUNGSI BANTUAN (UTILITIES)
@@ -274,12 +272,11 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Jam GPS Berdetik, Kalender Event, Cuaca Berdasarkan Lokasi Perangkat"""
+    """WIDGET HUD JS: Jam, Radar Lokasi, Kompas, dan Cuaca"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     
-    # Titik Jatuh (Fallback) jika pengguna menolak akses lokasi atau GPS mati
-    # ORF Muara Karang, Jakarta Utara
+    # Koordinat ORF Muara Karang (Fallback jika GPS mati/ditolak)
     fallback_lat, fallback_lon = "-6.1115", "106.7932"
     
     components.html(f"""
@@ -299,50 +296,60 @@ def ui_live_hud_widget():
             flex-wrap: wrap; transition: all 0.3s ease;
         }}
         .hud-container:hover {{ border-color: rgba(56,189,248,0.8); box-shadow: 0 12px 30px rgba(0,0,0,0.6); }}
-        .hud-section {{ display: flex; align-items: center; gap: 10px; }}
+        .hud-section {{ display: flex; align-items: center; gap: 10px; position: relative; }}
         .clock {{ font-size: 26px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-shadow: 0 0 12px rgba(56,189,248,0.4); }}
         .date {{ font-size: 15px; font-weight: 600; color: #e2e8f0; }}
         
-        .weather-box {{
+        .box-hud {{
             display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); 
-            padding: 6px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-            position: relative;
+            padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
         }}
-        .weather-stat {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
-        .weather-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
+        .stat-group {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
+        .stat-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
         
         .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 4px 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
         
-        #loc-status {{
-            position: absolute; top: -8px; right: -8px; background: #3b82f6; width: 14px; height: 14px;
-            border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center;
-        }}
+        /* Efek Kompas */
+        #compass-needle {{ transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: center center; }}
         
-        @media (max-width: 850px) {{ 
+        @media (max-width: 950px) {{ 
             .hud-container {{ justify-content: center; flex-direction: column; text-align: center; gap: 12px; padding: 16px; }} 
             .border-left-divider {{ border-left: none !important; padding-left: 0 !important; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 12px; width: 100%; justify-content: center; }}
-            .weather-box {{ width: 100%; justify-content: center; }}
+            .box-hud {{ width: 100%; justify-content: center; }}
         }}
     </style>
+
     <div class="hud-container">
         <div class="hud-section" style="flex-wrap: wrap; justify-content: center;">
             <span class="material-symbols-rounded" style="color:#38bdf8; font-size:30px;">schedule</span>
             <span class="clock" id="live-clock">--:--:--</span>
-            <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 8px;" class="hide-mobile"></div>
-            <span class="date" id="live-date">Memuat Waktu Lokal...</span>
+            <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 8px;"></div>
+            <span class="date" id="live-date">Memuat...</span>
         </div>
         
         <div class="hud-section border-left-divider" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
-            <div class="weather-box" id="weather-container" title="Meminta Akses Lokasi...">
-                <div id="loc-status" title="Status GPS">
-                    <span class="material-symbols-rounded" style="font-size:10px; color:white;" id="loc-icon">location_searching</span>
-                </div>
-                <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:24px;">partly_cloudy_day</span>
-                <div style="display:flex; flex-direction:column; gap:2px;">
-                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat Cuaca...</span>
+            <div class="box-hud" title="Lokasi dan Arah Mata Angin">
+                <span class="material-symbols-rounded" id="compass-needle" style="color:#f87171; font-size:26px;">navigation</span>
+                <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
+                    <span id="loc-name" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">Mencari Sinyal GPS...</span>
                     <div style="display:flex; gap:10px;">
-                        <span class="weather-stat" title="Suhu Lokal"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="weather-val">--</span></span>
-                        <span class="weather-stat" title="Kecepatan Angin Lokal"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="weather-val">--</span></span>
+                        <span class="stat-group" title="Arah Hadap Perangkat">
+                            <span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">explore</span> 
+                            <span id="compass-val" class="stat-val" style="color:#38bdf8;">--°</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-section border-left-divider" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
+            <div class="box-hud">
+                <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:26px;">partly_cloudy_day</span>
+                <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
+                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat...</span>
+                    <div style="display:flex; gap:10px;">
+                        <span class="stat-group"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="stat-val">--</span></span>
+                        <span class="stat-group"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="stat-val">--</span></span>
                     </div>
                 </div>
             </div>
@@ -354,27 +361,30 @@ def ui_live_hud_widget():
     </div>
     
     <script>
-        // Update Jam Tiap Detik Sesuai Waktu Perangkat
+        // A. Waktu Real-Time
         function updateTime() {{
             const now = new Date();
-            const optTime = {{ hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }};
-            const optDate = {{ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }};
-            document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, optTime).replace(/\./g, ':');
-            document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, optDate);
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, {{hour12: false}}).replace(/\./g, ':');
+            document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, {{weekday: 'short', day: 'numeric', month: 'short'}});
         }}
         setInterval(updateTime, 1000); updateTime();
 
-        // Variabel untuk menyimpan titik terakhir
         let currentLat = '{fallback_lat}';
         let currentLon = '{fallback_lon}';
-        let isUsingGPS = false;
 
-        // Fetch Cuaca dari Open-Meteo
-        async function fetchWeather(lat, lon) {{
+        // B. API Cuaca (Open-Meteo) & API Lokasi (BigDataCloud Reverse Geocoding)
+        async function fetchLocationData(lat, lon, isGPS) {{
             try {{
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${{lat}}&longitude=${{lon}}&current_weather=true`);
-                const data = await res.json();
-                const cw = data.current_weather;
+                // 1. Ambil Nama Lokasi
+                const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${{lat}}&longitude=${{lon}}&localityLanguage=id`);
+                const locData = await locRes.json();
+                const locName = locData.locality || locData.city || "Titik Koordinat";
+                document.getElementById('loc-name').innerText = isGPS ? locName : "ORF Muara Karang (Default)";
+
+                // 2. Ambil Cuaca
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${{lat}}&longitude=${{lon}}&current_weather=true`);
+                const wData = await wRes.json();
+                const cw = wData.current_weather;
                 
                 document.getElementById('w-temp').innerText = cw.temperature + '°C';
                 document.getElementById('w-wind').innerText = cw.windspeed + ' km/h';
@@ -394,57 +404,44 @@ def ui_live_hud_widget():
                 iconEl.innerText = icon; iconEl.style.color = color;
                 document.getElementById('w-desc').innerText = desc;
                 
-                // Update Indikator Lokasi
-                const locStatus = document.getElementById('loc-status');
-                const locIcon = document.getElementById('loc-icon');
-                const weatherBox = document.getElementById('weather-container');
-                
-                if (isUsingGPS) {{
-                    locStatus.style.background = '#22c55e'; // Hijau = GPS Aktif
-                    locIcon.innerText = 'my_location';
-                    weatherBox.title = "Cuaca Akurat di Lokasi Anda";
-                }} else {{
-                    locStatus.style.background = '#f97316'; // Oranye = Fallback ke ORF Muara Karang
-                    locIcon.innerText = 'location_off';
-                    weatherBox.title = "GPS Mati. Menampilkan Cuaca ORF Muara Karang";
-                }}
-                
             }} catch (err) {{
                 document.getElementById('w-desc').innerText = "Cuaca Offline";
-                document.getElementById('loc-status').style.background = '#ef4444'; // Merah = Error
+                document.getElementById('loc-name').innerText = "Sinyal Hilang";
             }}
         }}
 
-        // Deteksi Lokasi Otomatis via Browser HTML5
-        function initLocation() {{
-            if (navigator.geolocation) {{
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {{
-                        currentLat = position.coords.latitude;
-                        currentLon = position.coords.longitude;
-                        isUsingGPS = true;
-                        fetchWeather(currentLat, currentLon);
-                    }},
-                    (error) => {{
-                        console.warn("GPS Access Denied/Failed. Using Fallback Location.");
-                        isUsingGPS = false;
-                        fetchWeather(currentLat, currentLon); // Fallback ke Muara Karang
-                    }},
-                    {{ timeout: 10000, maximumAge: 60000 }}
-                );
-            }} else {{
-                isUsingGPS = false;
-                fetchWeather(currentLat, currentLon);
-            }}
+        // C. Pelacakan GPS Geolocation
+        if (navigator.geolocation) {{
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {{
+                    currentLat = pos.coords.latitude;
+                    currentLon = pos.coords.longitude;
+                    fetchLocationData(currentLat, currentLon, true);
+                }},
+                (err) => {{ fetchLocationData(currentLat, currentLon, false); }} // Fallback
+            );
+        }} else {{
+            fetchLocationData(currentLat, currentLon, false);
         }}
+        setInterval(() => fetchLocationData(currentLat, currentLon, true), 600000); // Update 10 menit
 
-        // Mulai pelacakan
-        initLocation();
-        
-        // Auto-update cuaca tiap 10 menit menggunakan koordinat terakhir
-        setInterval(() => fetchWeather(currentLat, currentLon), 600000); 
+        // D. Kompas Gyroscope (Device Orientation)
+        if (window.DeviceOrientationEvent) {{
+            window.addEventListener('deviceorientation', function(e) {{
+                let heading = null;
+                // iOS: webkitCompassHeading, Android: hitung dari alpha
+                if (e.webkitCompassHeading) {{ heading = e.webkitCompassHeading; }}
+                else if (e.alpha !== null) {{ heading = 360 - e.alpha; }} // Konversi Z-axis
+                
+                if (heading !== null) {{
+                    document.getElementById('compass-val').innerText = Math.round(heading) + '°';
+                    // Putar jarum berlawanan arah agar selalu menunjuk Utara
+                    document.getElementById('compass-needle').style.transform = `rotate(${{-heading}}deg)`;
+                }}
+            }}, true);
+        }}
     </script>
-    """, height=125)
+    """, height=140)
 
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -618,7 +615,6 @@ if __name__ == "__main__":
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
-    # Navigasi Profesional Tanpa Emoji
     st.markdown("<br>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
