@@ -22,7 +22,7 @@ URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
-# Database Sederhana untuk Hari Libur / Event Nasional (Bisa ditambah)
+# Database Hari Libur / Event Nasional
 EVENT_KALENDER = {
     "01-01": "Tahun Baru Masehi",
     "02-08": "Isra Mikraj Nabi Muhammad",
@@ -274,12 +274,13 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Jam Berdetik, Kalender Event, dan Cuaca ORF Muara Karang (Open-Meteo)"""
+    """WIDGET HUD JS: Jam GPS Berdetik, Kalender Event, Cuaca Berdasarkan Lokasi Perangkat"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     
-    # Koordinat ORF Muara Karang, Jakarta Utara
-    lat, lon = "-6.1115", "106.7932"
+    # Titik Jatuh (Fallback) jika pengguna menolak akses lokasi atau GPS mati
+    # ORF Muara Karang, Jakarta Utara
+    fallback_lat, fallback_lon = "-6.1115", "106.7932"
     
     components.html(f"""
     <style>
@@ -305,11 +306,17 @@ def ui_live_hud_widget():
         .weather-box {{
             display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); 
             padding: 6px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
         }}
         .weather-stat {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
         .weather-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
         
         .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 4px 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
+        
+        #loc-status {{
+            position: absolute; top: -8px; right: -8px; background: #3b82f6; width: 14px; height: 14px;
+            border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center;
+        }}
         
         @media (max-width: 850px) {{ 
             .hud-container {{ justify-content: center; flex-direction: column; text-align: center; gap: 12px; padding: 16px; }} 
@@ -322,17 +329,20 @@ def ui_live_hud_widget():
             <span class="material-symbols-rounded" style="color:#38bdf8; font-size:30px;">schedule</span>
             <span class="clock" id="live-clock">--:--:--</span>
             <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 8px;" class="hide-mobile"></div>
-            <span class="date" id="live-date">Memuat Tanggal...</span>
+            <span class="date" id="live-date">Memuat Waktu Lokal...</span>
         </div>
         
         <div class="hud-section border-left-divider" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
-            <div class="weather-box" title="Cuaca ORF Muara Karang">
+            <div class="weather-box" id="weather-container" title="Meminta Akses Lokasi...">
+                <div id="loc-status" title="Status GPS">
+                    <span class="material-symbols-rounded" style="font-size:10px; color:white;" id="loc-icon">location_searching</span>
+                </div>
                 <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:24px;">partly_cloudy_day</span>
                 <div style="display:flex; flex-direction:column; gap:2px;">
-                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat...</span>
+                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat Cuaca...</span>
                     <div style="display:flex; gap:10px;">
-                        <span class="weather-stat" title="Suhu"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="weather-val">--</span></span>
-                        <span class="weather-stat" title="Kecepatan Angin"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="weather-val">--</span></span>
+                        <span class="weather-stat" title="Suhu Lokal"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="weather-val">--</span></span>
+                        <span class="weather-stat" title="Kecepatan Angin Lokal"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="weather-val">--</span></span>
                     </div>
                 </div>
             </div>
@@ -344,20 +354,25 @@ def ui_live_hud_widget():
     </div>
     
     <script>
-        // Update Jam Tiap Detik
+        // Update Jam Tiap Detik Sesuai Waktu Perangkat
         function updateTime() {{
             const now = new Date();
             const optTime = {{ hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }};
             const optDate = {{ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }};
-            document.getElementById('live-clock').innerText = now.toLocaleTimeString('id-ID', optTime).replace(/\./g, ':');
-            document.getElementById('live-date').innerText = now.toLocaleDateString('id-ID', optDate);
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, optTime).replace(/\./g, ':');
+            document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, optDate);
         }}
         setInterval(updateTime, 1000); updateTime();
 
-        // Fetch Cuaca dari Open-Meteo untuk Muara Karang
-        async function fetchWeather() {{
+        // Variabel untuk menyimpan titik terakhir
+        let currentLat = '{fallback_lat}';
+        let currentLon = '{fallback_lon}';
+        let isUsingGPS = false;
+
+        // Fetch Cuaca dari Open-Meteo
+        async function fetchWeather(lat, lon) {{
             try {{
-                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true');
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${{lat}}&longitude=${{lon}}&current_weather=true`);
                 const data = await res.json();
                 const cw = data.current_weather;
                 
@@ -378,12 +393,56 @@ def ui_live_hud_widget():
                 const iconEl = document.getElementById('w-icon');
                 iconEl.innerText = icon; iconEl.style.color = color;
                 document.getElementById('w-desc').innerText = desc;
+                
+                // Update Indikator Lokasi
+                const locStatus = document.getElementById('loc-status');
+                const locIcon = document.getElementById('loc-icon');
+                const weatherBox = document.getElementById('weather-container');
+                
+                if (isUsingGPS) {{
+                    locStatus.style.background = '#22c55e'; // Hijau = GPS Aktif
+                    locIcon.innerText = 'my_location';
+                    weatherBox.title = "Cuaca Akurat di Lokasi Anda";
+                }} else {{
+                    locStatus.style.background = '#f97316'; // Oranye = Fallback ke ORF Muara Karang
+                    locIcon.innerText = 'location_off';
+                    weatherBox.title = "GPS Mati. Menampilkan Cuaca ORF Muara Karang";
+                }}
+                
             }} catch (err) {{
                 document.getElementById('w-desc').innerText = "Cuaca Offline";
+                document.getElementById('loc-status').style.background = '#ef4444'; // Merah = Error
             }}
         }}
-        fetchWeather();
-        setInterval(fetchWeather, 600000); // Auto-update cuaca tiap 10 menit
+
+        // Deteksi Lokasi Otomatis via Browser HTML5
+        function initLocation() {{
+            if (navigator.geolocation) {{
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {{
+                        currentLat = position.coords.latitude;
+                        currentLon = position.coords.longitude;
+                        isUsingGPS = true;
+                        fetchWeather(currentLat, currentLon);
+                    }},
+                    (error) => {{
+                        console.warn("GPS Access Denied/Failed. Using Fallback Location.");
+                        isUsingGPS = false;
+                        fetchWeather(currentLat, currentLon); // Fallback ke Muara Karang
+                    }},
+                    {{ timeout: 10000, maximumAge: 60000 }}
+                );
+            }} else {{
+                isUsingGPS = false;
+                fetchWeather(currentLat, currentLon);
+            }}
+        }}
+
+        // Mulai pelacakan
+        initLocation();
+        
+        // Auto-update cuaca tiap 10 menit menggunakan koordinat terakhir
+        setInterval(() => fetchWeather(currentLat, currentLon), 600000); 
     </script>
     """, height=125)
 
@@ -553,7 +612,7 @@ if __name__ == "__main__":
     ui_header(get_base64_image("pertamina.png"), pending_count)
     
     # -------------------------------------
-    # RENDER WIDGET HUD REAL-TIME
+    # RENDER WIDGET HUD REAL-TIME GPS
     # -------------------------------------
     ui_live_hud_widget() 
 
