@@ -236,6 +236,30 @@ def inject_custom_css(bg_base64, logo_base64):
     header[data-testid="stHeader"] {{ display: none !important; }}
     .material-symbols-rounded {{ font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }}
 
+    /* KONTRAST FORM INPUT (Teks & Tanggal) - Membuat Isian Jadi Putih */
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="datepicker"] > div {{
+        background-color: #f8fafc !important;
+        border-radius: 8px !important;
+        border: 2px solid transparent !important;
+        transition: all 0.3s ease;
+    }}
+    div[data-baseweb="input"] > div:focus-within,
+    div[data-baseweb="select"] > div:focus-within,
+    div[data-baseweb="datepicker"] > div:focus-within {{
+        border: 2px solid #38bdf8 !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
+    }}
+    div[data-baseweb="input"] input,
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div[class*="singleValue"] {{
+        color: #0f172a !important;
+        font-weight: 700 !important;
+    }}
+    div[data-baseweb="input"] input::placeholder {{ color: #94a3b8 !important; font-weight: 500 !important; }}
+    div[data-baseweb="input"] svg, div[data-baseweb="select"] svg {{ color: #64748b !important; }}
+
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
         border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }}
@@ -250,6 +274,7 @@ def inject_custom_css(bg_base64, logo_base64):
 
     .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeIn 0.5s ease-out 2s both; }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
+    
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
     
     details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
@@ -302,7 +327,6 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: TTS Voice, Jam GPS, Kalender Event, Cuaca"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     fallback_lat, fallback_lon = "-6.1115", "106.7932"
@@ -372,26 +396,18 @@ def ui_live_hud_widget():
     </div>
     
     <script>
-        // A. TEXT-TO-SPEECH (Suara Selamat Datang)
         let greetingPlayed = false;
         function playGreeting() {{
             if (!greetingPlayed && 'speechSynthesis' in window) {{
                 let msg = new SpeechSynthesisUtterance("Halo. Selamat datang di N R, O R F, Integrated Command.");
-                msg.lang = "id-ID";
-                msg.rate = 0.9;
+                msg.lang = "id-ID"; msg.rate = 0.9;
                 window.speechSynthesis.speak(msg);
                 greetingPlayed = true;
             }}
         }}
-        
-        // Panggil setelah 1.5 detik (sesuai timing hilangnya loading screen)
         setTimeout(playGreeting, 1500);
-        
-        // Cadangan jika browser memblokir autoplay: mainkan saat user menyentuh/klik widget
-        window.addEventListener('click', playGreeting);
-        window.addEventListener('touchstart', playGreeting);
+        window.addEventListener('click', playGreeting); window.addEventListener('touchstart', playGreeting);
 
-        // B. JAM REAL-TIME
         function updateTime() {{
             const now = new Date();
             document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, {{hour12: false}}).replace(/\./g, ':');
@@ -402,7 +418,6 @@ def ui_live_hud_widget():
         let currentLat = '{fallback_lat}';
         let currentLon = '{fallback_lon}';
 
-        // C. LOKASI & CUACA
         async function fetchLocationData(lat, lon, isGPS) {{
             try {{
                 const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${{lat}}&longitude=${{lon}}&localityLanguage=id`);
@@ -435,13 +450,8 @@ def ui_live_hud_widget():
                 const locStatus = document.getElementById('loc-status');
                 const locIcon = document.getElementById('loc-icon');
                 
-                if (isGPS) {{
-                    locStatus.style.background = '#22c55e';
-                    locIcon.innerText = 'my_location';
-                }} else {{
-                    locStatus.style.background = '#f97316';
-                    locIcon.innerText = 'location_off';
-                }}
+                if (isGPS) {{ locStatus.style.background = '#22c55e'; locIcon.innerText = 'my_location'; }} 
+                else {{ locStatus.style.background = '#f97316'; locIcon.innerText = 'location_off'; }}
             }} catch (err) {{
                 document.getElementById('w-desc').innerText = "Cuaca Offline";
                 document.getElementById('loc-status').style.background = '#ef4444';
@@ -450,19 +460,12 @@ def ui_live_hud_widget():
 
         if (navigator.geolocation) {{
             navigator.geolocation.getCurrentPosition(
-                (pos) => {{
-                    currentLat = pos.coords.latitude;
-                    currentLon = pos.coords.longitude;
-                    fetchLocationData(currentLat, currentLon, true);
-                }},
+                (pos) => {{ currentLat = pos.coords.latitude; currentLon = pos.coords.longitude; fetchLocationData(currentLat, currentLon, true); }},
                 (err) => {{ fetchLocationData(currentLat, currentLon, false); }}
             );
-        }} else {{
-            fetchLocationData(currentLat, currentLon, false);
-        }}
+        }} else {{ fetchLocationData(currentLat, currentLon, false); }}
         setInterval(() => fetchLocationData(currentLat, currentLon, true), 600000);
 
-        // D. KOMPAS
         if (window.DeviceOrientationEvent) {{
             window.addEventListener('deviceorientation', function(e) {{
                 let heading = null;
