@@ -22,7 +22,6 @@ URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
-# Database Sederhana untuk Hari Libur / Event Nasional (Bisa ditambah)
 EVENT_KALENDER = {
     "01-01": "Tahun Baru Masehi",
     "02-08": "Isra Mikraj Nabi Muhammad",
@@ -255,7 +254,7 @@ def inject_custom_css(bg_base64):
 
 
 # =====================================================================
-# 5. KOMPONEN UI UTAMA
+# 5. KOMPONEN UI UTAMA & HUD WIDGET
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" style="max-height: 50px;">'
@@ -269,21 +268,21 @@ def ui_header(logo_base64, pending_count):
     <div class="header-bar">
         <div>{logo}</div>
         <h1 class="header-title">NR ORF Integrated Command</h1>
-        <div style="display:flex; align-items:center;">
-            {notif}
-        </div>
+        <div style="display:flex; align-items:center;">{notif}</div>
     </div>
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Jam Berdetik & Kalender Event Tanpa Membebani Server Python"""
+    """WIDGET HUD JS: Jam Berdetik, Kalender Event, dan Cuaca (Open-Meteo)"""
     hari_ini = datetime.now().strftime("%m-%d")
-    event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event / libur nasional")
+    event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     
-    # Render UI via Streamlit Component Iframe agar JS jalan mulus 60 FPS
+    # Koordinat Area Jakarta / Teluk Jakarta
+    lat, lon = "-6.15", "106.82"
+    
     components.html(f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
         body {{
             margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif;
@@ -293,30 +292,58 @@ def ui_live_hud_widget():
             display: flex; align-items: center; justify-content: space-between; gap: 15px;
             background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1));
             border: 1px solid rgba(56,189,248,0.4); border-radius: 16px; 
-            padding: 16px 24px; width: 100%; box-sizing: border-box;
+            padding: 14px 24px; width: 100%; box-sizing: border-box;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #f8fafc;
-            flex-wrap: wrap;
+            flex-wrap: wrap; transition: all 0.3s ease;
         }}
+        .hud-container:hover {{ border-color: rgba(56,189,248,0.8); box-shadow: 0 12px 30px rgba(0,0,0,0.6); }}
         .hud-section {{ display: flex; align-items: center; gap: 10px; }}
-        .clock {{ font-size: 24px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 2px; text-shadow: 0 0 10px rgba(56,189,248,0.5); }}
+        .clock {{ font-size: 26px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-shadow: 0 0 12px rgba(56,189,248,0.4); }}
         .date {{ font-size: 15px; font-weight: 600; color: #e2e8f0; }}
-        .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 4px 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); }}
-        @media (max-width: 600px) {{ .hud-container {{ justify-content: center; flex-direction: column; text-align: center; }} }}
+        
+        .weather-box {{
+            display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); 
+            padding: 6px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+        }}
+        .weather-stat {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
+        .weather-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
+        
+        .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 4px 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
+        
+        @media (max-width: 850px) {{ 
+            .hud-container {{ justify-content: center; flex-direction: column; text-align: center; gap: 12px; padding: 16px; }} 
+            .border-left-divider {{ border-left: none !important; padding-left: 0 !important; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 12px; width: 100%; justify-content: center; }}
+            .weather-box {{ width: 100%; justify-content: center; }}
+        }}
     </style>
     <div class="hud-container">
-        <div class="hud-section">
-            <span class="material-symbols-rounded" style="color:#38bdf8; font-size:28px;">schedule</span>
+        <div class="hud-section" style="flex-wrap: wrap; justify-content: center;">
+            <span class="material-symbols-rounded" style="color:#38bdf8; font-size:30px;">schedule</span>
             <span class="clock" id="live-clock">--:--:--</span>
-        </div>
-        <div class="hud-section" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
-            <span class="material-symbols-rounded" style="color:#94a3b8;">calendar_month</span>
+            <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 8px;" class="hide-mobile"></div>
             <span class="date" id="live-date">Memuat Tanggal...</span>
         </div>
-        <div class="hud-section" style="margin-left: auto;">
-            <span class="event"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">campaign</span> {event_hari_ini}</span>
+        
+        <div class="hud-section border-left-divider" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
+            <div class="weather-box">
+                <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:24px;">partly_cloudy_day</span>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat...</span>
+                    <div style="display:flex; gap:10px;">
+                        <span class="weather-stat" title="Suhu"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="weather-val">--</span></span>
+                        <span class="weather-stat" title="Kecepatan Angin"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="weather-val">--</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hud-section border-left-divider" style="margin-left: auto;">
+            <span class="event"><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> {event_hari_ini}</span>
         </div>
     </div>
+    
     <script>
+        // Update Jam Tiap Detik
         function updateTime() {{
             const now = new Date();
             const optTime = {{ hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }};
@@ -325,8 +352,39 @@ def ui_live_hud_widget():
             document.getElementById('live-date').innerText = now.toLocaleDateString('id-ID', optDate);
         }}
         setInterval(updateTime, 1000); updateTime();
+
+        // Fetch Cuaca dari Open-Meteo (Gratis, Tanpa API Key)
+        async function fetchWeather() {{
+            try {{
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true');
+                const data = await res.json();
+                const cw = data.current_weather;
+                
+                document.getElementById('w-temp').innerText = cw.temperature + '°C';
+                document.getElementById('w-wind').innerText = cw.windspeed + ' km/h';
+                
+                const code = cw.weathercode;
+                let icon = 'partly_cloudy_day'; let desc = 'Berawan'; let color = '#facc15';
+                
+                if (code === 0) {{ icon = 'clear_day'; desc = 'Cerah'; }}
+                else if (code > 0 && code <= 3) {{ icon = 'cloud'; desc = 'Berawan'; color = '#cbd5e1'; }}
+                else if (code >= 45 && code <= 48) {{ icon = 'fog'; desc = 'Berkabut'; color = '#94a3b8'; }}
+                else if (code >= 51 && code <= 67) {{ icon = 'rainy'; desc = 'Gerimis'; color = '#60a5fa'; }}
+                else if (code >= 71 && code <= 77) {{ icon = 'rainy'; desc = 'Hujan'; color = '#3b82f6'; }}
+                else if (code >= 80 && code <= 82) {{ icon = 'rainy'; desc = 'Hujan Lebat'; color = '#2563eb'; }}
+                else if (code >= 95) {{ icon = 'thunderstorm'; desc = 'Badai Petir'; color = '#c084fc'; }}
+
+                const iconEl = document.getElementById('w-icon');
+                iconEl.innerText = icon; iconEl.style.color = color;
+                document.getElementById('w-desc').innerText = desc;
+            }} catch (err) {{
+                document.getElementById('w-desc').innerText = "Cuaca Offline";
+            }}
+        }}
+        fetchWeather();
+        setInterval(fetchWeather, 600000); // Auto-update cuaca tiap 10 menit
     </script>
-    """, height=85)
+    """, height=125)
 
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -492,11 +550,14 @@ if __name__ == "__main__":
     pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
-    ui_live_hud_widget() # Widget Jam & Kalender HUD
+    
+    # -------------------------------------
+    # RENDER WIDGET HUD REAL-TIME
+    # -------------------------------------
+    ui_live_hud_widget() 
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
-    # Navigasi Profesional Tanpa Emoji
     st.markdown("<br>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
