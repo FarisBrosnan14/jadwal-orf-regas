@@ -186,7 +186,7 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
 
 
 # =====================================================================
-# 4. CSS PROFESIONAL, SPLASH SCREEN, & ANIMASI UI
+# 4. CSS PROFESIONAL, SEAMLESS SPLASH SCREEN, & ANIMASI UI
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     st.markdown("""<style>[data-testid="collapsedControl"] { display: none; } .block-container { padding-top: 2rem !important; }</style>""", unsafe_allow_html=True)
@@ -195,15 +195,16 @@ def inject_custom_css(bg_base64, logo_base64):
     
     logo_src = f"data:image/png;base64,{logo_base64}" if logo_base64 else "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png"
     
-    # INJEKSI SPLASH SCREEN & CSS
     st.markdown(f"""
     <div id="splash-overlay">
         <div class="splash-content">
             <img src="{logo_src}" class="splash-logo" alt="Logo">
             <h2 class="splash-title">NR ORF COMMAND</h2>
-            <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
-            <div class="loading-bar-container">
-                <div class="loading-bar"></div>
+            <div class="splash-fade-early">
+                <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
+                <div class="loading-bar-container">
+                    <div class="loading-bar"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -213,25 +214,36 @@ def inject_custom_css(bg_base64, logo_base64):
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
     /* ==============================================
-       SPLASH SCREEN ANIMATIONS
+       SEAMLESS SPLASH SCREEN ANIMATIONS
        ============================================== */
     #splash-overlay {{
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: linear-gradient(135deg, #0f172a, #1e293b);
         z-index: 9999999; 
         display: flex; justify-content: center; align-items: center;
-        animation: splashFadeOut 0.8s cubic-bezier(0.8, 0, 0.2, 1) 2s forwards; 
+        animation: overlayFade 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; 
     }}
-    .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; }}
-    .splash-logo {{ max-height: 70px; margin-bottom: 25px; animation: floatLogo 2s ease-in-out infinite alternate; }}
-    .splash-title {{ color: #ffffff; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: 2px; margin: 0; }}
-    .splash-subtitle {{ color: #38bdf8; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 10px; opacity: 0.8; }}
-    .loading-bar-container {{ width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 25px; overflow: hidden; position: relative; }}
+    .splash-content {{ 
+        text-align: center; display: flex; flex-direction: column; align-items: center; 
+        animation: moveToHeader 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards;
+    }}
+    .splash-fade-early {{ animation: fadeOutEarly 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; display: flex; flex-direction: column; align-items: center; width: 100%; }}
+    .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s ease-in-out infinite alternate; }}
+    .splash-title {{ color: #ffffff; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }}
+    .splash-subtitle {{ color: #38bdf8; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
+    .loading-bar-container {{ width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
     .loading-bar {{ position: absolute; top: 0; left: 0; height: 100%; width: 40%; background: #38bdf8; border-radius: 4px; animation: loadingSwipe 1.2s ease-in-out infinite; box-shadow: 0 0 10px rgba(56,189,248,0.8); }}
     
-    @keyframes splashFadeOut {{
-        0% {{ opacity: 1; visibility: visible; backdrop-filter: blur(10px); transform: scale(1); }}
-        100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); transform: scale(1.05); pointer-events: none; }}
+    @keyframes overlayFade {{
+        0%, 65% {{ opacity: 1; visibility: visible; backdrop-filter: blur(12px); background: rgba(15,23,42,1); }}
+        100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); background: rgba(15,23,42,0); pointer-events: none; }}
+    }}
+    @keyframes moveToHeader {{
+        0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }}
+        100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }}
+    }}
+    @keyframes fadeOutEarly {{
+        0%, 50% {{ opacity: 1; transform: translateY(0); }}
+        65%, 100% {{ opacity: 0; transform: translateY(10px); }}
     }}
     @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6)); }} }}
     @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
@@ -258,7 +270,7 @@ def inject_custom_css(bg_base64, logo_base64):
     button[kind="secondary"] {{ background: rgba(30,41,59,0.8) !important; color: #e2e8f0 !important; border: 1px solid rgba(255,255,255,0.15) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; }}
     button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
 
-    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }}
+    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeIn 0.5s ease-out 2s both; }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
     
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
@@ -632,9 +644,6 @@ if __name__ == "__main__":
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
     
-    # -------------------------------------
-    # RENDER WIDGET HUD REAL-TIME GPS
-    # -------------------------------------
     ui_live_hud_widget() 
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
