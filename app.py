@@ -267,7 +267,6 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
     
-    /* CLASS KHUSUS UNTUK KARTU HARI INI */
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-3px); }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
 
@@ -303,6 +302,7 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
+    """WIDGET HUD JS: TTS Voice, Jam GPS, Kalender Event, Cuaca"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     fallback_lat, fallback_lon = "-6.1115", "106.7932"
@@ -323,7 +323,7 @@ def ui_live_hud_widget():
         .hud-section {{ display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }}
         .clock {{ font-size: 26px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-shadow: 0 0 12px rgba(56,189,248,0.4); }}
         .date {{ font-size: 15px; font-weight: 600; color: #e2e8f0; }}
-        .box-hud {{ display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); position: relative; }}
+        .box-hud {{ display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; }}
         .stat-group {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
         .stat-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
         .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 6px 14px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
@@ -372,6 +372,26 @@ def ui_live_hud_widget():
     </div>
     
     <script>
+        // A. TEXT-TO-SPEECH (Suara Selamat Datang)
+        let greetingPlayed = false;
+        function playGreeting() {{
+            if (!greetingPlayed && 'speechSynthesis' in window) {{
+                let msg = new SpeechSynthesisUtterance("Halo. Selamat datang di N R, O R F, Integrated Command.");
+                msg.lang = "id-ID";
+                msg.rate = 0.9;
+                window.speechSynthesis.speak(msg);
+                greetingPlayed = true;
+            }}
+        }}
+        
+        // Panggil setelah 1.5 detik (sesuai timing hilangnya loading screen)
+        setTimeout(playGreeting, 1500);
+        
+        // Cadangan jika browser memblokir autoplay: mainkan saat user menyentuh/klik widget
+        window.addEventListener('click', playGreeting);
+        window.addEventListener('touchstart', playGreeting);
+
+        // B. JAM REAL-TIME
         function updateTime() {{
             const now = new Date();
             document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, {{hour12: false}}).replace(/\./g, ':');
@@ -382,6 +402,7 @@ def ui_live_hud_widget():
         let currentLat = '{fallback_lat}';
         let currentLon = '{fallback_lon}';
 
+        // C. LOKASI & CUACA
         async function fetchLocationData(lat, lon, isGPS) {{
             try {{
                 const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${{lat}}&longitude=${{lon}}&localityLanguage=id`);
@@ -441,6 +462,7 @@ def ui_live_hud_widget():
         }}
         setInterval(() => fetchLocationData(currentLat, currentLon, true), 600000);
 
+        // D. KOMPAS
         if (window.DeviceOrientationEvent) {{
             window.addEventListener('deviceorientation', function(e) {{
                 let heading = null;
