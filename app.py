@@ -236,35 +236,18 @@ def inject_custom_css(bg_base64, logo_base64):
     header[data-testid="stHeader"] {{ display: none !important; }}
     .material-symbols-rounded {{ font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }}
 
-    /* KONTRAST FORM INPUT (Teks & Tanggal) - Membuat Isian Jadi Putih */
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="datepicker"] > div {{
-        background-color: #f8fafc !important;
-        border-radius: 8px !important;
-        border: 2px solid transparent !important;
-        transition: all 0.3s ease;
-    }}
-    div[data-baseweb="input"] > div:focus-within,
-    div[data-baseweb="select"] > div:focus-within,
-    div[data-baseweb="datepicker"] > div:focus-within {{
-        border: 2px solid #38bdf8 !important;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
-    }}
-    div[data-baseweb="input"] input,
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] div[class*="singleValue"] {{
-        color: #0f172a !important;
-        font-weight: 700 !important;
-    }}
+    /* KONTRAST FORM INPUT */
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, div[data-baseweb="datepicker"] > div {{ background-color: #f8fafc !important; border-radius: 8px !important; border: 2px solid transparent !important; transition: all 0.3s ease; }}
+    div[data-baseweb="input"] > div:focus-within, div[data-baseweb="select"] > div:focus-within, div[data-baseweb="datepicker"] > div:focus-within {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important; }}
+    div[data-baseweb="input"] input, div[data-baseweb="select"] span, div[data-baseweb="select"] div[class*="singleValue"] {{ color: #0f172a !important; font-weight: 700 !important; }}
     div[data-baseweb="input"] input::placeholder {{ color: #94a3b8 !important; font-weight: 500 !important; }}
     div[data-baseweb="input"] svg, div[data-baseweb="select"] svg {{ color: #64748b !important; }}
 
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-        border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }}
+    /* KARTU MELAYANG */
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }}
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{ transform: translateY(-4px); box-shadow: 0 15px 35px rgba(0,0,0,0.6); border-color: rgba(56, 189, 248, 0.3); }}
 
+    /* TOMBOL */
     .stButton>button {{ border-radius: 12px; font-weight: 700 !important; padding: 20px 10px !important; font-size: 15px !important; width: 100%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; letter-spacing: 0.3px; }}
     .stButton>button:hover {{ transform: translateY(-2px); filter: brightness(1.15); }}
     .stButton>button:active {{ transform: scale(0.96); }}
@@ -272,11 +255,30 @@ def inject_custom_css(bg_base64, logo_base64):
     button[kind="secondary"] {{ background: rgba(30,41,59,0.8) !important; color: #e2e8f0 !important; border: 1px solid rgba(255,255,255,0.15) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; }}
     button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
 
-    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeIn 0.5s ease-out 2s both; }}
+    /* ==============================================
+       HEADER GLOWING & NOTIFIKASI BERKEDIP
+       ============================================== */
+    @keyframes headerGlowPulse {{
+        0%   {{ box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 5px rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.3); }}
+        100% {{ box-shadow: 0 0 25px rgba(56, 189, 248, 0.6), inset 0 0 12px rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.9); }}
+    }}
+    .header-bar {{ 
+        background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; 
+        border: 2px solid rgba(56, 189, 248, 0.4);
+        /* Animasi fade in dilanjutkan dengan glow pulse terus-menerus */
+        animation: fadeIn 0.5s ease-out 2s both, headerGlowPulse 2.5s ease-in-out 2.5s infinite alternate; 
+    }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
     
-    .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
+    @keyframes bellFlash {{
+        0%, 100% {{ color: #1e293b; transform: scale(1); filter: none; }}
+        50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }}
+    }}
+    .bell-active {{ animation: bellFlash 1.5s infinite; display: inline-block; }}
     
+    .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; }}
+
+    /* AKORDEON PERSONEL OFF */
     details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
     details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
     details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
@@ -286,7 +288,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
     @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
 
-    /* TIMELINE HORIZONTAL SCROLL & HIGHLIGHT HARI INI */
+    /* TIMELINE SCROLL */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; }}
     .scroll-card {{ flex: 0 0 210px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
@@ -314,7 +316,7 @@ def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" style="max-height: 50px;">'
     
     if pending_count > 0:
-        notif = f'<div style="position:relative; margin-right:16px; cursor:pointer;" title="Ada {pending_count} ajuan"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
+        notif = f'<div style="position:relative; margin-right:16px; cursor:pointer;" title="Ada {pending_count} ajuan menunggu!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
     else:
         notif = '<div style="position:relative; margin-right:16px; opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
         
