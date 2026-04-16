@@ -213,19 +213,9 @@ def inject_custom_css(bg_base64, logo_base64):
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
-    /* ==============================================
-       SEAMLESS SPLASH SCREEN ANIMATIONS
-       ============================================== */
-    #splash-overlay {{
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        z-index: 9999999; 
-        display: flex; justify-content: center; align-items: center;
-        animation: overlayFade 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; 
-    }}
-    .splash-content {{ 
-        text-align: center; display: flex; flex-direction: column; align-items: center; 
-        animation: moveToHeader 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards;
-    }}
+    /* SPLASH SCREEN ANIMATIONS */
+    #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; display: flex; justify-content: center; align-items: center; animation: overlayFade 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; }}
+    .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; animation: moveToHeader 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; }}
     .splash-fade-early {{ animation: fadeOutEarly 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; display: flex; flex-direction: column; align-items: center; width: 100%; }}
     .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s ease-in-out infinite alternate; }}
     .splash-title {{ color: #ffffff; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }}
@@ -233,29 +223,17 @@ def inject_custom_css(bg_base64, logo_base64):
     .loading-bar-container {{ width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
     .loading-bar {{ position: absolute; top: 0; left: 0; height: 100%; width: 40%; background: #38bdf8; border-radius: 4px; animation: loadingSwipe 1.2s ease-in-out infinite; box-shadow: 0 0 10px rgba(56,189,248,0.8); }}
     
-    @keyframes overlayFade {{
-        0%, 65% {{ opacity: 1; visibility: visible; backdrop-filter: blur(12px); background: rgba(15,23,42,1); }}
-        100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); background: rgba(15,23,42,0); pointer-events: none; }}
-    }}
-    @keyframes moveToHeader {{
-        0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }}
-        100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }}
-    }}
-    @keyframes fadeOutEarly {{
-        0%, 50% {{ opacity: 1; transform: translateY(0); }}
-        65%, 100% {{ opacity: 0; transform: translateY(10px); }}
-    }}
+    @keyframes overlayFade {{ 0%, 65% {{ opacity: 1; visibility: visible; backdrop-filter: blur(12px); background: rgba(15,23,42,1); }} 100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); background: rgba(15,23,42,0); pointer-events: none; }} }}
+    @keyframes moveToHeader {{ 0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }} }}
+    @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 65%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
     @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6)); }} }}
     @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
 
-    /* ==============================================
-       GLOBAL STYLES
-       ============================================== */
+    /* GLOBAL STYLES */
     html, body, [class*="css"], .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
     .stApp {{ background-image: linear-gradient({bg_color}, {bg_color}), {bg_img}; background-size: cover; background-attachment: fixed; }}
     .block-container {{ max-width: 1200px !important; margin: 0 auto; }}
     header[data-testid="stHeader"] {{ display: none !important; }}
-    
     .material-symbols-rounded {{ font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }}
 
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
@@ -272,7 +250,6 @@ def inject_custom_css(bg_base64, logo_base64):
 
     .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeIn 0.5s ease-out 2s both; }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
-    
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
     
     details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
@@ -284,11 +261,16 @@ def inject_custom_css(bg_base64, logo_base64):
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
     @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
 
+    /* TIMELINE HORIZONTAL SCROLL & HIGHLIGHT HARI INI */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; }}
     .scroll-card {{ flex: 0 0 210px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
     
+    /* CLASS KHUSUS UNTUK KARTU HARI INI */
+    .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-3px); }}
+    .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
+
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; }}
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }}
@@ -296,11 +278,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
     .link-hover:hover {{ text-decoration: underline !important; filter: brightness(1.2); }}
 
-    @media (max-width: 768px) {{ 
-        .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} 
-        .header-title {{ font-size: 20px !important; }}
-        .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} 
-    }}
+    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -325,7 +303,6 @@ def ui_header(logo_base64, pending_count):
     """, unsafe_allow_html=True)
 
 def ui_live_hud_widget():
-    """WIDGET HUD JS: Jam GPS Berdetik, Kalender Event, Cuaca Berdasarkan Lokasi Perangkat"""
     hari_ini = datetime.now().strftime("%m-%d")
     event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event nasional")
     fallback_lat, fallback_lon = "-6.1115", "106.7932"
@@ -606,7 +583,13 @@ def ui_timeline(df_j, df_i):
     for i in range(14):
         d_obj = today + timedelta(days=i)
         d_str = d_obj.strftime('%Y-%m-%d')
-        html += f'<div class="scroll-card"><div class="scroll-header">{d_obj.strftime("%d %b %Y")}</div>'
+        
+        is_today = (i == 0)
+        card_class = "scroll-card today-card" if is_today else "scroll-card"
+        header_class = "scroll-header today-header" if is_today else "scroll-header"
+        date_text = f"⭐ HARI INI - {d_obj.strftime('%d %b %Y')}" if is_today else d_obj.strftime("%d %b %Y")
+        
+        html += f'<div class="{card_class}"><div class="{header_class}">{date_text}</div>'
         
         if d_str in df_j.columns:
             day_df = df_j[['Nama Operator', d_str]].dropna()
@@ -643,7 +626,6 @@ if __name__ == "__main__":
     pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
-    
     ui_live_hud_widget() 
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
