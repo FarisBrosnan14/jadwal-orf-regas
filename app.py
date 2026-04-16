@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timedelta
 import gspread
@@ -21,6 +22,27 @@ URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
+# Database Sederhana untuk Hari Libur / Event Nasional (Bisa ditambah)
+EVENT_KALENDER = {
+    "01-01": "Tahun Baru Masehi",
+    "02-08": "Isra Mikraj Nabi Muhammad",
+    "02-10": "Tahun Baru Imlek",
+    "03-11": "Hari Suci Nyepi",
+    "03-29": "Wafat Isa Al Masih",
+    "03-31": "Hari Paskah",
+    "04-10": "Hari Raya Idul Fitri",
+    "04-11": "Hari Raya Idul Fitri",
+    "05-01": "Hari Buruh Internasional",
+    "05-09": "Kenaikan Isa Al Masih",
+    "05-23": "Hari Raya Waisak",
+    "06-01": "Hari Lahir Pancasila",
+    "06-17": "Hari Raya Idul Adha",
+    "07-07": "Tahun Baru Islam",
+    "08-17": "Hari Kemerdekaan RI 🇮🇩",
+    "09-16": "Maulid Nabi Muhammad SAW",
+    "12-25": "Hari Raya Natal"
+}
+
 
 # =====================================================================
 # 2. FUNGSI BANTUAN (UTILITIES)
@@ -37,7 +59,6 @@ def find_col(df, keywords, default_name):
     return default_name
 
 def generate_html_card(row, col_reason, col_proof, delay):
-    """Template HTML Profesional dengan Material Icons & Animasi Masuk"""
     alasan = str(row.get(col_reason, '-')).strip()
     if alasan.lower() in ['nan', '']: alasan = 'Tidak ada keterangan'
     
@@ -54,14 +75,12 @@ def generate_html_card(row, col_reason, col_proof, delay):
             <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> 
             <span style='color:#94a3b8; font-weight:500; font-size:13px;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
         </div>
-        
         <div style='font-size:14px; margin-top:12px; color:#e2e8f0; display:flex; align-items:center; gap:6px;'>
             <span class='material-symbols-rounded' style='font-size:16px; color:#94a3b8;'>calendar_month</span> 
             {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}
             <span style='color:#64748b;'>|</span>
             <span class='material-symbols-rounded' style='font-size:16px; color:#94a3b8;'>schedule</span> Shift: {row.get('Shift Izin', 'Pg')}
         </div>
-        
         <div style='margin-top:12px; background: rgba(255,255,255,0.03); border-left: 3px solid #64748b; padding: 12px; border-radius: 6px; transition: background 0.3s;'>
             <div style='font-size:13px; color:#cbd5e1; margin-bottom:8px; line-height:1.5;'>
                 <div style='display:flex; align-items:center; gap:4px; margin-bottom:4px; color:#94a3b8;'>
@@ -71,7 +90,6 @@ def generate_html_card(row, col_reason, col_proof, delay):
             </div>
             <div style='font-size:13px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;'>{bukti_html}</div>
         </div>
-        
         <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-flex; align-items:center; gap:6px;'>
             <span class='material-symbols-rounded' style='font-size:16px;'>sync_alt</span> 
             Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}
@@ -178,7 +196,6 @@ def inject_custom_css(bg_base64):
     
     st.markdown(f"""
     <style>
-    /* Mengimpor Font Utama dan Ikon Material Google */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
@@ -187,106 +204,40 @@ def inject_custom_css(bg_base64):
     .block-container {{ max-width: 1200px !important; margin: 0 auto; }}
     header[data-testid="stHeader"] {{ display: none !important; }}
     
-    /* Pengaturan Ikon Global */
-    .material-symbols-rounded {{
-        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-        vertical-align: middle;
-    }}
+    .material-symbols-rounded {{ font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }}
 
-    /* =====================================
-       ANIMASI KARTU & PANEL (HOVER EFFECTS)
-       ===================================== */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-        border-radius: 16px; 
-        background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; 
-        backdrop-filter: blur(20px); 
-        border: 1px solid rgba(255,255,255,0.1); 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
-        padding: 24px;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }}
-    div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
-        transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-        border-color: rgba(56, 189, 248, 0.3);
-    }}
+    div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{ transform: translateY(-4px); box-shadow: 0 15px 35px rgba(0,0,0,0.6); border-color: rgba(56, 189, 248, 0.3); }}
 
-    /* =====================================
-       ANIMASI TOMBOL (INTERACTIVE BUTTONS)
-       ===================================== */
-    .stButton>button {{
-        border-radius: 12px; 
-        font-weight: 700 !important; 
-        padding: 20px 10px !important; 
-        font-size: 15px !important; 
-        width: 100%;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        letter-spacing: 0.3px;
-    }}
-    .stButton>button:hover {{
-        transform: translateY(-2px);
-        filter: brightness(1.15);
-    }}
-    .stButton>button:active {{
-        transform: scale(0.96);
-    }}
-    button[kind="primary"] {{ 
-        background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
-        color: white !important; 
-        border: 1px solid rgba(56,189,248,0.4) !important; 
-        box-shadow: 0 6px 15px rgba(2,132,199,0.4) !important; 
-    }}
-    button[kind="secondary"] {{ 
-        background: rgba(30,41,59,0.8) !important; 
-        color: #e2e8f0 !important; 
-        border: 1px solid rgba(255,255,255,0.15) !important; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; 
-    }}
+    .stButton>button {{ border-radius: 12px; font-weight: 700 !important; padding: 20px 10px !important; font-size: 15px !important; width: 100%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; letter-spacing: 0.3px; }}
+    .stButton>button:hover {{ transform: translateY(-2px); filter: brightness(1.15); }}
+    .stButton>button:active {{ transform: scale(0.96); }}
+    button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: 1px solid rgba(56,189,248,0.4) !important; box-shadow: 0 6px 15px rgba(2,132,199,0.4) !important; }}
+    button[kind="secondary"] {{ background: rgba(30,41,59,0.8) !important; color: #e2e8f0 !important; border: 1px solid rgba(255,255,255,0.15) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; }}
+    button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
 
-    /* Header Bar */
-    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }}
+    .header-bar {{ background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
     
-    /* Notifikasi */
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; animation: pulseRed 2s infinite; }}
     @keyframes pulseRed {{ 0% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }} 70% {{ box-shadow: 0 0 0 8px rgba(239,68,68,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0); }} }}
 
-    /* =====================================
-       ANIMASI ACCORDION (PERSONEL OFF)
-       ===================================== */
-    details.off-personnel {{ 
-        background: rgba(255,255,255,0.03); 
-        border-left: 3px solid #38bdf8; 
-        border-radius: 8px; 
-        margin-bottom: 10px; 
-        transition: background 0.3s ease, transform 0.2s ease;
-    }}
-    details.off-personnel:hover {{
-        background: rgba(56,189,248,0.08);
-        transform: translateX(4px);
-    }}
-    details.off-personnel summary {{ 
-        padding: 14px 16px; 
-        cursor: pointer; 
-        font-size: 14px; 
-        font-weight: 600; 
-        display: flex; 
-        align-items: center; 
-        list-style: none; 
-    }}
+    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
+    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
+    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
     details.off-personnel summary::-webkit-details-marker {{ display: none; }}
     .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
     details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
     @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
 
-    /* Scroll Horizontal Jadwal */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; }}
     .scroll-card {{ flex: 0 0 210px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
     
-    /* Status Dots Profesional */
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; }}
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }}
@@ -320,13 +271,62 @@ def ui_header(logo_base64, pending_count):
         <h1 class="header-title">NR ORF Integrated Command</h1>
         <div style="display:flex; align-items:center;">
             {notif}
-            <div style="background:#f1f5f9; color:#0f172a; padding:8px 16px; border-radius:10px; font-weight:700; border:1px solid #cbd5e1; font-size:13px; display:flex; align-items:center; gap:6px;">
-                <span class="material-symbols-rounded" style="font-size:18px;">calendar_today</span>
-                {datetime.now().strftime("%d %b %Y")}
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+def ui_live_hud_widget():
+    """WIDGET HUD JS: Jam Berdetik & Kalender Event Tanpa Membebani Server Python"""
+    hari_ini = datetime.now().strftime("%m-%d")
+    event_hari_ini = EVENT_KALENDER.get(hari_ini, "Tidak ada event / libur nasional")
+    
+    # Render UI via Streamlit Component Iframe agar JS jalan mulus 60 FPS
+    components.html(f"""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
+        body {{
+            margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+        }}
+        .hud-container {{
+            display: flex; align-items: center; justify-content: space-between; gap: 15px;
+            background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1));
+            border: 1px solid rgba(56,189,248,0.4); border-radius: 16px; 
+            padding: 16px 24px; width: 100%; box-sizing: border-box;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #f8fafc;
+            flex-wrap: wrap;
+        }}
+        .hud-section {{ display: flex; align-items: center; gap: 10px; }}
+        .clock {{ font-size: 24px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 2px; text-shadow: 0 0 10px rgba(56,189,248,0.5); }}
+        .date {{ font-size: 15px; font-weight: 600; color: #e2e8f0; }}
+        .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 4px 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); }}
+        @media (max-width: 600px) {{ .hud-container {{ justify-content: center; flex-direction: column; text-align: center; }} }}
+    </style>
+    <div class="hud-container">
+        <div class="hud-section">
+            <span class="material-symbols-rounded" style="color:#38bdf8; font-size:28px;">schedule</span>
+            <span class="clock" id="live-clock">--:--:--</span>
+        </div>
+        <div class="hud-section" style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
+            <span class="material-symbols-rounded" style="color:#94a3b8;">calendar_month</span>
+            <span class="date" id="live-date">Memuat Tanggal...</span>
+        </div>
+        <div class="hud-section" style="margin-left: auto;">
+            <span class="event"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">campaign</span> {event_hari_ini}</span>
+        </div>
+    </div>
+    <script>
+        function updateTime() {{
+            const now = new Date();
+            const optTime = {{ hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }};
+            const optDate = {{ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }};
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('id-ID', optTime).replace(/\./g, ':');
+            document.getElementById('live-date').innerText = now.toLocaleDateString('id-ID', optDate);
+        }}
+        setInterval(updateTime, 1000); updateTime();
+    </script>
+    """, height=85)
 
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -492,10 +492,12 @@ if __name__ == "__main__":
     pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
+    ui_live_hud_widget() # Widget Jam & Kalender HUD
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
     # Navigasi Profesional Tanpa Emoji
+    st.markdown("<br>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
     with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
