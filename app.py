@@ -12,9 +12,8 @@ from PIL import Image
 # =====================================================================
 # 1. KONFIGURASI UTAMA & KONSTANTA
 # =====================================================================
-# Solusi agar Logo Tab Browser (Favicon) 100% muncul
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png") # Pastikan file pertamina.png ada di folder yang sama
+    favicon = Image.open("logo-pertaminaregasv2.png")
 except:
     favicon = "⚡"
 
@@ -342,20 +341,19 @@ def inject_custom_css(bg_base64, logo_base64):
     .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
     details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
+    @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
 
-    /* TIMELINE SCROLL HACK (Diperbarui agar tombol JS berfungsi) */
-    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; scroll-snap-type: x mandatory; padding-bottom: 15px; gap: 15px; }}
-    div[data-testid="stForm"] div[data-testid="column"] {{ min-width: 220px !important; flex: 0 0 220px !important; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; scroll-snap-align: start; }}
-    div[data-testid="stForm"] div[data-testid="column"]:first-child {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; }}
-
-    .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; }}
-    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
+    /* TIMELINE SCROLL (KEMBALI KE VISUAL MURNI) */
+    .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
+    .scroll-container::-webkit-scrollbar {{ display: none; }}
+    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; scroll-snap-align: start; }}
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
+    
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-3px); }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
 
-    .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; }}
+    .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width:100%; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; }}
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }}
     
@@ -366,18 +364,11 @@ def inject_custom_css(bg_base64, logo_base64):
 
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
     
-    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
-    
     /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
-    div[data-testid="stTabs"] button {{
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        color: #94a3b8 !important;
-    }}
-    div[data-testid="stTabs"] button[aria-selected="true"] {{
-        color: #38bdf8 !important;
-    }}
+    div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
+    div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
+    
+    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -539,8 +530,8 @@ def ui_live_hud_widget():
     """, height=115)
 
 def ui_smart_assistant(df_j, is_locked):
-    st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-    st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot memilih dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='opacity:0.1; margin: 20px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
+    st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka Editor Taktis.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
     
     if is_locked: return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
 
@@ -569,6 +560,59 @@ def ui_smart_assistant(df_j, is_locked):
             st.session_state.ai_parsed_data = None
             st.rerun()
 
+def ui_editor_taktis(df_j):
+    st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>edit_square</span> Editor Taktis (Update Massal)</h4>", unsafe_allow_html=True)
+    st.info("Pilih tanggal di bawah ini untuk mengedit jadwal secara massal menggunakan dropdown.")
+    
+    tgl_edit = st.date_input("Pilih Tanggal yang Ingin Diedit:", value=datetime.now().date())
+    tgl_str = tgl_edit.strftime('%Y-%m-%d')
+    
+    if df_j.empty or tgl_str not in df_j.columns:
+        st.warning(f"⚠️ Kolom tanggal **{tgl_str}** belum tersedia di database Google Sheets.")
+        return
+
+    col_idx = list(df_j.columns).index(tgl_str) + 1
+    valid_df = df_j.dropna(subset=['Nama Operator'])
+    valid_df = valid_df[valid_df['Nama Operator'].astype(str).str.strip() != '']
+    shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
+    
+    with st.form("form_mass_update"):
+        cols = st.columns(3)
+        new_values = {}
+        for i, (idx, row) in enumerate(valid_df.iterrows()):
+            nama = str(row['Nama Operator']).replace('*', '').strip()
+            status_lama = str(row[tgl_str]).strip().upper()
+            opsi = shift_options.copy()
+            if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
+            default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
+            
+            with cols[i % 3]:
+                new_val = st.selectbox(nama, options=opsi, index=default_idx, key=f"edit_mass_{idx}")
+                new_values[idx] = {"val": new_val, "row_sheet": int(idx) + 2}
+        
+        submit = st.form_submit_button("💾 Simpan Perubahan Massal", type="primary", use_container_width=True)
+        if submit:
+            updates = []
+            for idx, data in new_values.items():
+                old_val = str(valid_df.loc[idx, tgl_str]).strip().upper()
+                if data["val"] != old_val:
+                    updates.append(gspread.Cell(data["row_sheet"], col_idx, data["val"]))
+            
+            if updates:
+                try:
+                    client = get_client()
+                    sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                    sh.update_cells(updates)
+                    load_all_data.clear()
+                    st.success(f"✅ Berhasil memperbarui {len(updates)} data personel untuk tanggal {tgl_str}!")
+                    import time
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Gagal menyimpan ke database: {e}")
+            else:
+                st.info("Tidak ada perubahan jadwal yang dideteksi.")
+
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
     
@@ -594,6 +638,8 @@ def ui_manager_panel(df_i, df_j):
         with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
         
         ui_smart_assistant(df_j, is_name_locked)
+        if not is_name_locked:
+            ui_editor_taktis(df_j)
         
     with tab_izin:
         if df_i.empty or 'Status Approval' not in df_i.columns: 
@@ -664,7 +710,7 @@ def ui_off_tracker(df_j, df_k):
 
 
 # =====================================================================
-# 6. TIMELINE INTERAKTIF DENGAN TOMBOL NAVIGASI JS
+# 6. TIMELINE INTERAKTIF (VISUAL MURNI)
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("<br><hr style='opacity:0.1;'>", unsafe_allow_html=True)
@@ -673,119 +719,56 @@ def ui_timeline(df_j, df_i):
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
         <div style="display: flex; gap: 10px;">
-            <button class="nav-arrow-btn" onclick="var ro = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = ro || form; if(t) t.scrollBy({left: -300, behavior: 'smooth'});" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button class="nav-arrow-btn" onclick="var ro = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = ro || form; if(t) t.scrollBy({left: 300, behavior: 'smooth'});" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
+            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); if(c) c.scrollBy({left: -300, behavior: 'smooth'});" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
+            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); if(c) c.scrollBy({left: 300, behavior: 'smooth'});" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     if df_j.empty: return st.warning("Sedang menyinkronisasi jadwal...")
 
-    is_manager = st.session_state.get('is_manager', False)
     today = datetime.now().date()
-    shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
+    subs_map = {}
+    if not df_i.empty and 'Status Approval' in df_i.columns:
+        for _, row in df_i[df_i['Status Approval'].astype(str).str.upper().str.contains('APPROVED', na=False)].iterrows():
+            try:
+                sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+                if sub and sub not in ['nan', '']:
+                    for d in pd.date_range(pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date(), pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()):
+                        subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
+            except Exception: pass
 
-    if is_manager:
-        st.info("⚙️ **Mode Edit Aktif!** Ubah dropdown putih di kalender bawah, lalu klik Simpan di sini.")
+    html = '<div class="scroll-container">'
+    for i in range(14):
+        d_obj = today + timedelta(days=i)
+        d_str = d_obj.strftime('%Y-%m-%d')
         
-        with st.form("inline_timeline_editor"):
-            submit_btn = st.form_submit_button("💾 Simpan Semua Perubahan", type="primary", use_container_width=True)
-            st.markdown('<div class="timeline-anchor"></div>', unsafe_allow_html=True)
+        is_today = (i == 0)
+        card_class = "scroll-card today-card" if is_today else "scroll-card"
+        header_class = "scroll-header today-header" if is_today else "scroll-header"
+        date_text = f"⭐ HARI INI - {d_obj.strftime('%d %b %Y')}" if is_today else d_obj.strftime("%d %b %Y")
+        
+        html += f'<div class="{card_class}"><div class="{header_class}">{date_text}</div>'
+        
+        if d_str in df_j.columns:
+            day_df = df_j[['Nama Operator', d_str]].dropna()
+            day_df = day_df[~day_df[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
             
-            cols = st.columns(14)
-            new_values = {}
-            
-            for i in range(14):
-                d_obj = today + timedelta(days=i)
-                d_str = d_obj.strftime('%Y-%m-%d')
-                is_today = (i == 0)
-                
-                with cols[i]:
-                    if is_today: st.markdown(f"<div class='today-header' style='padding:8px; border-radius:8px; text-align:center; font-weight:bold; margin-bottom:15px;'>⭐ HARI INI<br>{d_obj.strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
-                    else: st.markdown(f"<div class='scroll-header'>{d_obj.strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
+            if not day_df.empty:
+                for _, row in day_df.iterrows():
+                    name = str(row['Nama Operator']).replace('*', '').strip()
+                    status = str(row[d_str]).upper()
                     
-                    if d_str in df_j.columns:
-                        day_df = df_j[['Nama Operator', d_str]].dropna()
-                        day_df = day_df[~day_df[d_str].astype(str).str.strip().str.lower().isin(['nan', '', 'none'])]
+                    if any(k in status for k in ["DINAS", "PD"]): badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
+                    elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
+                    elif name.lower() in subs_map.get(d_str, []): badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
+                    else: badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
                         
-                        for idx, row in day_df.iterrows():
-                            name = str(row['Nama Operator']).replace('*', '').strip()
-                            status_lama = str(row[d_str]).strip().upper()
-                            
-                            st.markdown(f"<div style='color:#f8fafc; font-size:13px; font-weight:700; padding-top:12px; padding-bottom:4px;'>{name}</div>", unsafe_allow_html=True)
-                            
-                            opsi = shift_options.copy()
-                            if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
-                            default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
-                            
-                            new_val = st.selectbox("Status", options=opsi, index=default_idx, key=f"edit_{idx}_{d_str}", label_visibility="collapsed")
-                            new_values[f"{idx}_{d_str}"] = {"row_sheet": int(idx) + 2, "col_name": d_str, "val": new_val, "old_val": status_lama}
-                    else:
-                        st.markdown("<div style='text-align:center; color:#64748b; font-style:italic;'>Belum dirilis</div>", unsafe_allow_html=True)
-
-            if submit_btn:
-                updates = []
-                for k, v in new_values.items():
-                    if v["val"] != v["old_val"]:
-                        col_idx = list(df_j.columns).index(v["col_name"]) + 1
-                        updates.append(gspread.Cell(v["row_sheet"], col_idx, v["val"]))
-                
-                if updates:
-                    try:
-                        client = get_client()
-                        sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                        sh.update_cells(updates)
-                        load_all_data.clear()
-                        st.success(f"✅ Berhasil menyimpan {len(updates)} perubahan jadwal!")
-                        import time
-                        time.sleep(1.5)
-                        st.rerun()
-                    except Exception as e: st.error(f"Gagal menyimpan ke database: {e}")
-                else:
-                    st.info("Tidak ada perubahan jadwal yang dideteksi.")
-
-    else:
-        subs_map = {}
-        if not df_i.empty and 'Status Approval' in df_i.columns:
-            for _, row in df_i[df_i['Status Approval'].astype(str).str.upper().str.contains('APPROVED', na=False)].iterrows():
-                try:
-                    sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                    if sub and sub not in ['nan', '']:
-                        for d in pd.date_range(pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date(), pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()):
-                            subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
-                except Exception: pass
-
-        html = '<div class="scroll-container">'
-        for i in range(14):
-            d_obj = today + timedelta(days=i)
-            d_str = d_obj.strftime('%Y-%m-%d')
-            
-            is_today = (i == 0)
-            card_class = "scroll-card today-card" if is_today else "scroll-card"
-            header_class = "scroll-header today-header" if is_today else "scroll-header"
-            date_text = f"⭐ HARI INI - {d_obj.strftime('%d %b %Y')}" if is_today else d_obj.strftime("%d %b %Y")
-            
-            html += f'<div class="{card_class}"><div class="{header_class}">{date_text}</div>'
-            
-            if d_str in df_j.columns:
-                day_df = df_j[['Nama Operator', d_str]].dropna()
-                day_df = day_df[~day_df[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
-                
-                if not day_df.empty:
-                    for _, row in day_df.iterrows():
-                        name = str(row['Nama Operator']).replace('*', '').strip()
-                        status = str(row[d_str]).upper()
-                        
-                        if any(k in status for k in ["DINAS", "PD"]): badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
-                        elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
-                        elif name.lower() in subs_map.get(d_str, []): badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
-                        else: badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
-                            
-                        html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:13px;">{name}</b><br>{badge}</div>'
-                else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Semua OFF</div>'
-            else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Data belum dirilis</div>'
-            html += '</div>'
-        st.markdown(html + '</div>', unsafe_allow_html=True)
+                    html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:13px;">{name}</b><br>{badge}</div>'
+            else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Semua OFF</div>'
+        else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Data belum dirilis</div>'
+        html += '</div>'
+    st.markdown(html + '</div>', unsafe_allow_html=True)
 
 
 # =====================================================================
