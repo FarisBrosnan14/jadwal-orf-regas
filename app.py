@@ -256,26 +256,23 @@ def inject_custom_css(bg_base64, logo_base64):
     button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
 
     /* ==============================================
-       HEADER GLOWING & NOTIFIKASI BERKEDIP
+       HEADER GLOWING BERKEDIP WARNA PERTAMINA
        ============================================== */
     @keyframes headerGlowPulse {{
-        0%   {{ box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 5px rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.3); }}
-        100% {{ box-shadow: 0 0 25px rgba(56, 189, 248, 0.6), inset 0 0 12px rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.9); }}
+        0%   {{ box-shadow: 0 0 20px rgba(0, 77, 149, 0.6), inset 0 0 5px rgba(0, 77, 149, 0.1); border-color: rgba(0, 77, 149, 0.9); }} /* Biru */
+        33%  {{ box-shadow: 0 0 20px rgba(239, 68, 68, 0.6), inset 0 0 5px rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.9); }} /* Merah */
+        66%  {{ box-shadow: 0 0 20px rgba(130, 195, 65, 0.6), inset 0 0 5px rgba(130, 195, 65, 0.1); border-color: rgba(130, 195, 65, 0.9); }} /* Hijau Muda */
+        100% {{ box-shadow: 0 0 20px rgba(0, 77, 149, 0.6), inset 0 0 5px rgba(0, 77, 149, 0.1); border-color: rgba(0, 77, 149, 0.9); }} /* Kembali ke Biru */
     }}
     .header-bar {{ 
         background-color: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; 
-        border: 2px solid rgba(56, 189, 248, 0.4);
-        /* Animasi fade in dilanjutkan dengan glow pulse terus-menerus */
-        animation: fadeIn 0.5s ease-out 2s both, headerGlowPulse 2.5s ease-in-out 2.5s infinite alternate; 
+        border: 2px solid transparent;
+        animation: fadeIn 0.5s ease-out 2s both, headerGlowPulse 6s ease-in-out 2.5s infinite; 
     }}
     .header-title {{ color: #004D95 !important; font-weight: 800; font-size: clamp(20px, 3vw, 28px) !important; text-align: center; flex-grow: 1; letter-spacing: -0.5px; text-shadow: none !important; margin:0; }}
     
-    @keyframes bellFlash {{
-        0%, 100% {{ color: #1e293b; transform: scale(1); filter: none; }}
-        50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }}
-    }}
+    @keyframes bellFlash {{ 0%, 100% {{ color: #1e293b; transform: scale(1); filter: none; }} 50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }} }}
     .bell-active {{ animation: bellFlash 1.5s infinite; display: inline-block; }}
-    
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; }}
 
     /* AKORDEON PERSONEL OFF */
@@ -398,18 +395,6 @@ def ui_live_hud_widget():
     </div>
     
     <script>
-        let greetingPlayed = false;
-        function playGreeting() {{
-            if (!greetingPlayed && 'speechSynthesis' in window) {{
-                let msg = new SpeechSynthesisUtterance("Halo. Selamat datang di N R, O R F, Integrated Command.");
-                msg.lang = "id-ID"; msg.rate = 0.9;
-                window.speechSynthesis.speak(msg);
-                greetingPlayed = true;
-            }}
-        }}
-        setTimeout(playGreeting, 1500);
-        window.addEventListener('click', playGreeting); window.addEventListener('touchstart', playGreeting);
-
         function updateTime() {{
             const now = new Date();
             document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, {{hour12: false}}).replace(/\./g, ':');
@@ -653,6 +638,7 @@ if __name__ == "__main__":
     pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
+    
     ui_live_hud_widget() 
 
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
