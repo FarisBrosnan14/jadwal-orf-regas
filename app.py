@@ -7,11 +7,18 @@ from google.oauth2.service_account import Credentials
 import base64
 import os
 import re
+from PIL import Image
 
 # =====================================================================
 # 1. KONFIGURASI UTAMA & KONSTANTA
 # =====================================================================
-st.set_page_config(page_title="NR ORF Command", page_icon="logo-pertaminaregasv2.png", layout="wide", initial_sidebar_state="collapsed")
+# Solusi agar Logo Tab Browser (Favicon) 100% muncul
+try:
+    favicon = Image.open("pertamina.png") # Pastikan file pertamina.png ada di folder yang sama
+except:
+    favicon = "⚡"
+
+st.set_page_config(page_title="NR ORF Command", page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
@@ -360,6 +367,17 @@ def inject_custom_css(bg_base64, logo_base64):
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
     
     @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
+    
+    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
+    div[data-testid="stTabs"] button {{
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        color: #94a3b8 !important;
+    }}
+    div[data-testid="stTabs"] button[aria-selected="true"] {{
+        color: #38bdf8 !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -522,7 +540,7 @@ def ui_live_hud_widget():
 
 def ui_smart_assistant(df_j, is_locked):
     st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-    st.markdown("<div class='chat-bubble'><span class='ai-badge'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot memilih dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
+    st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot memilih dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
     
     if is_locked: return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
 
@@ -565,45 +583,52 @@ def ui_manager_panel(df_i, df_j):
 
     approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
     is_name_locked = approver_name == DAFTAR_MANAJER[0]
+
+    # === TABS UNTUK MEMISAHKAN PANEL EDIT DAN PERSETUJUAN ===
+    tab_edit, tab_izin = st.tabs(["⚙️ Panel Edit & Asisten AI", "📋 Panel Persetujuan Izin"])
     
-    st.markdown("<div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
-    c_btn1, c_btn2 = st.columns(2)
-    with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
-    with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
+    with tab_edit:
+        st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
+        c_btn1, c_btn2 = st.columns(2)
+        with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
+        with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
+        
+        ui_smart_assistant(df_j, is_name_locked)
+        
+    with tab_izin:
+        if df_i.empty or 'Status Approval' not in df_i.columns: 
+            st.warning("Menunggu sinkronisasi data izin...")
+        else:
+            df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
+            col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
+            col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
 
-    ui_smart_assistant(df_j, is_name_locked)
-
-    if df_i.empty or 'Status Approval' not in df_i.columns: return st.warning("Menunggu sinkronisasi data izin...")
-    df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
-    col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
-    col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
-
-    st.markdown("<h4 style='color:white; font-size:16px; margin-top:20px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
-    pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
-    
-    if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
-    else:
-        if is_name_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
-        for idx, row in pending_df.head(5).iterrows():
-            with st.container(border=True):
-                st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
-                c1, c2 = st.columns(2)
-                if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
-                if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
-
-    st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
-    history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
-    
-    if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
-    else:
-        for idx, row in history_df.tail(5).iloc[::-1].iterrows():
-            status = str(row['Status Approval']).upper()
-            is_appr = "APPROVED" in status
-            c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+            st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:10px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
+            pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
             
-            with st.container(border=True):
-                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
+            if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
+            else:
+                if is_name_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
+                for idx, row in pending_df.head(5).iterrows():
+                    with st.container(border=True):
+                        st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
+                        c1, c2 = st.columns(2)
+                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
+                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
+
+            st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
+            history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
+            
+            if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
+            else:
+                for idx, row in history_df.tail(5).iloc[::-1].iterrows():
+                    status = str(row['Status Approval']).upper()
+                    is_appr = "APPROVED" in status
+                    c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+                    
+                    with st.container(border=True):
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
+                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
 
 def ui_off_tracker(df_j, df_k):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
@@ -644,7 +669,6 @@ def ui_off_tracker(df_j, df_k):
 def ui_timeline(df_j, df_i):
     st.markdown("<br><hr style='opacity:0.1;'>", unsafe_allow_html=True)
     
-    # HACK TOMBOL JS: Akan mencari kotak scroll Read-Only maupun kotak Form Editor
     st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
@@ -666,6 +690,7 @@ def ui_timeline(df_j, df_i):
         
         with st.form("inline_timeline_editor"):
             submit_btn = st.form_submit_button("💾 Simpan Semua Perubahan", type="primary", use_container_width=True)
+            st.markdown('<div class="timeline-anchor"></div>', unsafe_allow_html=True)
             
             cols = st.columns(14)
             new_values = {}
