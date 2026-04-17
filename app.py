@@ -14,7 +14,7 @@ from PIL import Image
 # =====================================================================
 # Solusi agar Logo Tab Browser (Favicon) 100% muncul
 try:
-    favicon = Image.open("pertamina.png") # Pastikan file pertamina.png ada di folder yang sama
+    favicon = Image.open("logo-pertaminaregasv2.png") # Pastikan file pertamina.png ada di folder yang sama
 except:
     favicon = "⚡"
 
