@@ -11,7 +11,7 @@ import re
 # =====================================================================
 # 1. KONFIGURASI UTAMA & KONSTANTA
 # =====================================================================
-st.set_page_config(page_title="NR ORF Command", page_icon="pertaminaregasv2.png", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NR ORF Command", page_icon="logo-pertaminaregasv2.png", layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
@@ -253,7 +253,7 @@ def execute_smart_edit(nama, status, d_start, d_end, df_j):
 
 
 # =====================================================================
-# 4. CSS PROFESIONAL, SEAMLESS SPLASH SCREEN (TEMA TERANG), & ANIMASI UI
+# 4. CSS PROFESIONAL, SPLASH SCREEN, & ANIMASI UI
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     st.markdown("""<style>[data-testid="collapsedControl"] { display: none; } .block-container { padding-top: 2rem !important; }</style>""", unsafe_allow_html=True)
@@ -277,19 +277,13 @@ def inject_custom_css(bg_base64, logo_base64):
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
-    /* SPLASH SCREEN ANIMATIONS (TEMA TERANG) */
-    #splash-overlay {{ 
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; 
-        display: flex; justify-content: center; align-items: center; 
-        background: #ffffff; /* Latar belakang putih bersih */
-        animation: overlayFade 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; 
-    }}
+    #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; display: flex; justify-content: center; align-items: center; background: #ffffff; animation: overlayFade 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; }}
     .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; animation: moveToHeader 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; }}
     .splash-fade-early {{ animation: fadeOutEarly 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; display: flex; flex-direction: column; align-items: center; width: 100%; }}
     .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s ease-in-out infinite alternate; }}
-    .splash-title {{ color: #004D95; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }} /* Teks biru Pertamina */
-    .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }} /* Teks abu-abu */
-    .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }} /* Latar bar abu-abu terang */
+    .splash-title {{ color: #004D95; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }}
+    .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
+    .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
     .loading-bar {{ position: absolute; top: 0; left: 0; height: 100%; width: 40%; background: #38bdf8; border-radius: 4px; animation: loadingSwipe 1.2s ease-in-out infinite; box-shadow: 0 0 10px rgba(56,189,248,0.8); }}
     
     @keyframes overlayFade {{ 0%, 65% {{ opacity: 1; visibility: visible; backdrop-filter: blur(12px); background: #ffffff; }} 100% {{ opacity: 0; visibility: hidden; backdrop-filter: blur(0px); background: rgba(255,255,255,0); pointer-events: none; }} }}
@@ -304,6 +298,7 @@ def inject_custom_css(bg_base64, logo_base64):
     header[data-testid="stHeader"] {{ display: none !important; }}
     .material-symbols-rounded {{ font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }}
 
+    /* KONTRAST FORM INPUT */
     div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, div[data-baseweb="datepicker"] > div {{ background-color: #f8fafc !important; border-radius: 8px !important; border: 2px solid transparent !important; transition: all 0.3s ease; min-height: 38px !important; }}
     div[data-baseweb="input"] > div:focus-within, div[data-baseweb="select"] > div:focus-within, div[data-baseweb="datepicker"] > div:focus-within {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important; }}
     div[data-baseweb="input"] input, div[data-baseweb="select"] span, div[data-baseweb="select"] div[class*="singleValue"] {{ color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }}
@@ -317,9 +312,8 @@ def inject_custom_css(bg_base64, logo_base64):
     .stButton>button:hover {{ transform: translateY(-2px); filter: brightness(1.15); }}
     .stButton>button:active {{ transform: scale(0.96); }}
     button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: 1px solid rgba(56,189,248,0.4) !important; box-shadow: 0 6px 15px rgba(2,132,199,0.4) !important; }}
-    button[kind="secondary"] {{ background: rgba(30,41,59,0.8) !important; color: #e2e8f0 !important; border: 1px solid rgba(255,255,255,0.15) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important; }}
-    button[kind="secondary"]:hover {{ background: rgba(30,41,59,0.9) !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.3) !important; }}
 
+    /* HEADER GLOWING & BEL ALERT */
     @keyframes headerGlowPulse {{
         0%   {{ box-shadow: 0 0 20px rgba(0, 77, 149, 0.6), inset 0 0 5px rgba(0, 77, 149, 0.1); border-color: rgba(0, 77, 149, 0.9); }} 
         33%  {{ box-shadow: 0 0 20px rgba(239, 68, 68, 0.6), inset 0 0 5px rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.9); }} 
@@ -333,15 +327,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .bell-active {{ animation: bellFlash 1.5s infinite; display: inline-block; }}
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; }}
 
-    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
-    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
-    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
-    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
-    .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
-    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
-    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
-
-    /* TIMELINE SCROLL HACK */
+    /* TIMELINE SCROLL & NAV BUTTONS */
     .timeline-anchor + div [data-testid="stHorizontalBlock"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; scroll-snap-type: x mandatory; padding-bottom: 15px; gap: 15px; }}
     .timeline-anchor + div [data-testid="column"] {{ min-width: 220px !important; flex: 0 0 220px !important; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; scroll-snap-align: start; }}
     .timeline-anchor + div [data-testid="column"]:first-child {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; }}
@@ -350,17 +336,27 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
     .scroll-card:hover {{ transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
-    
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-3px); }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
 
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; }}
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }}
+    
+    /* NAV ARROW BUTTONS */
+    .nav-arrow-btn {{ background: rgba(30,41,59,0.8); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }}
+    .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.2); transform: scale(1.05); color: #ffffff; border-color: #38bdf8; }}
+    .nav-arrow-btn:active {{ transform: scale(0.95); }}
 
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
-    .chat-bubble {{ background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }}
-    .ai-badge {{ background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px; }}
+    
+    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
+    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
+    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
+    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
+    .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
+    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
+    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
 
     @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
     </style>
@@ -642,10 +638,22 @@ def ui_off_tracker(df_j, df_k):
 
 
 # =====================================================================
-# 6. TIMELINE INTERAKTIF DENGAN INLINE EDITOR
+# 6. TIMELINE INTERAKTIF DENGAN TOMBOL NAVIGASI JS
 # =====================================================================
 def ui_timeline(df_j, df_i):
-    st.markdown("<br><hr style='opacity:0.1;'><h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>", unsafe_allow_html=True)
+    st.markdown("<br><hr style='opacity:0.1;'>", unsafe_allow_html=True)
+    
+    # Header Timeline dilengkapi Tombol Navigasi Kiri/Kanan
+    st.markdown("""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
+        <div style="display: flex; gap: 10px;">
+            <button class="nav-arrow-btn" onclick="try { var c = document.querySelector('.scroll-container') || document.querySelector('.timeline-anchor').nextElementSibling.querySelector('[data-testid=\\'stHorizontalBlock\\']'); c.scrollBy({left: -300, behavior: 'smooth'}); } catch(e){}" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
+            <button class="nav-arrow-btn" onclick="try { var c = document.querySelector('.scroll-container') || document.querySelector('.timeline-anchor').nextElementSibling.querySelector('[data-testid=\\'stHorizontalBlock\\']'); c.scrollBy({left: 300, behavior: 'smooth'}); } catch(e){}" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
     if df_j.empty: return st.warning("Sedang menyinkronisasi jadwal...")
 
     is_manager = st.session_state.get('is_manager', False)
