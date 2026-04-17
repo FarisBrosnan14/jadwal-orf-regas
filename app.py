@@ -513,12 +513,11 @@ def ui_live_hud_widget():
     </script>
     """, height=115)
 
-def ui_smart_assistant(df_j, approver_name, is_locked):
+def ui_smart_assistant(df_j, is_locked):
     st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
     st.markdown("<div class='chat-bubble'><span class='ai-badge'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot memilih dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
     
-    if is_locked:
-        return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
+    if is_locked: return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
 
     if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
         
@@ -545,84 +544,28 @@ def ui_smart_assistant(df_j, approver_name, is_locked):
             st.session_state.ai_parsed_data = None
             st.rerun()
 
-def ui_editor_jadwal(df_j):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>rule_settings</span> Editor Taktis (Update Massal)</h3>", unsafe_allow_html=True)
-    
-    if st.text_input("Kunci Keamanan Editor", type="password", key="pin_editor", placeholder="Masukkan PIN Manajer...") != PIN_MANAGER:
-        return st.markdown("<div style='border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(15,23,42,0.6); padding:30px; text-align:center;'><span class='material-symbols-rounded' style='font-size:48px; color:#64748b; margin-bottom:10px;'>lock</span><br><span style='color:#cbd5e1; font-size:14px;'>Area khusus otoritas.</span></div>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        tgl_edit = st.date_input("Pilih Tanggal yang Ingin Diedit:")
-        tgl_str = tgl_edit.strftime('%Y-%m-%d')
-        
-    if df_j.empty or tgl_str not in df_j.columns:
-        return st.warning(f"⚠️ Kolom tanggal **{tgl_str}** belum tersedia di database Google Sheets (Berada di luar jangkauan kalender saat ini).")
-
-    st.markdown(f"<h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:20px;'>edit_calendar</span> Susunan Shift: {tgl_str}</h4>", unsafe_allow_html=True)
-    
-    col_idx = list(df_j.columns).index(tgl_str) + 1
-    valid_df = df_j.dropna(subset=['Nama Operator'])
-    valid_df = valid_df[valid_df['Nama Operator'].astype(str).str.strip() != '']
-    
-    shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
-    
-    with st.form("form_mass_update"):
-        st.info("Pilih status baru pada kolom di bawah. Anda bisa mengubah jadwal banyak orang sekaligus, lalu klik Simpan di paling bawah.")
-        cols = st.columns(3)
-        new_values = {}
-        
-        for i, (idx, row) in enumerate(valid_df.iterrows()):
-            nama = str(row['Nama Operator']).replace('*', '').strip()
-            status_lama = str(row[tgl_str]).strip().upper()
-            
-            opsi = shift_options.copy()
-            if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
-            default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
-            
-            with cols[i % 3]:
-                new_val = st.selectbox(nama, options=opsi, index=default_idx, key=f"edit_{idx}")
-                new_values[idx] = {"nama": nama, "val": new_val, "row_sheet": int(idx) + 2}
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        submit = st.form_submit_button("💾 Simpan Perubahan Masal", type="primary", use_container_width=True)
-        
-        if submit:
-            updates = []
-            for idx, data in new_values.items():
-                old_val = str(valid_df.loc[idx, tgl_str]).strip().upper()
-                if data["val"] != old_val:
-                    updates.append(gspread.Cell(data["row_sheet"], col_idx, data["val"]))
-            
-            if updates:
-                try:
-                    client = get_client()
-                    sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                    sh.update_cells(updates)
-                    load_all_data.clear()
-                    st.success(f"✅ Berhasil memperbarui {len(updates)} data personel untuk tanggal {tgl_str}!")
-                    import time
-                    time.sleep(1.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Gagal menyimpan ke database: {e}")
-            else:
-                st.info("Tidak ada perubahan jadwal yang dideteksi.")
-
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
     
-    if st.text_input("Kunci Keamanan", type="password", placeholder="Masukkan PIN Manajer...") != PIN_MANAGER:
+    # === SISTEM LOGIN GLOBAL ===
+    if 'is_manager' not in st.session_state: st.session_state.is_manager = False
+    
+    pin_input = st.text_input("Kunci Keamanan", type="password", placeholder="Masukkan PIN Manajer...")
+    is_locked = pin_input != PIN_MANAGER
+    st.session_state.is_manager = not is_locked
+
+    if is_locked:
         return st.markdown("<div style='border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(15,23,42,0.6); padding:30px; text-align:center;'><span class='material-symbols-rounded' style='font-size:48px; color:#64748b; margin-bottom:10px;'>lock</span><br><span style='color:#cbd5e1; font-size:14px;'>Akses terkunci. Silakan masukkan PIN otoritas.</span></div>", unsafe_allow_html=True)
 
     approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
-    is_locked = approver_name == DAFTAR_MANAJER[0]
+    is_name_locked = approver_name == DAFTAR_MANAJER[0]
     
     st.markdown("<div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
     c_btn1, c_btn2 = st.columns(2)
     with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
     with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
 
-    ui_smart_assistant(df_j, approver_name, is_locked)
+    ui_smart_assistant(df_j, is_name_locked)
 
     if df_i.empty or 'Status Approval' not in df_i.columns: return st.warning("Menunggu sinkronisasi data izin...")
     df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
@@ -634,13 +577,13 @@ def ui_manager_panel(df_i, df_j):
     
     if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
     else:
-        if is_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
+        if is_name_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
         for idx, row in pending_df.head(5).iterrows():
             with st.container(border=True):
                 st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
                 c1, c2 = st.columns(2)
-                if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
-                if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
+                if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
+                if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
 
     st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
     history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
@@ -654,7 +597,7 @@ def ui_manager_panel(df_i, df_j):
             
             with st.container(border=True):
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
+                if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
 
 def ui_off_tracker(df_j, df_k):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
@@ -736,6 +679,62 @@ def ui_timeline(df_j, df_i):
         html += '</div>'
     st.markdown(html + '</div>', unsafe_allow_html=True)
 
+    # === INTEGRASI EDITOR TAKTIS LANGSUNG DI BAWAH TIMELINE ===
+    if st.session_state.get('is_manager', False):
+        st.markdown("<br><h4 style='color:#38bdf8; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded'>edit_calendar</span> ⚙️ Mode Edit Jadwal Langsung</h4>", unsafe_allow_html=True)
+        with st.container(border=True):
+            tgl_edit = st.date_input("Pilih Tanggal yang Ingin Diedit di Atas:", value=datetime.now().date())
+            tgl_str_edit = tgl_edit.strftime('%Y-%m-%d')
+            
+            if df_j.empty or tgl_str_edit not in df_j.columns:
+                st.warning(f"⚠️ Data jadwal untuk **{tgl_str_edit}** belum tersedia di database.")
+            else:
+                col_idx = list(df_j.columns).index(tgl_str_edit) + 1
+                valid_df = df_j.dropna(subset=['Nama Operator'])
+                valid_df = valid_df[valid_df['Nama Operator'].astype(str).str.strip() != '']
+                shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
+                
+                with st.form("form_mass_update"):
+                    cols = st.columns(3)
+                    new_values = {}
+                    
+                    for i, (idx, row) in enumerate(valid_df.iterrows()):
+                        nama = str(row['Nama Operator']).replace('*', '').strip()
+                        status_lama = str(row[tgl_str_edit]).strip().upper()
+                        
+                        opsi = shift_options.copy()
+                        if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
+                        default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
+                        
+                        with cols[i % 3]:
+                            new_val = st.selectbox(nama, options=opsi, index=default_idx, key=f"edit_{idx}")
+                            new_values[idx] = {"nama": nama, "val": new_val, "row_sheet": int(idx) + 2}
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    submit = st.form_submit_button("💾 Simpan Perubahan Jadwal", type="primary", use_container_width=True)
+                    
+                    if submit:
+                        updates = []
+                        for idx, data in new_values.items():
+                            old_val = str(valid_df.loc[idx, tgl_str_edit]).strip().upper()
+                            if data["val"] != old_val:
+                                updates.append(gspread.Cell(data["row_sheet"], col_idx, data["val"]))
+                        
+                        if updates:
+                            try:
+                                client = get_client()
+                                sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                                sh.update_cells(updates)
+                                load_all_data.clear()
+                                st.success(f"✅ Berhasil memperbarui {len(updates)} jadwal untuk tanggal {tgl_str_edit}!")
+                                import time
+                                time.sleep(1.5)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal menyimpan ke database: {e}")
+                        else:
+                            st.info("Tidak ada perubahan jadwal yang dideteksi.")
+
 
 # =====================================================================
 # 6. ROUTER & MAIN EXECUTION
@@ -752,20 +751,18 @@ if __name__ == "__main__":
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
     st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
-    with c2: st.button("Editor Taktis", type="primary" if st.session_state.active_menu == "Editor" else "secondary", on_click=lambda: st.session_state.update(active_menu="Editor"), use_container_width=True)
-    with c3: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
+    with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.session_state.active_menu == "Dashboard":
         col_m, col_s = st.columns([2.5, 1.5])
         with col_m: ui_manager_panel(df_i, df_j)
         with col_s: ui_off_tracker(df_j, df_k)
-        ui_timeline(df_j, df_i)
         
-    elif st.session_state.active_menu == "Editor":
-        ui_editor_jadwal(df_j)
+        # Panggil timeline yang sudah terintegrasi dengan Editor
+        ui_timeline(df_j, df_i)
         
     elif st.session_state.active_menu == "Kalender":
         st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
