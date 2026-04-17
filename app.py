@@ -58,24 +58,18 @@ def find_col(df, keywords, default_name):
         if any(kw in str(col).lower() for kw in keywords): return col
     return default_name
 
-# --- NATURAL LANGUAGE PARSER (Asisten Pintar) ---
 def parse_natural_language_schedule(text, df_j):
-    """Menerjemahkan teks manusia menjadi instruksi komputer."""
     text = text.lower()
     today = datetime.now()
-    
-    # 1. Cari Nama Personel (Fuzzy Match Sederhana)
     nama_ditemukan = None
     if not df_j.empty and 'Nama Operator' in df_j.columns:
         daftar_nama = df_j['Nama Operator'].dropna().astype(str).tolist()
         for nama in daftar_nama:
             nama_bersih = nama.replace('*', '').strip().lower()
-            # Cek jika nama depan atau panggilannya disebut
             if nama_bersih in text or nama_bersih.split()[0] in text:
                 nama_ditemukan = nama
                 break
     
-    # 2. Cari Status / Shift
     status_baru = None
     if any(k in text for k in ["sakit", "jatuh sakit"]): status_baru = "SAKIT"
     elif any(k in text for k in ["cuti", "libur"]): status_baru = "CUTI"
@@ -84,46 +78,64 @@ def parse_natural_language_schedule(text, df_j):
     elif "pagi" in text: status_baru = "PG"
     elif "malam" in text: status_baru = "MLM"
     
-    # 3. Cari Tanggal
     tanggal_mulai, tanggal_selesai = None, None
-    
-    # Deteksi "hari ini", "besok", "lusa"
-    if "hari ini" in text:
-        tanggal_mulai = tanggal_selesai = today
-    elif "besok" in text:
-        tanggal_mulai = tanggal_selesai = today + timedelta(days=1)
-    elif "lusa" in text:
-        tanggal_mulai = tanggal_selesai = today + timedelta(days=2)
+    if "hari ini" in text: tanggal_mulai = tanggal_selesai = today
+    elif "besok" in text: tanggal_mulai = tanggal_selesai = today + timedelta(days=1)
+    elif "lusa" in text: tanggal_mulai = tanggal_selesai = today + timedelta(days=2)
     else:
-        # Regex untuk mencari format "18" atau "18-20" atau "18 sampai 20"
         match_rentang = re.search(r'(\d{1,2})\s*(?:-|sampai|s/d)\s*(\d{1,2})', text)
         match_tunggal = re.search(r'(\d{1,2})', text)
-        
-        # Asumsi bulan adalah bulan ini (bisa diperbaiki untuk deteksi bulan juga nanti)
-        bulan_ini = today.month
-        tahun_ini = today.year
-        
+        bulan_ini, tahun_ini = today.month, today.year
         try:
             if match_rentang:
-                tgl_awal = int(match_rentang.group(1))
-                tgl_akhir = int(match_rentang.group(2))
-                # Validasi agar tidak error jika tgl tidak masuk akal (misal: 35)
-                if 1 <= tgl_awal <= 31 and 1 <= tgl_akhir <= 31:
-                    tanggal_mulai = datetime(tahun_ini, bulan_ini, tgl_awal)
-                    tanggal_selesai = datetime(tahun_ini, bulan_ini, tgl_akhir)
+                t_aw, t_ak = int(match_rentang.group(1)), int(match_rentang.group(2))
+                if 1 <= t_aw <= 31 and 1 <= t_ak <= 31:
+                    tanggal_mulai, tanggal_selesai = datetime(tahun_ini, bulan_ini, t_aw), datetime(tahun_ini, bulan_ini, t_ak)
             elif match_tunggal:
                 tgl = int(match_tunggal.group(1))
-                if 1 <= tgl <= 31:
-                    tanggal_mulai = tanggal_selesai = datetime(tahun_ini, bulan_ini, tgl)
-        except ValueError:
-            pass # Tanggal tidak valid (misal 30 Februari)
+                if 1 <= tgl <= 31: tanggal_mulai = tanggal_selesai = datetime(tahun_ini, bulan_ini, tgl)
+        except ValueError: pass
 
-    return {
-        "nama": nama_ditemukan,
-        "status": status_baru,
-        "tgl_mulai": tanggal_mulai,
-        "tgl_selesai": tanggal_selesai
-    }
+    return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
+
+def generate_html_card(row, col_reason, col_proof, delay):
+    alasan = str(row.get(col_reason, '-')).strip()
+    if alasan.lower() in ['nan', '']: alasan = 'Tidak ada keterangan'
+    
+    bukti = str(row.get(col_proof, '')).strip()
+    if bukti.startswith('http'):
+        bukti_html = f"<a href='{bukti}' target='_blank' class='link-hover' style='color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center;'><span class='material-symbols-rounded' style='font-size:16px; margin-right:4px;'>attach_file</span> Buka Dokumen</a>"
+    else:
+        bukti_html = "<span style='color:#64748b; font-style:italic; display:inline-flex; align-items:center;'><span class='material-symbols-rounded' style='font-size:16px; margin-right:4px;'>description_off</span> Tidak ada lampiran</span>"
+
+    return f"""
+    <div style='animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) {delay}s both;'>
+        <div style='display:flex; align-items:center; gap:8px;'>
+            <span class='material-symbols-rounded' style='color:#38bdf8; font-size:20px;'>person</span>
+            <b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b> 
+            <span style='color:#94a3b8; font-weight:500; font-size:13px;'>({row.get('Jenis Izin yang Diajukan', 'Izin')})</span>
+        </div>
+        <div style='font-size:14px; margin-top:12px; color:#e2e8f0; display:flex; align-items:center; gap:6px;'>
+            <span class='material-symbols-rounded' style='font-size:16px; color:#94a3b8;'>calendar_month</span> 
+            {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}
+            <span style='color:#64748b;'>|</span>
+            <span class='material-symbols-rounded' style='font-size:16px; color:#94a3b8;'>schedule</span> Shift: {row.get('Shift Izin', 'Pg')}
+        </div>
+        <div style='margin-top:12px; background: rgba(255,255,255,0.03); border-left: 3px solid #64748b; padding: 12px; border-radius: 6px; transition: background 0.3s;'>
+            <div style='font-size:13px; color:#cbd5e1; margin-bottom:8px; line-height:1.5;'>
+                <div style='display:flex; align-items:center; gap:4px; margin-bottom:4px; color:#94a3b8;'>
+                    <span class='material-symbols-rounded' style='font-size:14px;'>notes</span> <b>Alasan / Keterangan:</b>
+                </div>
+                {alasan}
+            </div>
+            <div style='font-size:13px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;'>{bukti_html}</div>
+        </div>
+        <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-flex; align-items:center; gap:6px;'>
+            <span class='material-symbols-rounded' style='font-size:16px;'>sync_alt</span> 
+            Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}
+        </div>
+    </div>
+    """
 
 
 # =====================================================================
@@ -214,15 +226,11 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
         st.error(f"Terjadi kesalahan API: {e}")
 
 def execute_smart_edit(nama, status, d_start, d_end, df_j):
-    """Eksekusi Update Batch dari Asisten AI ke Spreadsheet."""
     client = get_client()
     if not client: return st.error("Gagal terhubung ke database.")
-    
     try:
         sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
         batch_updates = []
-        
-        # Cari baris Personel
         match_p = df_j[df_j.iloc[:,0].astype(str).str.replace('*', '', regex=False).str.strip().str.lower() == nama.replace('*', '').strip().lower()]
         
         if not match_p.empty:
@@ -237,15 +245,11 @@ def execute_smart_edit(nama, status, d_start, d_end, df_j):
                 sh_aktual.update_cells(batch_updates)
                 load_all_data.clear()
                 st.success(f"✅ Jadwal **{nama}** berhasil diubah menjadi **{status}**.")
-                # Delay sedikit sebelum rerun agar pesan sukses terlihat
                 import time
                 time.sleep(1.5)
                 st.rerun()
-        else:
-            st.error("Nama tidak ditemukan di database.")
-            
-    except Exception as e:
-        st.error(f"Gagal mengupdate jadwal: {e}")
+        else: st.error("Nama tidak ditemukan di database.")
+    except Exception as e: st.error(f"Gagal mengupdate jadwal: {e}")
 
 
 # =====================================================================
@@ -345,8 +349,6 @@ def inject_custom_css(bg_base64, logo_base64):
 
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
     .link-hover:hover {{ text-decoration: underline !important; filter: brightness(1.2); }}
-
-    /* SMART ASSISTANT STYLES */
     .chat-bubble {{ background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }}
     .ai-badge {{ background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px; }}
 
@@ -362,7 +364,7 @@ def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" style="max-height: 50px;">'
     
     if pending_count > 0:
-        notif = f'<div style="position:relative; margin-right:16px; cursor:pointer;" title="Ada {pending_count} ajuan"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
+        notif = f'<div style="position:relative; margin-right:16px; cursor:pointer;" title="Ada {pending_count} ajuan menunggu!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
     else:
         notif = '<div style="position:relative; margin-right:16px; opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
         
@@ -384,13 +386,7 @@ def ui_live_hud_widget():
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
         body {{ margin: 0; padding: 5px; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }}
-        .hud-container {{
-            display: flex; align-items: center; justify-content: flex-start; gap: 20px;
-            background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1));
-            border: 1px solid rgba(56,189,248,0.4); border-radius: 16px; 
-            padding: 12px 20px; box-sizing: border-box; box-shadow: 0 8px 20px rgba(0,0,0,0.4); color: #f8fafc;
-            flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; 
-        }}
+        .hud-container {{ display: flex; align-items: center; justify-content: flex-start; gap: 20px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1)); border: 1px solid rgba(56,189,248,0.4); border-radius: 16px; padding: 12px 20px; box-sizing: border-box; box-shadow: 0 8px 20px rgba(0,0,0,0.4); color: #f8fafc; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }}
         .hud-container::-webkit-scrollbar {{ display: none; }}
         .hud-section {{ display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }}
         .clock {{ font-size: 26px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-shadow: 0 0 12px rgba(56,189,248,0.4); }}
@@ -517,59 +513,100 @@ def ui_live_hud_widget():
     </script>
     """, height=115)
 
-
 def ui_smart_assistant(df_j, approver_name, is_locked):
-    """UI untuk Chatbot Asisten Pengubah Jadwal"""
     st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-    st.markdown("<div class='chat-bubble'><span class='ai-badge'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus buka spreadsheet.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi sakit tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
+    st.markdown("<div class='chat-bubble'><span class='ai-badge'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot memilih dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
     
     if is_locked:
-        st.warning("⚠️ Pilih Nama Approver di atas untuk menggunakan Asisten AI.")
-        return
+        return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
 
-    # Inisialisasi Session State untuk percakapan AI
-    if 'ai_parsed_data' not in st.session_state:
-        st.session_state.ai_parsed_data = None
+    if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
         
     perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
     
     if st.button("Kirim Perintah", type="primary"):
-        if not perintah:
-            st.error("Silakan ketik perintah terlebih dahulu.")
+        if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
         else:
             parsed = parse_natural_language_schedule(perintah, df_j)
-            
-            if not parsed['nama']:
-                st.error("❌ Saya tidak dapat menemukan nama personel tersebut di database.")
-            elif not parsed['status']:
-                st.error("❌ Saya tidak menangkap status yang diinginkan (sakit/cuti/off/pagi/malam).")
-            elif not parsed['tgl_mulai']:
-                st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka (misal: 18) atau rentang (misal: 18-20).")
-            else:
-                # Simpan hasil parsing ke session state untuk konfirmasi
-                st.session_state.ai_parsed_data = parsed
+            if not parsed['nama']: st.error("❌ Saya tidak menemukan nama personel tersebut di database.")
+            elif not parsed['status']: st.error("❌ Saya tidak menangkap status yang diinginkan (sakit/cuti/off/pagi/malam).")
+            elif not parsed['tgl_mulai']: st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka (misal: 18) atau rentang (misal: 18-20).")
+            else: st.session_state.ai_parsed_data = parsed
 
-    # Tampilkan Box Konfirmasi jika data sudah diparsing
     if st.session_state.ai_parsed_data:
         p = st.session_state.ai_parsed_data
         tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
-        
-        st.markdown(f"""
-        <div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'>
-            <b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>
-            Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?
-        </div>
-        """, unsafe_allow_html=True)
-        
-        c_yes, c_no = st.columns(2)
-        if c_yes.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
+        st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
+        c_y, c_n = st.columns(2)
+        if c_y.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
             execute_smart_edit(p['nama'], p['status'], p['tgl_mulai'], p['tgl_selesai'], df_j)
-            st.session_state.ai_parsed_data = None # Reset setelah eksekusi
-            
-        if c_no.button("❌ Batal", use_container_width=True):
+            st.session_state.ai_parsed_data = None
+        if c_n.button("❌ Batal", use_container_width=True):
             st.session_state.ai_parsed_data = None
             st.rerun()
 
+def ui_editor_jadwal(df_j):
+    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>rule_settings</span> Editor Taktis (Update Massal)</h3>", unsafe_allow_html=True)
+    
+    if st.text_input("Kunci Keamanan Editor", type="password", key="pin_editor", placeholder="Masukkan PIN Manajer...") != PIN_MANAGER:
+        return st.markdown("<div style='border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(15,23,42,0.6); padding:30px; text-align:center;'><span class='material-symbols-rounded' style='font-size:48px; color:#64748b; margin-bottom:10px;'>lock</span><br><span style='color:#cbd5e1; font-size:14px;'>Area khusus otoritas.</span></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        tgl_edit = st.date_input("Pilih Tanggal yang Ingin Diedit:")
+        tgl_str = tgl_edit.strftime('%Y-%m-%d')
+        
+    if df_j.empty or tgl_str not in df_j.columns:
+        return st.warning(f"⚠️ Kolom tanggal **{tgl_str}** belum tersedia di database Google Sheets (Berada di luar jangkauan kalender saat ini).")
+
+    st.markdown(f"<h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:20px;'>edit_calendar</span> Susunan Shift: {tgl_str}</h4>", unsafe_allow_html=True)
+    
+    col_idx = list(df_j.columns).index(tgl_str) + 1
+    valid_df = df_j.dropna(subset=['Nama Operator'])
+    valid_df = valid_df[valid_df['Nama Operator'].astype(str).str.strip() != '']
+    
+    shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
+    
+    with st.form("form_mass_update"):
+        st.info("Pilih status baru pada kolom di bawah. Anda bisa mengubah jadwal banyak orang sekaligus, lalu klik Simpan di paling bawah.")
+        cols = st.columns(3)
+        new_values = {}
+        
+        for i, (idx, row) in enumerate(valid_df.iterrows()):
+            nama = str(row['Nama Operator']).replace('*', '').strip()
+            status_lama = str(row[tgl_str]).strip().upper()
+            
+            opsi = shift_options.copy()
+            if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
+            default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
+            
+            with cols[i % 3]:
+                new_val = st.selectbox(nama, options=opsi, index=default_idx, key=f"edit_{idx}")
+                new_values[idx] = {"nama": nama, "val": new_val, "row_sheet": int(idx) + 2}
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        submit = st.form_submit_button("💾 Simpan Perubahan Masal", type="primary", use_container_width=True)
+        
+        if submit:
+            updates = []
+            for idx, data in new_values.items():
+                old_val = str(valid_df.loc[idx, tgl_str]).strip().upper()
+                if data["val"] != old_val:
+                    updates.append(gspread.Cell(data["row_sheet"], col_idx, data["val"]))
+            
+            if updates:
+                try:
+                    client = get_client()
+                    sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+                    sh.update_cells(updates)
+                    load_all_data.clear()
+                    st.success(f"✅ Berhasil memperbarui {len(updates)} data personel untuk tanggal {tgl_str}!")
+                    import time
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Gagal menyimpan ke database: {e}")
+            else:
+                st.info("Tidak ada perubahan jadwal yang dideteksi.")
 
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -579,30 +616,25 @@ def ui_manager_panel(df_i, df_j):
 
     approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
     is_locked = approver_name == DAFTAR_MANAJER[0]
-    if is_locked: st.info("Pilih Nama Anda terlebih dahulu untuk mengaktifkan tombol persetujuan.")
     
     st.markdown("<div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
-    
     c_btn1, c_btn2 = st.columns(2)
     with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
     with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
 
-    # -------- INTEGRASI AI ASSISTANT --------
     ui_smart_assistant(df_j, approver_name, is_locked)
-    # ----------------------------------------
 
     if df_i.empty or 'Status Approval' not in df_i.columns: return st.warning("Menunggu sinkronisasi data izin...")
-
     df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
     col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
     col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
 
-    # Bagian 1: Antrean Pending
     st.markdown("<h4 style='color:white; font-size:16px; margin-top:20px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
     pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
     
     if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
     else:
+        if is_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
         for idx, row in pending_df.head(5).iterrows():
             with st.container(border=True):
                 st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
@@ -610,7 +642,6 @@ def ui_manager_panel(df_i, df_j):
                 if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
                 if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
 
-    # Bagian 2: Riwayat Keputusan
     st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
     history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
     
@@ -622,17 +653,7 @@ def ui_manager_panel(df_i, df_j):
             c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
             
             with st.container(border=True):
-                st.markdown(f"""
-                <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'>
-                    <div>
-                        <b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br>
-                        <span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span>
-                    </div>
-                    <div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'>
-                        <span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
                 if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
 
 def ui_off_tracker(df_j, df_k):
@@ -662,22 +683,7 @@ def ui_off_tracker(df_j, df_k):
                     if match.empty: match = df_k[clean_db.str.contains(target, na=False)]
                     if not match.empty: hp = str(match.iloc[0][col_hp]).strip()
 
-                st.markdown(f"""
-                <details class="off-personnel" style="animation: slideInRight 0.3s {i*0.05}s ease-out backwards;">
-                    <summary>
-                        <div style='background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 8px; border-radius:4px; font-size:11px; margin-right:10px;'>OFF</div>
-                        <span style="font-size:14px;">{name}</span>
-                        <span class="material-symbols-rounded chevron-icon">expand_more</span>
-                    </summary>
-                    <div class="off-details-content">
-                        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-                            <span class="material-symbols-rounded" style="color:#94a3b8; font-size:18px;">call</span>
-                            <span style="color:#94a3b8;">No. Handphone:</span> 
-                            <b style="color:#e2e8f0; font-size:14px; letter-spacing:0.5px;">{hp}</b>
-                        </div>
-                    </div>
-                </details>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<details class='off-personnel' style='animation: slideInRight 0.3s {i*0.05}s ease-out backwards;'><summary><div style='background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 8px; border-radius:4px; font-size:11px; margin-right:10px;'>OFF</div><span style='font-size:14px;'>{name}</span><span class='material-symbols-rounded chevron-icon'>expand_more</span></summary><div class='off-details-content'><div style='display:flex; align-items:center; gap:8px; margin-top:8px;'><span class='material-symbols-rounded' style='color:#94a3b8; font-size:18px;'>call</span><span style='color:#94a3b8;'>No. Handphone:</span> <b style='color:#e2e8f0; font-size:14px; letter-spacing:0.5px;'>{hp}</b></div></div></details>", unsafe_allow_html=True)
                 
     st.markdown("<br>", unsafe_allow_html=True)
     st.link_button("Ajukan Form Izin / Tukar Shift", URL_GFORM, use_container_width=True, type="primary")
@@ -719,14 +725,10 @@ def ui_timeline(df_j, df_i):
                     name = str(row['Nama Operator']).replace('*', '').strip()
                     status = str(row[d_str]).upper()
                     
-                    if any(k in status for k in ["DINAS", "PD"]): 
-                        badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
-                    elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): 
-                        badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
-                    elif name.lower() in subs_map.get(d_str, []): 
-                        badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
-                    else: 
-                        badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
+                    if any(k in status for k in ["DINAS", "PD"]): badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
+                    elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
+                    elif name.lower() in subs_map.get(d_str, []): badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
+                    else: badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
                         
                     html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:13px;">{name}</b><br>{badge}</div>'
             else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Semua OFF</div>'
@@ -750,9 +752,10 @@ if __name__ == "__main__":
     if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
     
     st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
-    with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
+    with c2: st.button("Editor Taktis", type="primary" if st.session_state.active_menu == "Editor" else "secondary", on_click=lambda: st.session_state.update(active_menu="Editor"), use_container_width=True)
+    with c3: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.session_state.active_menu == "Dashboard":
@@ -760,6 +763,9 @@ if __name__ == "__main__":
         with col_m: ui_manager_panel(df_i, df_j)
         with col_s: ui_off_tracker(df_j, df_k)
         ui_timeline(df_j, df_i)
+        
+    elif st.session_state.active_menu == "Editor":
+        ui_editor_jadwal(df_j)
         
     elif st.session_state.active_menu == "Kalender":
         st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
