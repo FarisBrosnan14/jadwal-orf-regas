@@ -11,7 +11,7 @@ import re
 # =====================================================================
 # 1. KONFIGURASI UTAMA & KONSTANTA
 # =====================================================================
-st.set_page_config(page_title="NR ORF Command", page_icon="logo-pertaminaregasv2.png", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NR ORF Command", page_icon="pertamina.png", layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
@@ -327,10 +327,19 @@ def inject_custom_css(bg_base64, logo_base64):
     .bell-active {{ animation: bellFlash 1.5s infinite; display: inline-block; }}
     .notif-badge {{ position: absolute; top: -6px; right: -8px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: 800; }}
 
-    /* TIMELINE SCROLL & NAV BUTTONS */
-    .timeline-anchor + div [data-testid="stHorizontalBlock"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; scroll-snap-type: x mandatory; padding-bottom: 15px; gap: 15px; }}
-    .timeline-anchor + div [data-testid="column"] {{ min-width: 220px !important; flex: 0 0 220px !important; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; scroll-snap-align: start; }}
-    .timeline-anchor + div [data-testid="column"]:first-child {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; }}
+    /* AKORDEON PERSONEL OFF */
+    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
+    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
+    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
+    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
+    .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
+    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
+    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
+
+    /* TIMELINE SCROLL HACK (Diperbarui agar tombol JS berfungsi) */
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; scroll-snap-type: x mandatory; padding-bottom: 15px; gap: 15px; }}
+    div[data-testid="stForm"] div[data-testid="column"] {{ min-width: 220px !important; flex: 0 0 220px !important; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; scroll-snap-align: start; }}
+    div[data-testid="stForm"] div[data-testid="column"]:first-child {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; }}
 
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; }}
     .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; }}
@@ -350,14 +359,6 @@ def inject_custom_css(bg_base64, logo_base64):
 
     .section-title {{ font-weight: 800; margin-bottom: 20px; font-size: 20px; display:flex; align-items:center; gap:8px; }}
     
-    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
-    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
-    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
-    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
-    .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
-    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
-    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
-
     @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; }} .header-title {{ font-size: 20px !important; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
     </style>
     """, unsafe_allow_html=True)
@@ -643,13 +644,13 @@ def ui_off_tracker(df_j, df_k):
 def ui_timeline(df_j, df_i):
     st.markdown("<br><hr style='opacity:0.1;'>", unsafe_allow_html=True)
     
-    # Header Timeline dilengkapi Tombol Navigasi Kiri/Kanan
+    # HACK TOMBOL JS: Akan mencari kotak scroll Read-Only maupun kotak Form Editor
     st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
         <div style="display: flex; gap: 10px;">
-            <button class="nav-arrow-btn" onclick="try { var c = document.querySelector('.scroll-container') || document.querySelector('.timeline-anchor').nextElementSibling.querySelector('[data-testid=\\'stHorizontalBlock\\']'); c.scrollBy({left: -300, behavior: 'smooth'}); } catch(e){}" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button class="nav-arrow-btn" onclick="try { var c = document.querySelector('.scroll-container') || document.querySelector('.timeline-anchor').nextElementSibling.querySelector('[data-testid=\\'stHorizontalBlock\\']'); c.scrollBy({left: 300, behavior: 'smooth'}); } catch(e){}" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
+            <button class="nav-arrow-btn" onclick="var ro = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = ro || form; if(t) t.scrollBy({left: -300, behavior: 'smooth'});" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
+            <button class="nav-arrow-btn" onclick="var ro = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = ro || form; if(t) t.scrollBy({left: 300, behavior: 'smooth'});" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -665,7 +666,6 @@ def ui_timeline(df_j, df_i):
         
         with st.form("inline_timeline_editor"):
             submit_btn = st.form_submit_button("💾 Simpan Semua Perubahan", type="primary", use_container_width=True)
-            st.markdown('<div class="timeline-anchor"></div>', unsafe_allow_html=True)
             
             cols = st.columns(14)
             new_values = {}
