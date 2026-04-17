@@ -11,7 +11,7 @@ import re
 # =====================================================================
 # 1. KONFIGURASI UTAMA & KONSTANTA
 # =====================================================================
-st.set_page_config(page_title="NR ORF Command", page_icon="logo-pertamina.png", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NR ORF Command", page_icon="logo-pertaminaregas.png", layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
