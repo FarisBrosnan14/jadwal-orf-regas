@@ -23,6 +23,7 @@ ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
 URL_JADWAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_JADWAL}/edit#gid=0"
 URL_IZIN = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_IZIN}/edit"
 URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
+
 PIN_MANAGER = "regas123"
 DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
@@ -32,6 +33,7 @@ EVENT_KALENDER = {
     "05-01": "Hari Buruh", "05-09": "Kenaikan Isa Al Masih", "05-23": "Waisak", "06-01": "Lahir Pancasila",
     "06-17": "Idul Adha", "07-07": "Tahun Baru Islam", "08-17": "HUT RI", "09-16": "Maulid Nabi", "12-25": "Natal"
 }
+
 
 # =====================================================================
 # 2. UTILITIES & AI PARSER
@@ -94,6 +96,7 @@ def generate_html_card(row, col_reason, col_proof, delay):
         <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
     </div>
     """
+
 
 # =====================================================================
 # 3. DATABASE (GSPREAD)
@@ -197,53 +200,47 @@ def clear_pending_requests(df_i):
         st.rerun()
     except Exception as e: st.error(f"Error: {e}")
 
+
 # =====================================================================
-# 4. CSS INJECTION
+# 4. CSS INJECTION (ANTI-STUCK SPLASH SCREEN)
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
     logo_src = f"data:image/png;base64,{logo_base64}" if logo_base64 else ""
     
+    # 1. STYLE GLOBAL (Selalu dimuat agar desain tidak berantakan)
     st.markdown(f"""
-    <div id="splash-overlay"><div class="splash-content"><img src="{logo_src}" class="splash-logo"><h2 class="splash-title">NR ORF COMMAND</h2>
-    <div class="splash-fade-early"><div class="splash-subtitle">SINKRONISASI DATABASE...</div><div class="loading-bar-container"><div class="loading-bar"></div></div></div></div></div>
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
     
-    /* Splash Screen Force White Background & Black Text */
-    #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2.5s forwards; }}
-    .splash-content {{ text-align: center; animation: moveToHeader 2.5s forwards; }}
-    .splash-fade-early {{ animation: fadeOutEarly 2.5s forwards; }}
-    .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s infinite alternate; }}
-    .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; }}
-    .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
-    .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
-    .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1.2s infinite; }}
-    
-    @keyframes overlayFade {{ 0%, 65% {{ opacity: 1; visibility: visible; background: #ffffff; }} 100% {{ opacity: 0; visibility: hidden; pointer-events: none; }} }}
-    @keyframes moveToHeader {{ 0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }} }}
-    @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 65%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
-    @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }} }}
-    @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
+    [data-testid="collapsedControl"] {{ display: none; }} 
+    .block-container {{ max-width: 1200px !important; padding-top: 2rem !important; }} 
+    header[data-testid="stHeader"] {{ display: none !important; }}
     
     html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
     .stApp {{ background-image: linear-gradient(rgba(15,23,42,0.88), rgba(15,23,42,0.88)), {bg_img}; background-size: cover; background-attachment: fixed; }}
-    .block-container {{ max-width: 1200px !important; padding-top: 2rem !important; }} header[data-testid="stHeader"] {{ display: none !important; }}
+    
+    /* STYLE FORM INPUT */
     div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{ background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }}
     div[data-baseweb="input"] input, div[data-baseweb="select"] span {{ color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }}
+    
     div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; border: 1px solid rgba(255,255,255,0.1); padding: 24px; transition: all 0.3s; }}
+    
     .stButton>button {{ border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }}
     button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }}
     
+    /* HEADER GLOWING */
     @keyframes headerGlow {{ 0%, 100% {{ box-shadow: 0 0 20px rgba(0,77,149,0.6); border-color: rgba(0,77,149,0.9); }} 33% {{ box-shadow: 0 0 20px rgba(239,68,68,0.6); border-color: rgba(239,68,68,0.9); }} 66% {{ box-shadow: 0 0 20px rgba(130,195,65,0.6); border-color: rgba(130,195,65,0.9); }} }}
-    .header-bar {{ background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 2s both, headerGlow 6s infinite; border: 2px solid transparent; }}
+    .header-bar {{ background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }}
+    
     @keyframes bellFlash {{ 0%, 100% {{ color: #1e293b; transform: scale(1); }} 50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); }} }}
     .bell-active {{ animation: bellFlash 1.5s infinite; }}
-    .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; }}
+    .home-btn {{ display: flex; align-items: center; justify-content: center; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; }}
     
-    /* CSS Timeline Visual Original */
+    /* TIMELINE SCROLL */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
+    .scroll-container::-webkit-scrollbar {{ display: none; }}
     .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s; scroll-snap-align: start; }}
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 20px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-3px); }}
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; }}
@@ -257,6 +254,42 @@ def inject_custom_css(bg_base64, logo_base64):
     </style>
     """, unsafe_allow_html=True)
 
+    # 2. SPLASH SCREEN (Hanya diinjeksi 1 kali per sesi pengguna agar tidak pernah tersangkut)
+    if 'splash_shown' not in st.session_state:
+        st.session_state.splash_shown = True
+        st.markdown(f"""
+        <div id="splash-overlay">
+            <div class="splash-content">
+                <img src="{logo_src}" class="splash-logo" alt="Logo">
+                <h2 class="splash-title">NR ORF COMMAND</h2>
+                <div class="splash-fade-early">
+                    <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
+                    <div class="loading-bar-container"><div class="loading-bar"></div></div>
+                </div>
+            </div>
+        </div>
+        <style>
+        #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background: #ffffff; animation: overlayFade 2.5s forwards; pointer-events: none; }}
+        .splash-content {{ text-align: center; animation: moveToHeader 2.5s forwards; }}
+        .splash-fade-early {{ animation: fadeOutEarly 2.5s forwards; }}
+        .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s infinite alternate; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; }}
+        .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
+        .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
+        .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1.2s infinite; }}
+        
+        @keyframes overlayFade {{ 0%, 60% {{ opacity: 1; visibility: visible; }} 99% {{ opacity: 0; visibility: visible; }} 100% {{ opacity: 0; visibility: hidden; display: none; }} }}
+        @keyframes moveToHeader {{ 0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }} }}
+        @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 65%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
+        @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }} }}
+        @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
+        </style>
+        """, unsafe_allow_html=True)
+
+
+# =====================================================================
+# 5. HEADER & HUD COMPONENT (WIDGET JAM & CUACA)
+# =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
     notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
@@ -275,7 +308,6 @@ def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
     evt = EVENT_KALENDER.get(hari_ini, "Tidak ada event")
     
-    # HTML dan JS murni (Tidak menggunakan injeksi f-string bracket untuk JS agar anti-error)
     components.html(f"""
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
     <style>
@@ -307,7 +339,6 @@ def ui_live_hud_widget():
         </div>
         <div class="section"><span style="font-size:13px; font-weight:700; color:#1e293b; background:#facc15; padding:6px 14px; border-radius:8px;">📢 {evt}</span></div>
     </div>
-    
     <script>
         function updateTime() {{
             var d = new Date();
@@ -325,27 +356,19 @@ def ui_live_hud_widget():
         if(navigator.geolocation) {{
             navigator.geolocation.getCurrentPosition(async function(pos) {{
                 try {{
-                    var lat = pos.coords.latitude;
-                    var lon = pos.coords.longitude;
-                    var r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true');
+                    var r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + pos.coords.latitude + '&longitude=' + pos.coords.longitude + '&current_weather=true');
                     var json = await r.json();
                     var cw = json.current_weather;
-                    
                     document.getElementById('w-temp').innerText = cw.temperature + '°C'; 
                     document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; 
                     document.getElementById('loc').innerText = "Titik Koordinat";
-                    
-                    var i = 'partly_cloudy_day';
-                    var desc = 'Berawan'; 
+                    var i = 'partly_cloudy_day'; var desc = 'Berawan'; 
                     if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'Cerah'; }} 
                     else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'Hujan'; }}
-                    
-                    document.getElementById('w-icon').innerText = i; 
-                    document.getElementById('w-desc').innerText = desc;
+                    document.getElementById('w-icon').innerText = i; document.getElementById('w-desc').innerText = desc;
                 }} catch(e) {{}}
             }});
         }}
-        
         window.addEventListener('deviceorientation', function(e) {{ 
             if(e.webkitCompassHeading) {{ 
                 document.getElementById('deg').innerText = Math.round(e.webkitCompassHeading) + '°'; 
@@ -357,7 +380,7 @@ def ui_live_hud_widget():
 
 
 # =====================================================================
-# 5. HALAMAN MANAJER
+# 6. HALAMAN MANAJER
 # =====================================================================
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 style='font-weight:800;'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -413,7 +436,7 @@ def ui_manager_panel(df_i, df_j):
 
 
 # =====================================================================
-# 6. HALAMAN UTAMA (TIMELINE SCROLL CANTIK)
+# 7. HALAMAN UTAMA (TIMELINE & TRACKER)
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("<hr style='opacity:0.2;'>", unsafe_allow_html=True)
@@ -438,7 +461,7 @@ def ui_timeline(df_j, df_i):
     html = '<div class="scroll-container">'
     for i in range(14):
         d_str = (today + timedelta(days=i)).strftime('%Y-%m-%d')
-        h_cls = "scroll-header today-header" if i==0 else "scroll-header"
+        h_cls = "today-header" if i==0 else "scroll-header"
         c_cls = "scroll-card today-card" if i==0 else "scroll-card"
         txt = f"⭐ HARI INI - {d_str}" if i==0 else d_str
         
@@ -450,14 +473,11 @@ def ui_timeline(df_j, df_i):
                 n = str(r['Nama Operator']).replace('*','').strip()
                 s = str(r[d_str]).upper()
                 
-                # Desain Badge Warna-warni
                 c_bg = "rgba(249,115,22,0.15)" if "PD" in s else "rgba(239,68,68,0.15)" if any(x in s for x in ["SAKIT","CUTI","IZIN"]) else "rgba(56,189,248,0.15)" if n.lower() in subs.get(d_str,[]) else "rgba(34,197,94,0.15)"
                 c_txt = "#fdba74" if "PD" in s else "#fca5a5" if any(x in s for x in ["SAKIT","CUTI","IZIN"]) else "#7dd3fc" if n.lower() in subs.get(d_str,[]) else "#4ade80"
                 c_dot = "#f97316" if "PD" in s else "#ef4444" if any(x in s for x in ["SAKIT","CUTI","IZIN"]) else "#38bdf8" if n.lower() in subs.get(d_str,[]) else "#22c55e"
                 
-                badge_html = f'<div class="status-badge" style="background:{c_bg}; color:{c_txt};"><div class="status-dot" style="background:{c_dot};"></div>SHIFT {s}</div>'
-                
-                html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:14px;">{n}</b><br>{badge_html}</div>'
+                html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:14px;">{n}</b><br><div class="status-badge" style="background:{c_bg}; color:{c_txt};"><div class="status-dot" style="background:{c_dot};"></div>SHIFT {s}</div></div>'
         else: html += '<div class="scroll-item" style="color:#64748b; text-align:center;">Belum dirilis</div>'
         html += '</div>'
     st.markdown(html + '</div>', unsafe_allow_html=True)
