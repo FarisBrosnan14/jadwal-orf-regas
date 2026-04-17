@@ -258,13 +258,10 @@ def execute_smart_edit(nama, status, d_start, d_end, df_j):
     except Exception as e: st.error(f"Gagal mengupdate jadwal: {e}")
 
 def clear_pending_requests(df_i):
-    """Fungsi untuk menghapus baris ajuan izin yang masih kosong (pending) dari Google Sheets."""
     client = get_client()
     if not client: return st.error("Gagal terhubung ke database.")
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        
-        # Temukan baris mana saja yang status approval-nya kosong
         df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
         pending_rows = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
         
@@ -272,8 +269,6 @@ def clear_pending_requests(df_i):
             st.info("Tidak ada antrean yang bisa dihapus.")
             return
             
-        # Hapus baris dari bawah ke atas agar indeks sheet tidak berantakan
-        # Indeks di dataframe mulai dari 0, di sheet mulai dari 2 (baris 1 adalah header)
         indices_to_delete = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         
         for row_num in indices_to_delete:
@@ -317,7 +312,10 @@ def inject_custom_css(bg_base64, logo_base64):
     .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; animation: moveToHeader 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; }}
     .splash-fade-early {{ animation: fadeOutEarly 2.5s cubic-bezier(0.8, 0, 0.2, 1) forwards; display: flex; flex-direction: column; align-items: center; width: 100%; }}
     .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s ease-in-out infinite alternate; }}
-    .splash-title {{ color: #004D95; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }}
+    
+    /* DIUBAH MENJADI HITAM PEKAT AGAR KELIhatan JELAS DI LAYAR PUTIH */
+    .splash-title {{ color: #0f172a; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 2px; margin: 0; }}
+    
     .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
     .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
     .loading-bar {{ position: absolute; top: 0; left: 0; height: 100%; width: 40%; background: #38bdf8; border-radius: 4px; animation: loadingSwipe 1.2s ease-in-out infinite; box-shadow: 0 0 10px rgba(56,189,248,0.8); }}
@@ -375,7 +373,6 @@ def inject_custom_css(bg_base64, logo_base64):
     .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
     details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
-    @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
 
     /* TIMELINE SCROLL HACK */
     div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; scroll-snap-type: x mandatory; padding-bottom: 15px; gap: 15px; }}
@@ -417,9 +414,9 @@ def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Pertamina_Logo.svg/512px-Pertamina_Logo.svg.png" style="max-height: 50px;">'
     
     if pending_count > 0:
-        notif = f'<div style="position:relative; cursor:pointer;" title="Ada {pending_count} ajuan menunggu!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
+        notif = f'<div style="position:relative; margin-right:16px; cursor:pointer;" title="Ada {pending_count} ajuan menunggu!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span class="notif-badge">{pending_count}</span></div>'
     else:
-        notif = '<div style="position:relative; opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
+        notif = '<div style="position:relative; margin-right:16px; opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
         
     st.markdown(f"""
     <div class="header-bar">
@@ -451,425 +448,4 @@ def ui_live_hud_widget():
         .stat-group {{ display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #e2e8f0; }}
         .stat-val {{ color: #4ade80; font-weight: 800; font-size: 14px; }}
         .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 6px 14px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
-        #loc-status {{ position: absolute; top: -6px; right: -6px; background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center; }}
-        .border-left-divider {{ border-left: 2px solid rgba(255,255,255,0.1); padding-left: 20px; }}
-        #compass-needle {{ transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: center center; }}
-    </style>
-
-    <div class="hud-container">
-        <div class="hud-section">
-            <span class="material-symbols-rounded" style="color:#38bdf8; font-size:30px;">schedule</span>
-            <span class="clock" id="live-clock">--:--:--</span>
-            <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 4px;"></div>
-            <span class="date" id="live-date">Memuat...</span>
-        </div>
-        <div class="hud-section border-left-divider">
-            <div class="box-hud" title="Lokasi dan Arah Mata Angin">
-                <span class="material-symbols-rounded" id="compass-needle" style="color:#f87171; font-size:26px;">navigation</span>
-                <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
-                    <span id="loc-name" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">Mencari GPS...</span>
-                    <div style="display:flex; gap:10px;">
-                        <span class="stat-group" title="Arah Hadap Perangkat">
-                            <span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">explore</span> 
-                            <span id="compass-val" class="stat-val" style="color:#38bdf8;">--°</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="hud-section border-left-divider">
-            <div class="box-hud">
-                <div id="loc-status" title="Status GPS"><span class="material-symbols-rounded" style="font-size:10px; color:white;" id="loc-icon">location_searching</span></div>
-                <span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:26px;">partly_cloudy_day</span>
-                <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
-                    <span id="w-desc" style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Memuat...</span>
-                    <div style="display:flex; gap:10px;">
-                        <span class="stat-group"><span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span> <span id="w-temp" class="stat-val">--</span></span>
-                        <span class="stat-group"><span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span> <span id="w-wind" class="stat-val">--</span></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="hud-section border-left-divider">
-            <span class="event"><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> {event_hari_ini}</span>
-        </div>
-    </div>
-    
-    <script>
-        function updateTime() {{
-            const now = new Date();
-            document.getElementById('live-clock').innerText = now.toLocaleTimeString(undefined, {{hour12: false}}).replace(/\./g, ':');
-            document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, {{weekday: 'short', day: 'numeric', month: 'short'}});
-        }}
-        setInterval(updateTime, 1000); updateTime();
-
-        let currentLat = '{fallback_lat}';
-        let currentLon = '{fallback_lon}';
-
-        async function fetchLocationData(lat, lon, isGPS) {{
-            try {{
-                const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${{lat}}&longitude=${{lon}}&localityLanguage=id`);
-                const locData = await locRes.json();
-                const locName = locData.locality || locData.city || "Titik Koordinat";
-                document.getElementById('loc-name').innerText = isGPS ? locName : "ORF Muara Karang (Default)";
-
-                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${{lat}}&longitude=${{lon}}&current_weather=true`);
-                const wData = await wRes.json();
-                const cw = wData.current_weather;
-                
-                document.getElementById('w-temp').innerText = cw.temperature + '°C';
-                document.getElementById('w-wind').innerText = cw.windspeed + ' km/h';
-                
-                const code = cw.weathercode;
-                let icon = 'partly_cloudy_day'; let desc = 'Berawan'; let color = '#facc15';
-                
-                if (code === 0) {{ icon = 'clear_day'; desc = 'Cerah'; }}
-                else if (code > 0 && code <= 3) {{ icon = 'cloud'; desc = 'Berawan'; color = '#cbd5e1'; }}
-                else if (code >= 45 && code <= 48) {{ icon = 'fog'; desc = 'Berkabut'; color = '#94a3b8'; }}
-                else if (code >= 51 && code <= 67) {{ icon = 'rainy'; desc = 'Gerimis'; color = '#60a5fa'; }}
-                else if (code >= 71 && code <= 77) {{ icon = 'rainy'; desc = 'Hujan'; color = '#3b82f6'; }}
-                else if (code >= 80 && code <= 82) {{ icon = 'rainy'; desc = 'Hujan Lebat'; color = '#2563eb'; }}
-                else if (code >= 95) {{ icon = 'thunderstorm'; desc = 'Badai Petir'; color = '#c084fc'; }}
-
-                const iconEl = document.getElementById('w-icon');
-                iconEl.innerText = icon; iconEl.style.color = color;
-                document.getElementById('w-desc').innerText = desc;
-                
-                const locStatus = document.getElementById('loc-status');
-                const locIcon = document.getElementById('loc-icon');
-                
-                if (isGPS) {{ locStatus.style.background = '#22c55e'; locIcon.innerText = 'my_location'; }} 
-                else {{ locStatus.style.background = '#f97316'; locIcon.innerText = 'location_off'; }}
-            }} catch (err) {{
-                document.getElementById('w-desc').innerText = "Cuaca Offline";
-                document.getElementById('loc-status').style.background = '#ef4444';
-            }}
-        }}
-
-        if (navigator.geolocation) {{
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {{ currentLat = pos.coords.latitude; currentLon = pos.coords.longitude; fetchLocationData(currentLat, currentLon, true); }},
-                (err) => {{ fetchLocationData(currentLat, currentLon, false); }}
-            );
-        }} else {{ fetchLocationData(currentLat, currentLon, false); }}
-        setInterval(() => fetchLocationData(currentLat, currentLon, true), 600000);
-
-        if (window.DeviceOrientationEvent) {{
-            window.addEventListener('deviceorientation', function(e) {{
-                let heading = null;
-                if (e.webkitCompassHeading) {{ heading = e.webkitCompassHeading; }}
-                else if (e.alpha !== null) {{ heading = 360 - e.alpha; }}
-                
-                if (heading !== null) {{
-                    document.getElementById('compass-val').innerText = Math.round(heading) + '°';
-                    document.getElementById('compass-needle').style.transform = `rotate(${{-heading}}deg)`;
-                }}
-            }}, true);
-        }}
-    </script>
-    """, height=115)
-
-def ui_smart_assistant(df_j, is_locked):
-    st.markdown("<hr style='opacity:0.1; margin: 20px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-    st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
-    
-    if is_locked: return st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
-
-    if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
-        
-    perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
-    
-    if st.button("Kirim Perintah", type="primary"):
-        if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
-        else:
-            parsed = parse_natural_language_schedule(perintah, df_j)
-            if not parsed['nama']: st.error("❌ Saya tidak menemukan nama personel tersebut di database.")
-            elif not parsed['status']: st.error("❌ Saya tidak menangkap status yang diinginkan (sakit/cuti/off/pagi/malam).")
-            elif not parsed['tgl_mulai']: st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka (misal: 18) atau rentang (misal: 18-20).")
-            else: st.session_state.ai_parsed_data = parsed
-
-    if st.session_state.ai_parsed_data:
-        p = st.session_state.ai_parsed_data
-        tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
-        st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
-        c_y, c_n = st.columns(2)
-        if c_y.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
-            execute_smart_edit(p['nama'], p['status'], p['tgl_mulai'], p['tgl_selesai'], df_j)
-            st.session_state.ai_parsed_data = None
-        if c_n.button("❌ Batal", use_container_width=True):
-            st.session_state.ai_parsed_data = None
-            st.rerun()
-
-def ui_manager_panel(df_i, df_j):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
-    
-    if 'is_manager' not in st.session_state: st.session_state.is_manager = False
-    
-    pin_input = st.text_input("Kunci Keamanan", type="password", placeholder="Masukkan PIN Manajer...")
-    is_locked = pin_input != PIN_MANAGER
-    st.session_state.is_manager = not is_locked
-
-    if is_locked:
-        return st.markdown("<div style='border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(15,23,42,0.6); padding:30px; text-align:center;'><span class='material-symbols-rounded' style='font-size:48px; color:#64748b; margin-bottom:10px;'>lock</span><br><span style='color:#cbd5e1; font-size:14px;'>Akses terkunci. Silakan masukkan PIN otoritas.</span></div>", unsafe_allow_html=True)
-
-    approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
-    is_name_locked = approver_name == DAFTAR_MANAJER[0]
-
-    # === TABS UNTUK MEMISAHKAN PANEL EDIT DAN PERSETUJUAN ===
-    tab_edit, tab_izin = st.tabs(["⚙️ Panel Edit & Asisten AI", "📋 Panel Persetujuan Izin"])
-    
-    with tab_edit:
-        st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
-        c_btn1, c_btn2 = st.columns(2)
-        with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
-        with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
-        
-        ui_smart_assistant(df_j, is_name_locked)
-        
-    with tab_izin:
-        if df_i.empty or 'Status Approval' not in df_i.columns: 
-            st.warning("Menunggu sinkronisasi data izin...")
-        else:
-            df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
-            col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
-            col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
-            
-            pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
-
-            # HEADER ANTREAN + TOMBOL SAPU JAGAT
-            col_hdr1, col_hdr2 = st.columns([2, 1])
-            with col_hdr1:
-                st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
-            with col_hdr2:
-                if not pending_df.empty and not is_name_locked:
-                    if st.button("🗑️ Hapus Semua Antrean", help="Hapus baris yang masih pending tanpa membuka Google Sheets"):
-                        clear_pending_requests(df_i)
-
-            if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
-            else:
-                if is_name_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
-                for idx, row in pending_df.head(5).iterrows():
-                    with st.container(border=True):
-                        st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
-                        c1, c2 = st.columns(2)
-                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
-                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
-
-            st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
-            history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
-            
-            if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
-            else:
-                for idx, row in history_df.tail(5).iloc[::-1].iterrows():
-                    status = str(row['Status Approval']).upper()
-                    is_appr = "APPROVED" in status
-                    c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
-                    
-                    with st.container(border=True):
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
-
-def ui_off_tracker(df_j, df_k):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
-    tgl_cek = st.date_input("Pilih Tanggal Pengecekan:", value=datetime.now().date())
-    tgl_str = tgl_cek.strftime('%Y-%m-%d')
-    
-    if df_j.empty or tgl_str not in df_j.columns:
-        st.warning("Data jadwal belum dirilis untuk tanggal ini.")
-        return st.link_button("Form Pengajuan", URL_GFORM, use_container_width=True, type="primary")
-
-    valid_df = df_j.dropna(subset=['Nama Operator'])
-    off_list = valid_df[valid_df[tgl_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]["Nama Operator"].astype(str).tolist()
-    
-    with st.container(border=True):
-        if not off_list: st.write("Seluruh personel bertugas hari ini.")
-        else:
-            col_n = find_col(df_k, ['nama', 'operator'], None)
-            col_hp = find_col(df_k, ['contact', 'kontak', 'hp'], None)
-
-            for i, name in enumerate(off_list):
-                hp = "Tidak terdaftar"
-                if col_n and col_hp and not df_k.empty:
-                    clean_db = df_k[col_n].astype(str).str.replace('*','', regex=False).str.strip().str.lower()
-                    target = str(name).replace('*','').strip().lower()
-                    match = df_k[clean_db == target]
-                    if match.empty: match = df_k[clean_db.str.contains(target, na=False)]
-                    if not match.empty: hp = str(match.iloc[0][col_hp]).strip()
-
-                st.markdown(f"<details class='off-personnel' style='animation: slideInRight 0.3s {i*0.05}s ease-out backwards;'><summary><div style='background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 8px; border-radius:4px; font-size:11px; margin-right:10px;'>OFF</div><span style='font-size:14px;'>{name}</span><span class='material-symbols-rounded chevron-icon'>expand_more</span></summary><div class='off-details-content'><div style='display:flex; align-items:center; gap:8px; margin-top:8px;'><span class='material-symbols-rounded' style='color:#94a3b8; font-size:18px;'>call</span><span style='color:#94a3b8;'>No. Handphone:</span> <b style='color:#e2e8f0; font-size:14px; letter-spacing:0.5px;'>{hp}</b></div></div></details>", unsafe_allow_html=True)
-                
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.link_button("Ajukan Form Izin / Tukar Shift", URL_GFORM, use_container_width=True, type="primary")
-
-
-# =====================================================================
-# 6. TIMELINE INTERAKTIF DENGAN TOMBOL NAVIGASI JS
-# =====================================================================
-def ui_timeline(df_j, df_i):
-    st.markdown("<br><hr style='opacity:0.1;'>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
-        <div style="display: flex; gap: 10px;">
-            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = c || form; if(t) t.scrollBy({left: -300, behavior: 'smooth'});" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); var form = document.querySelector('div[data-testid=\\'stForm\\'] div[data-testid=\\'stHorizontalBlock\\']'); var t = c || form; if(t) t.scrollBy({left: 300, behavior: 'smooth'});" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if df_j.empty: return st.warning("Sedang menyinkronisasi jadwal...")
-
-    is_manager = st.session_state.get('is_manager', False)
-    today = datetime.now().date()
-    shift_options = ["PG", "MLM", "OFF", "SAKIT", "CUTI", "PD", "IZIN"]
-
-    if is_manager:
-        st.info("⚙️ **Mode Edit Aktif!** Ubah dropdown putih di kalender bawah, lalu klik Simpan di sini.")
-        
-        with st.form("inline_timeline_editor"):
-            submit_btn = st.form_submit_button("💾 Simpan Semua Perubahan", type="primary", use_container_width=True)
-            st.markdown('<div class="timeline-anchor"></div>', unsafe_allow_html=True)
-            
-            cols = st.columns(14)
-            new_values = {}
-            
-            for i in range(14):
-                d_obj = today + timedelta(days=i)
-                d_str = d_obj.strftime('%Y-%m-%d')
-                is_today = (i == 0)
-                
-                with cols[i]:
-                    if is_today: st.markdown(f"<div class='today-header' style='padding:8px; border-radius:8px; text-align:center; font-weight:bold; margin-bottom:15px;'>⭐ HARI INI<br>{d_obj.strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
-                    else: st.markdown(f"<div class='scroll-header'>{d_obj.strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
-                    
-                    if d_str in df_j.columns:
-                        day_df = df_j[['Nama Operator', d_str]].dropna()
-                        day_df = day_df[~day_df[d_str].astype(str).str.strip().str.lower().isin(['nan', '', 'none'])]
-                        
-                        for idx, row in day_df.iterrows():
-                            name = str(row['Nama Operator']).replace('*', '').strip()
-                            status_lama = str(row[d_str]).strip().upper()
-                            
-                            st.markdown(f"<div style='color:#f8fafc; font-size:13px; font-weight:700; padding-top:12px; padding-bottom:4px;'>{name}</div>", unsafe_allow_html=True)
-                            
-                            opsi = shift_options.copy()
-                            if status_lama and status_lama not in opsi: opsi.insert(0, status_lama)
-                            default_idx = opsi.index(status_lama) if status_lama in opsi else opsi.index("OFF")
-                            
-                            new_val = st.selectbox("Status", options=opsi, index=default_idx, key=f"edit_{idx}_{d_str}", label_visibility="collapsed")
-                            new_values[f"{idx}_{d_str}"] = {"row_sheet": int(idx) + 2, "col_name": d_str, "val": new_val, "old_val": status_lama}
-                    else:
-                        st.markdown("<div style='text-align:center; color:#64748b; font-style:italic;'>Belum dirilis</div>", unsafe_allow_html=True)
-
-            if submit_btn:
-                updates = []
-                for k, v in new_values.items():
-                    if v["val"] != v["old_val"]:
-                        col_idx = list(df_j.columns).index(v["col_name"]) + 1
-                        updates.append(gspread.Cell(v["row_sheet"], col_idx, v["val"]))
-                
-                if updates:
-                    try:
-                        client = get_client()
-                        sh = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-                        sh.update_cells(updates)
-                        load_all_data.clear()
-                        st.success(f"✅ Berhasil menyimpan {len(updates)} perubahan jadwal!")
-                        import time
-                        time.sleep(1.5)
-                        st.rerun()
-                    except Exception as e: st.error(f"Gagal menyimpan ke database: {e}")
-                else:
-                    st.info("Tidak ada perubahan jadwal yang dideteksi.")
-
-    else:
-        subs_map = {}
-        if not df_i.empty and 'Status Approval' in df_i.columns:
-            for _, row in df_i[df_i['Status Approval'].astype(str).str.upper().str.contains('APPROVED', na=False)].iterrows():
-                try:
-                    sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                    if sub and sub not in ['nan', '']:
-                        for d in pd.date_range(pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date(), pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()):
-                            subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
-                except Exception: pass
-
-        html = '<div class="scroll-container">'
-        for i in range(14):
-            d_obj = today + timedelta(days=i)
-            d_str = d_obj.strftime('%Y-%m-%d')
-            
-            is_today = (i == 0)
-            card_class = "scroll-card today-card" if is_today else "scroll-card"
-            header_class = "scroll-header today-header" if is_today else "scroll-header"
-            date_text = f"⭐ HARI INI - {d_obj.strftime('%d %b %Y')}" if is_today else d_obj.strftime("%d %b %Y")
-            
-            html += f'<div class="{card_class}"><div class="{header_class}">{date_text}</div>'
-            
-            if d_str in df_j.columns:
-                day_df = df_j[['Nama Operator', d_str]].dropna()
-                day_df = day_df[~day_df[d_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]
-                
-                if not day_df.empty:
-                    for _, row in day_df.iterrows():
-                        name = str(row['Nama Operator']).replace('*', '').strip()
-                        status = str(row[d_str]).upper()
-                        
-                        if any(k in status for k in ["DINAS", "PD"]): badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
-                        elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
-                        elif name.lower() in subs_map.get(d_str, []): badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
-                        else: badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
-                            
-                        html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:13px;">{name}</b><br>{badge}</div>'
-                else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Semua OFF</div>'
-            else: html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Data belum dirilis</div>'
-            html += '</div>'
-        st.markdown(html + '</div>', unsafe_allow_html=True)
-
-
-# =====================================================================
-# 7. ROUTER & MAIN EXECUTION
-# =====================================================================
-if __name__ == "__main__":
-    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"))
-    df_j, df_i, df_k = load_all_data()
-
-    pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
-
-    ui_header(get_base64_image("pertamina.png"), pending_count)
-    ui_live_hud_widget() 
-
-    if 'active_menu' not in st.session_state: st.session_state.active_menu = "Dashboard"
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1: st.button("Dashboard Utama", type="primary" if st.session_state.active_menu == "Dashboard" else "secondary", on_click=lambda: st.session_state.update(active_menu="Dashboard"), use_container_width=True)
-    with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.active_menu == "Kalender" else "secondary", on_click=lambda: st.session_state.update(active_menu="Kalender"), use_container_width=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    if st.session_state.active_menu == "Dashboard":
-        col_m, col_s = st.columns([2.5, 1.5])
-        with col_m: ui_manager_panel(df_i, df_j)
-        with col_s: ui_off_tracker(df_j, df_k)
-        ui_timeline(df_j, df_i)
-        
-    elif st.session_state.active_menu == "Kalender":
-        st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
-        with st.container(border=True): tgl = st.date_input("Pilih Tanggal Pengecekan:").strftime('%Y-%m-%d')
-        
-        if df_j.empty or tgl not in df_j.columns:
-            st.warning("⚠️ Data jadwal untuk tanggal ini belum tersedia.")
-        else:
-            st.markdown(f"<br><h4 style='color:white; font-size:18px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#94a3b8;'>check_circle</span> Status Personel: <b style='color:#38bdf8;'>{tgl}</b></h4>", unsafe_allow_html=True)
-            df_day = df_j[['Nama Operator', tgl]].dropna().copy()
-            df_day['Status'] = df_day[tgl].fillna('').astype(str).str.strip().str.upper()
-
-            df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '', 'NONE'])]
-            df_abs = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
-            df_hdr = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_abs['Nama Operator'])]
-
-            for title, df_data, clr_border, clr_bg, show_sts in [("Hadir / Bertugas", df_hdr, "rgba(34,197,94,0.4)", "rgba(34,197,94,0.15)", True), ("Sedang OFF", df_off, "rgba(56,189,248,0.4)", "rgba(56,189,248,0.15)", False), ("Absen / Dinas Luar", df_abs, "rgba(239,68,68,0.4)", "rgba(239,68,68,0.15)", True)]:
-                with st.container(border=True):
-                    st.markdown(f"<div style='background:{clr_bg}; padding:12px; border-radius:8px; border:1px solid {clr_border}; margin-bottom:12px; display:flex; align-items:center; gap:8px;'><b style='color:white; font-size:15px;'>{title} ({len(df_data)})</b></div>", unsafe_allow_html=True)
-                    if not df_data.empty: st.dataframe(df_data[['Nama Operator', 'Status']] if show_sts else df_data[['Nama Operator']], hide_index=True, use_container_width=True)
-                    else: st.write("Tidak ada data pada kategori ini.")
+        #loc-status {{ position: absolute; top: -6px; right: -6px; background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0f172a; display: flex;
