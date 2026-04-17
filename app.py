@@ -12,7 +12,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("pertamina.png")
+    favicon = Image.open("logo-pertaminaregasv2.png")
 except:
     favicon = "⚡"
 
@@ -299,9 +299,20 @@ def inject_custom_css(bg_base64, logo_base64):
     
     .nav-arrow-btn {{ background: rgba(30,41,59,0.8); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.2); color: #fff; }}
+    
+    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: background 0.3s ease, transform 0.2s ease; }}
+    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
+    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
+    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
+    .chevron-icon {{ transition: transform 0.3s ease; color: #94a3b8; font-size:18px; margin-left:auto; }}
+    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
+    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; animation: dropDown 0.3s ease-out forwards; }}
+    @keyframes dropDown {{ from {{ opacity:0; transform: translateY(-10px); }} to {{ opacity:1; transform: translateY(0); }} }}
+
     </style>
     """, unsafe_allow_html=True)
 
+    # 2. SPLASH SCREEN (Hanya diinjeksi 1 kali per sesi pengguna agar tidak pernah tersangkut)
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
         st.markdown(f"""
@@ -315,9 +326,28 @@ def inject_custom_css(bg_base64, logo_base64):
                 </div>
             </div>
         </div>
+        <style>
+        #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2.5s forwards; margin: 0 !important; padding: 0 !important; pointer-events: none; }}
+        .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: moveToHeader 2.5s forwards; }}
+        .splash-fade-early {{ animation: fadeOutEarly 2.5s forwards; }}
+        .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 2s infinite alternate; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; }}
+        .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
+        .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
+        .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1.2s infinite; }}
+        
+        @keyframes overlayFade {{ 0%, 60% {{ opacity: 1; visibility: visible; }} 99% {{ opacity: 0; visibility: visible; }} 100% {{ opacity: 0; visibility: hidden; display: none; }} }}
+        @keyframes moveToHeader {{ 0%, 65% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-42vh) scale(0.4); opacity: 0; }} }}
+        @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 65%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
+        @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }} }}
+        @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
+        </style>
         """, unsafe_allow_html=True)
 
 
+# =====================================================================
+# 5. HEADER & HUD COMPONENT
+# =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
     notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
@@ -335,6 +365,7 @@ def ui_header(logo_base64, pending_count):
 def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
     evt = EVENT_KALENDER.get(hari_ini, "Tidak ada event")
+    
     components.html(f"""
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
     <style>
@@ -344,7 +375,7 @@ def ui_live_hud_widget():
         .section {{ display:flex; align-items:center; gap:12px; flex:0 0 auto; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 20px; }}
         .section:first-child {{ border:none; padding-left:0; }}
         .box {{ display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:6px 14px; border-radius:10px; position:relative; }}
-        .clock {{ font-size:26px; font-weight:800; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4); }}
+        .clock {{ font-size:26px; font-weight:800; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4); font-variant-numeric: tabular-nums; }}
         .val {{ color:#4ade80; font-weight:800; font-size:14px; }}
     </style>
     <div class="hud-container">
@@ -366,25 +397,57 @@ def ui_live_hud_widget():
         </div>
         <div class="section"><span style="font-size:13px; font-weight:700; color:#1e293b; background:#facc15; padding:6px 14px; border-radius:8px;">📢 {evt}</span></div>
     </div>
+    
     <script>
-        function ut(){{ const d=new Date(); document.getElementById('clock').innerText=d.toLocaleTimeString('id-ID'); document.getElementById('date').innerText=d.toLocaleDateString('id-ID',{{weekday:'short',day:'numeric',month:'short'}}); }}
-        setInterval(ut, 1000); ut();
-        navigator.geolocation.getCurrentPosition(async function(pos){{
-            try {{
-                const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+pos.coords.latitude+'&longitude='+pos.coords.longitude+'&current_weather=true');
-                const cw = (await r.json()).current_weather;
-                document.getElementById('w-temp').innerText = cw.temperature + '°C'; document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; document.getElementById('loc').innerText = "Titik Koordinat";
-                let i='partly_cloudy_day', d='Berawan'; if(cw.weathercode===0){{i='clear_day'; d='Cerah';}} else if(cw.weathercode>50){{i='rainy'; d='Hujan';}}
-                document.getElementById('w-icon').innerText = i; document.getElementById('w-desc').innerText = d;
-            }}catch(e){{}}
+        function updateTime() {{
+            var d = new Date();
+            var hrs = String(d.getHours()).padStart(2, '0');
+            var min = String(d.getMinutes()).padStart(2, '0');
+            var sec = String(d.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').innerText = hrs + ':' + min + ':' + sec;
+            
+            var options = {{ weekday: 'short', day: 'numeric', month: 'short' }};
+            document.getElementById('date').innerText = d.toLocaleDateString('id-ID', options);
+        }}
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        if(navigator.geolocation) {{
+            navigator.geolocation.getCurrentPosition(async function(pos) {{
+                try {{
+                    var lat = pos.coords.latitude;
+                    var lon = pos.coords.longitude;
+                    var r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true');
+                    var json = await r.json();
+                    var cw = json.current_weather;
+                    
+                    document.getElementById('w-temp').innerText = cw.temperature + '°C'; 
+                    document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; 
+                    document.getElementById('loc').innerText = "Titik Koordinat";
+                    
+                    var i = 'partly_cloudy_day';
+                    var desc = 'Berawan'; 
+                    if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'Cerah'; }} 
+                    else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'Hujan'; }}
+                    
+                    document.getElementById('w-icon').innerText = i; 
+                    document.getElementById('w-desc').innerText = desc;
+                }} catch(e) {{}}
+            }});
+        }}
+        
+        window.addEventListener('deviceorientation', function(e) {{ 
+            if(e.webkitCompassHeading) {{ 
+                document.getElementById('deg').innerText = Math.round(e.webkitCompassHeading) + '°'; 
+                document.getElementById('compass').style.transform = 'rotate(-' + e.webkitCompassHeading + 'deg)'; 
+            }} 
         }});
-        window.addEventListener('deviceorientation', function(e){{ if(e.webkitCompassHeading){{ document.getElementById('deg').innerText=Math.round(e.webkitCompassHeading)+'°'; document.getElementById('compass').style.transform='rotate(-'+e.webkitCompassHeading+'deg)'; }} }});
     </script>
     """, height=90)
 
 
 # =====================================================================
-# 5. HALAMAN MANAJER
+# 6. HALAMAN MANAJER
 # =====================================================================
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 style='font-weight:800;'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -440,7 +503,7 @@ def ui_manager_panel(df_i, df_j):
 
 
 # =====================================================================
-# 6. HALAMAN UTAMA (TIMELINE & TRACKER)
+# 7. HALAMAN UTAMA (TIMELINE & TRACKER)
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("<hr style='opacity:0.2;'>", unsafe_allow_html=True)
@@ -465,7 +528,7 @@ def ui_timeline(df_j, df_i):
     html = '<div class="scroll-container">'
     for i in range(14):
         d_str = (today + timedelta(days=i)).strftime('%Y-%m-%d')
-        h_cls = "today-header" if i==0 else "scroll-header"
+        h_cls = "scroll-header today-header" if i==0 else "scroll-header"
         c_cls = "scroll-card today-card" if i==0 else "scroll-card"
         txt = f"⭐ HARI INI - {d_str}" if i==0 else d_str
         
@@ -487,6 +550,61 @@ def ui_timeline(df_j, df_i):
         html += '</div>'
     st.markdown(html + '</div>', unsafe_allow_html=True)
 
+
+def ui_off_tracker(df_j, df_k):
+    st.markdown("<h3 style='font-weight:800;'><span class='material-symbols-rounded' style='color:#38bdf8;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
+    tgl_cek = st.date_input("Pilih Tanggal Pengecekan:", value=datetime.now().date())
+    tgl_str = tgl_cek.strftime('%Y-%m-%d')
+    
+    if df_j.empty or tgl_str not in df_j.columns:
+        st.warning("Data jadwal belum dirilis untuk tanggal ini.")
+        return st.link_button("Form Pengajuan", URL_GFORM, use_container_width=True, type="primary")
+
+    valid_df = df_j.dropna(subset=['Nama Operator'])
+    off_list = valid_df[valid_df[tgl_str].astype(str).str.strip().str.lower().isin(['off', 'nan', '', 'none'])]["Nama Operator"].astype(str).tolist()
+    
+    with st.container(border=True):
+        if not off_list: st.write("Seluruh personel bertugas hari ini.")
+        else:
+            col_n = find_col(df_k, ['nama', 'operator'], None)
+            col_hp = find_col(df_k, ['contact', 'kontak', 'hp'], None)
+
+            for i, name in enumerate(off_list):
+                hp = "Tidak terdaftar"
+                if col_n and col_hp and not df_k.empty:
+                    clean_db = df_k[col_n].astype(str).str.replace('*','', regex=False).str.strip().str.lower()
+                    target = str(name).replace('*','').strip().lower()
+                    match = df_k[clean_db == target]
+                    if match.empty: match = df_k[clean_db.str.contains(target, na=False)]
+                    if not match.empty: hp = str(match.iloc[0][col_hp]).strip()
+
+                st.markdown(f"<details class='off-personnel' style='animation: slideInRight 0.3s {i*0.05}s ease-out backwards;'><summary><div style='background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 8px; border-radius:4px; font-size:11px; margin-right:10px;'>OFF</div><span style='font-size:14px;'>{name}</span><span class='material-symbols-rounded chevron-icon'>expand_more</span></summary><div class='off-details-content'><div style='display:flex; align-items:center; gap:8px; margin-top:8px;'><span class='material-symbols-rounded' style='color:#94a3b8; font-size:18px;'>call</span><span style='color:#94a3b8;'>No. Handphone:</span> <b style='color:#e2e8f0; font-size:14px; letter-spacing:0.5px;'>{hp}</b></div></div></details>", unsafe_allow_html=True)
+                
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.link_button("Ajukan Form Izin / Tukar Shift", URL_GFORM, use_container_width=True, type="primary")
+
+def ui_kalender_lengkap(df_j):
+    st.markdown("<h3 style='font-weight:800;'><span class='material-symbols-rounded' style='color:#38bdf8;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
+    with st.container(border=True): tgl = st.date_input("Pilih Tanggal Pengecekan:", key="tgl_lengkap").strftime('%Y-%m-%d')
+    
+    if df_j.empty or tgl not in df_j.columns:
+        st.warning("⚠️ Data jadwal untuk tanggal ini belum tersedia.")
+    else:
+        st.markdown(f"<br><h4 style='color:white; font-size:18px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#94a3b8;'>check_circle</span> Status Personel: <b style='color:#38bdf8;'>{tgl}</b></h4>", unsafe_allow_html=True)
+        df_day = df_j[['Nama Operator', tgl]].dropna().copy()
+        df_day['Status'] = df_day[tgl].fillna('').astype(str).str.strip().str.upper()
+
+        df_off = df_day[df_day['Status'].isin(['OFF', 'NAN', '', 'NONE'])]
+        df_abs = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
+        df_hdr = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_abs['Nama Operator'])]
+
+        for title, df_data, clr_border, clr_bg, show_sts in [("Hadir / Bertugas", df_hdr, "rgba(34,197,94,0.4)", "rgba(34,197,94,0.15)", True), ("Sedang OFF", df_off, "rgba(56,189,248,0.4)", "rgba(56,189,248,0.15)", False), ("Absen / Dinas Luar", df_abs, "rgba(239,68,68,0.4)", "rgba(239,68,68,0.15)", True)]:
+            with st.container(border=True):
+                st.markdown(f"<div style='background:{clr_bg}; padding:12px; border-radius:8px; border:1px solid {clr_border}; margin-bottom:12px; display:flex; align-items:center; gap:8px;'><b style='color:white; font-size:15px;'>{title} ({len(df_data)})</b></div>", unsafe_allow_html=True)
+                if not df_data.empty: st.dataframe(df_data[['Nama Operator', 'Status']] if show_sts else df_data[['Nama Operator']], hide_index=True, use_container_width=True)
+                else: st.write("Tidak ada data pada kategori ini.")
+
+
 # =====================================================================
 # MAIN RUNNER
 # =====================================================================
@@ -499,11 +617,16 @@ if __name__ == "__main__":
     ui_live_hud_widget()
 
     if 'menu' not in st.session_state: st.session_state.menu = "Dash"
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1: st.button("Dashboard Utama", type="primary" if st.session_state.menu=="Dash" else "secondary", on_click=lambda: st.session_state.update(menu="Dash"), use_container_width=True)
-    with c2: st.button("Panel Manajer", type="primary" if st.session_state.menu=="Mgr" else "secondary", on_click=lambda: st.session_state.update(menu="Mgr"), use_container_width=True)
+    with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.menu=="Kal" else "secondary", on_click=lambda: st.session_state.update(menu="Kal"), use_container_width=True)
+    with c3: st.button("Panel Manajer", type="primary" if st.session_state.menu=="Mgr" else "secondary", on_click=lambda: st.session_state.update(menu="Mgr"), use_container_width=True)
 
     if st.session_state.menu == "Dash":
-        ui_timeline(df_j, df_i)
+        col_m, col_s = st.columns([2.5, 1.5])
+        with col_m: ui_timeline(df_j, df_i)
+        with col_s: ui_off_tracker(df_j, df_k)
+    elif st.session_state.menu == "Kal":
+        ui_kalender_lengkap(df_j)
     else:
         ui_manager_panel(df_i, df_j)
