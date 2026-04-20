@@ -216,14 +216,12 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         return False
 
 def reply_todo_operator(nama_operator, komentar):
-    """Menyimpan balasan spesifik untuk baris operator tertentu (Tanpa menghapus data lain)"""
     client = get_client()
     if not client: return False
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
         ws = sh.worksheet("To_Do_List")
         
-        # Pastikan header Comment ada
         header = ws.row_values(1)
         if len(header) < 3 or header[2] != "Comment":
             ws.update_cell(1, 3, "Comment")
@@ -231,7 +229,6 @@ def reply_todo_operator(nama_operator, komentar):
         records = ws.get_all_records()
         for i, r in enumerate(records):
             if str(r.get("Target", "")) == nama_operator:
-                # i + 2 karena row di gspread mulai dari 1, dan ada baris header (index 0 di records)
                 ws.update_cell(i + 2, 3, komentar)
                 fetch_todo_from_sheet.clear()
                 return True
@@ -371,11 +368,31 @@ def inject_custom_css(bg_base64, logo_base64):
     details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }}
     
-    /* GAYA EXPANDER PENGUMUMAN TO DO LIST */
+    /* GAYA EXPANDER PENGUMUMAN TO DO LIST (UTAMA) */
     div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }}
     div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
     div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }}
     div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
+    
+    /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) AGAR TERLIHAT BERSIH */
+    div[data-testid="stExpander"] div[data-testid="stExpander"] {{ 
+        border: 1px solid rgba(255,255,255,0.1) !important; 
+        border-top: none !important;
+        border-radius: 0 0 8px 8px !important; 
+        background: rgba(0,0,0,0.2) !important; 
+        margin-top: 0px !important;
+        margin-bottom: 12px !important;
+        box-shadow: none !important;
+    }}
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary {{ 
+        background: rgba(255,255,255,0.03) !important; 
+        padding: 10px 15px !important; 
+        border-top: 1px solid rgba(255,255,255,0.05) !important;
+    }}
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary p {{ 
+        font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; 
+    }}
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg {{ color: #cbd5e1 !important; }}
     
     /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
     @keyframes todoGlow {{ 
@@ -586,30 +603,36 @@ def ui_todo_widget():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
         has_task = False
+        
         for op, data in td['tasks'].items():
             task_text = data.get('task', '')
             comment_text = data.get('comment', '')
             
             if task_text.strip():
                 has_task = True
-                reply_html = f"<div style='margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15);'><span style='font-size:12px; color:#94a3b8;'>Tanggapan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>" if comment_text else ""
                 
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px 12px 0 12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1);'><div style='display:flex; gap:10px; margin-bottom:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span>{reply_html}</div></div>", unsafe_allow_html=True)
+                # Kartu Tugas Utama (Dengan border-bottom rata untuk menyambung ke expander bawahnya)
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
                 
-                # Kotak Balasan Spesifik per Operator
-                c1, c2 = st.columns([3, 1])
-                with c1:
-                    reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik laporan {op}...", label_visibility="collapsed", key=f"reply_msg_{op}")
-                with c2:
-                    if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
-                        if reply_msg.strip():
-                            if reply_todo_operator(op, reply_msg):
-                                st.success("Terkirim!")
-                                time.sleep(1)
-                                st.rerun()
-                        else:
-                            st.error("Isi laporan!")
-                st.markdown("</div>", unsafe_allow_html=True)
+                # Dropdown Balasan Khusus (Nested Expander)
+                with st.expander(f"💬 Tanggapan & Progress ({'1' if comment_text else 'Belum ada'})"):
+                    if comment_text:
+                        st.markdown(f"<div style='padding:8px 12px; border-left:3px solid #facc15; background:rgba(250, 204, 21, 0.1); margin-bottom:12px; border-radius:4px;'><span style='font-size:12px; color:#94a3b8;'>Laporan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>", unsafe_allow_html=True)
+                    
+                    c1, c2 = st.columns([3, 1])
+                    with c1:
+                        reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik laporan {op}...", label_visibility="collapsed", key=f"reply_msg_{op}")
+                    with c2:
+                        if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
+                            if reply_msg.strip():
+                                if reply_todo_operator(op, reply_msg):
+                                    st.success("Terkirim!")
+                                    time.sleep(1)
+                                    st.rerun()
+                            else:
+                                st.error("Isi laporan!")
+                                
+                st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
         
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
