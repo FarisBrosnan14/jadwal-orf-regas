@@ -34,6 +34,11 @@ EVENT_KALENDER = {
     "06-17": "Idul Adha", "07-07": "Tahun Baru Islam", "08-17": "HUT RI", "09-16": "Maulid Nabi", "12-25": "Natal"
 }
 
+# Inisialisasi Memori untuk Notifikasi Update To-Do List
+if 'last_seen_todo' not in st.session_state:
+    st.session_state.last_seen_todo = ""
+
+
 # =====================================================================
 # 2. UTILITIES & AI PARSER
 # =====================================================================
@@ -147,16 +152,14 @@ def load_jadwal_izin_data():
 
 @st.cache_data(ttl=60)
 def fetch_todo_from_sheet():
-    """Mengambil Data To-Do List yang Tersimpan Permanen di Google Sheets"""
     client = get_client()
-    default_data = {"main_msg": "", "tasks": {}}
+    default_data = {"main_msg": "", "tasks": {}, "last_updated": ""}
     if not client: return default_data
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
         try:
             ws = sh.worksheet("To_Do_List")
         except gspread.exceptions.WorksheetNotFound:
-            # Jika tab To_Do_List belum ada, otomatis buatkan
             ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=2)
             ws.append_row(["Target", "Task"])
         
@@ -166,6 +169,8 @@ def fetch_todo_from_sheet():
             task = str(r.get("Task", ""))
             if target == "PENGUMUMAN_UTAMA":
                 default_data["main_msg"] = task
+            elif target == "LAST_UPDATED":
+                default_data["last_updated"] = task
             elif target:
                 default_data["tasks"][target] = task
         return default_data
@@ -173,7 +178,6 @@ def fetch_todo_from_sheet():
         return default_data
 
 def push_todo_to_sheet(main_msg, tasks_dict):
-    """Menyimpan Data To-Do List ke Google Sheets agar Permanen"""
     client = get_client()
     if not client: return False
     try:
@@ -186,7 +190,8 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         ws.clear()
         time.sleep(0.5)
         
-        rows = [["Target", "Task"], ["PENGUMUMAN_UTAMA", main_msg]]
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        rows = [["Target", "Task"], ["PENGUMUMAN_UTAMA", main_msg], ["LAST_UPDATED", timestamp]]
         for op, task in tasks_dict.items():
             if task.strip():
                 rows.append([op, task.strip()])
@@ -312,33 +317,14 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-container::-webkit-scrollbar {{ display: none; }}
     
     /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
-    .scroll-card {{ 
-        flex: 0 0 220px; 
-        background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); 
-        border: 1px solid rgba(255,255,255,0.1); 
-        border-radius: 14px; 
-        padding: 16px; 
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; 
-        scroll-snap-align: start; 
-        cursor: pointer;
-    }}
-    .scroll-card:hover {{ 
-        transform: translateY(-8px); 
-        border-color: rgba(56, 189, 248, 0.5); 
-        box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); 
-    }}
-    .scroll-card:active {{ 
-        transform: scale(0.97) translateY(0); 
-        box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); 
-    }}
-    
+    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }}
+    .scroll-card:hover {{ transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }}
+    .scroll-card:active {{ transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }}
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
     .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
-    
     .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
     .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
-    
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
     .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
@@ -360,10 +346,14 @@ def inject_custom_css(bg_base64, logo_base64):
     /* GAYA EXPANDER PENGUMUMAN TO DO LIST */
     div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; }}
     div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
-    div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; }}
+    div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: color 0.3s; }}
     div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
     
-    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
+    /* ANIMASI GLOW UPDATE TO DO LIST */
+    @keyframes todoGlow {{ 0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 50% {{ box-shadow: 0 0 20px rgba(74, 222, 128, 0.6); border-color: #4ade80; }} }}
+    .todo-updated-animation {{ animation: todoGlow 2s infinite !important; }}
+    .todo-updated-text {{ color: #4ade80 !important; }}
+    
     div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
     div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
     
@@ -403,7 +393,7 @@ def inject_custom_css(bg_base64, logo_base64):
 
 
 # =====================================================================
-# 5. HEADER, HUD, DAN TO-DO WIDGET (DASHBOARD)
+# 5. HEADER, HUD, DAN TO-DO WIDGET
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
@@ -533,12 +523,38 @@ def ui_live_hud_widget():
     """, height=90)
 
 def ui_todo_widget():
-    """Menampilkan To-Do List yang di-fetch dari Google Sheets ke layar utama"""
     td = fetch_todo_from_sheet()
     
+    # Logic untuk animasi berkedip jika ada update baru
+    is_new = False
+    if td['last_updated'] and td['last_updated'] != st.session_state.last_seen_todo:
+        is_new = True
+        # Injeksi JS untuk menambahkan class CSS animasi glow pada expander To Do List
+        components.html("""
+        <script>
+            setTimeout(() => {
+                const pDoc = window.parent.document;
+                const expanders = pDoc.querySelectorAll('div[data-testid="stExpander"]');
+                if(expanders.length > 0) {
+                    // Expander pertama adalah To Do List
+                    expanders[0].classList.add("todo-updated-animation");
+                    const summaryText = expanders[0].querySelector("summary p");
+                    if(summaryText) summaryText.classList.add("todo-updated-text");
+                }
+            }, 500);
+        </script>
+        """, height=0, width=0)
+    
     st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
-    with st.expander("📢 PENGUMUMAN & TO-DO LIST HARI INI"):
-        
+    
+    # Label "NEW" jika ada update
+    expander_title = "📢 PENGUMUMAN & TO-DO LIST HARI INI ✨ BARU" if is_new else "📢 PENGUMUMAN & TO-DO LIST HARI INI"
+    
+    with st.expander(expander_title):
+        # Saat expander dibuka/dirender isinya, update last_seen_todo
+        if is_new:
+            st.session_state.last_seen_todo = td['last_updated']
+            
         if td['main_msg'].strip():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
@@ -550,6 +566,20 @@ def ui_todo_widget():
         
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
+        
+        # Tombol Tutup Otomatis di Bawah
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⬆️ Tutup Daftar Tugas", use_container_width=True):
+            # Injeksi JS untuk mengklik paksa tombol expander dari dalam
+            components.html("""
+            <script>
+                const pDoc = window.parent.document;
+                const expanders = pDoc.querySelectorAll('div[data-testid="stExpander"] summary');
+                if(expanders.length > 0) {
+                    expanders[0].click(); // Tutup expander
+                }
+            </script>
+            """, height=0, width=0)
 
 
 # =====================================================================
@@ -595,12 +625,13 @@ def ui_manager_panel(df_i, df_j):
                 new_tasks[op] = st.text_input(op, value=old_task, placeholder=f"Tugas untuk {op}...")
                 
             col_save, col_clear = st.columns(2)
-            if col_save.button("💾 Simpan Perubahan ke Database", type="primary", disabled=is_name_locked, use_container_width=True):
+            
+            if col_save.button("💾 Simpan Perubahan ke Database", type="primary", use_container_width=True):
                 if push_todo_to_sheet(new_main_msg, new_tasks):
                     st.success("✅ Berhasil diperbarui!")
                     time.sleep(1)
                     st.rerun()
-            if col_clear.button("🗑️ Bersihkan Semua", disabled=is_name_locked, use_container_width=True):
+            if col_clear.button("🗑️ Bersihkan Semua", use_container_width=True):
                 if push_todo_to_sheet("", {}):
                     st.success("✅ To-Do List berhasil dikosongkan!")
                     time.sleep(1)
