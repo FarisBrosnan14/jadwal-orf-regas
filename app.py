@@ -180,7 +180,6 @@ def fetch_todo_from_sheet():
         return default_data
 
 def push_todo_to_sheet(main_msg, tasks_dict):
-    """Menyimpan data dari Manajer, dengan mempertahankan komentar operator jika ada"""
     client = get_client()
     if not client: return False
     try:
@@ -190,9 +189,7 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         except:
             ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
         
-        # Ambil data komentar lama sebelum di clear
         existing_data = fetch_todo_from_sheet()
-        
         ws.clear()
         time.sleep(0.5)
         
@@ -201,7 +198,6 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         
         for op, task in tasks_dict.items():
             if task.strip():
-                # Pertahankan komentar lama jika operator sudah pernah komentar
                 old_comment = existing_data["tasks"].get(op, {}).get("comment", "")
                 rows.append([op, task.strip(), old_comment])
         
@@ -220,24 +216,29 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         return False
 
 def reply_todo_operator(nama_operator, komentar):
-    """Menyimpan balasan/tanggapan khusus untuk baris operator tertentu"""
+    """Menyimpan balasan spesifik untuk baris operator tertentu (Tanpa menghapus data lain)"""
     client = get_client()
     if not client: return False
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
         ws = sh.worksheet("To_Do_List")
         
-        # Cari baris mana yang berisi nama operator ini
-        cell = ws.find(nama_operator, in_column=1)
-        if cell:
-            ws.update_cell(cell.row, 3, komentar) # Update kolom ke-3 (Comment)
-            fetch_todo_from_sheet.clear()
-            return True
+        # Pastikan header Comment ada
+        header = ws.row_values(1)
+        if len(header) < 3 or header[2] != "Comment":
+            ws.update_cell(1, 3, "Comment")
+        
+        records = ws.get_all_records()
+        for i, r in enumerate(records):
+            if str(r.get("Target", "")) == nama_operator:
+                # i + 2 karena row di gspread mulai dari 1, dan ada baris header (index 0 di records)
+                ws.update_cell(i + 2, 3, komentar)
+                fetch_todo_from_sheet.clear()
+                return True
         return False
     except Exception as e:
         st.error(f"Gagal mengirim tanggapan: {e}")
         return False
-
 
 def load_all_data():
     df_j, df_i = load_jadwal_izin_data()
@@ -585,42 +586,34 @@ def ui_todo_widget():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
         has_task = False
-        active_ops = []
-        
         for op, data in td['tasks'].items():
             task_text = data.get('task', '')
             comment_text = data.get('comment', '')
             
             if task_text.strip():
                 has_task = True
-                active_ops.append(op)
-                
                 reply_html = f"<div style='margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15);'><span style='font-size:12px; color:#94a3b8;'>Tanggapan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>" if comment_text else ""
                 
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span>{reply_html}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px 12px 0 12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1);'><div style='display:flex; gap:10px; margin-bottom:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span>{reply_html}</div></div>", unsafe_allow_html=True)
+                
+                # Kotak Balasan Spesifik per Operator
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik laporan {op}...", label_visibility="collapsed", key=f"reply_msg_{op}")
+                with c2:
+                    if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
+                        if reply_msg.strip():
+                            if reply_todo_operator(op, reply_msg):
+                                st.success("Terkirim!")
+                                time.sleep(1)
+                                st.rerun()
+                        else:
+                            st.error("Isi laporan!")
+                st.markdown("</div>", unsafe_allow_html=True)
         
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
-        if has_task:
-            st.markdown("<div style='margin-top:15px; margin-bottom:5px; font-size:14px; font-weight:700; color:#38bdf8;'>💬 Kirim Tanggapan / Progress Tugas:</div>", unsafe_allow_html=True)
-            c1, c2 = st.columns([1, 2])
-            with c1:
-                reply_name = st.selectbox("Nama Anda", ["-- Pilih Nama Anda --"] + active_ops, label_visibility="collapsed", key="reply_name_todo")
-            with c2:
-                reply_msg = st.text_input("Tanggapan", placeholder="Ketik status tugas (misal: Sudah selesai komandan)...", label_visibility="collapsed", key="reply_msg_todo")
-            
-            if st.button("Kirim Tanggapan", type="primary", use_container_width=True):
-                if reply_name == "-- Pilih Nama Anda --":
-                    st.error("Silakan pilih nama Anda!")
-                elif not reply_msg.strip():
-                    st.error("Tanggapan tidak boleh kosong!")
-                else:
-                    if reply_todo_operator(reply_name, reply_msg):
-                        st.success("Tanggapan berhasil dikirim!")
-                        time.sleep(1)
-                        st.rerun()
-
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("⬆️ Tutup Daftar Tugas", use_container_width=True):
             components.html("""
