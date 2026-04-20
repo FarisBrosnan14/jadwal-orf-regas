@@ -12,7 +12,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -32,6 +32,16 @@ EVENT_KALENDER = {
     "05-01": "Hari Buruh", "05-09": "Kenaikan Isa Al Masih", "05-23": "Waisak", "06-01": "Lahir Pancasila",
     "06-17": "Idul Adha", "07-07": "Tahun Baru Islam", "08-17": "HUT RI", "09-16": "Maulid Nabi", "12-25": "Natal"
 }
+
+# =====================================================================
+# INISIALISASI MEMORI TO-DO LIST
+# =====================================================================
+if 'todo_data' not in st.session_state:
+    st.session_state.todo_data = {
+        "main_msg": "",
+        "tasks": {}
+    }
+
 
 # =====================================================================
 # 2. UTILITIES & AI PARSER
@@ -97,7 +107,7 @@ def generate_html_card(row, col_reason, col_proof, delay):
     """
 
 # =====================================================================
-# 3. DATABASE (GSPREAD) - TEROPTIMASI ANTI LAG
+# 3. DATABASE (GSPREAD)
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -212,9 +222,8 @@ def clear_pending_requests(df_i):
         st.rerun()
     except Exception as e: st.error(f"Error: {e}")
 
-
 # =====================================================================
-# 4. CSS INJECTION (CENTERING & ANIMASI KARTU)
+# 4. CSS INJECTION
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
@@ -222,7 +231,7 @@ def inject_custom_css(bg_base64, logo_base64):
     
     st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
     
     html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
@@ -245,46 +254,21 @@ def inject_custom_css(bg_base64, logo_base64):
     .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }}
     .home-btn:hover {{ background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }}
     
-    /* SCROLL CONTAINER TIMELINE */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
     .scroll-container::-webkit-scrollbar {{ display: none; }}
-    
-    /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
-    .scroll-card {{ 
-        flex: 0 0 220px; 
-        background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); 
-        border: 1px solid rgba(255,255,255,0.1); 
-        border-radius: 14px; 
-        padding: 16px; 
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; 
-        scroll-snap-align: start; 
-        cursor: pointer;
-    }}
-    .scroll-card:hover {{ 
-        transform: translateY(-8px); 
-        border-color: rgba(56, 189, 248, 0.5); 
-        box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); 
-    }}
-    .scroll-card:active {{ 
-        transform: scale(0.97) translateY(0); 
-        box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); 
-    }}
-    
+    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.2s, box-shadow 0.2s; scroll-snap-align: start; cursor: pointer; }}
+    .scroll-card:hover {{ transform: translateY(-4px); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 8px 20px rgba(56, 189, 248, 0.15); }}
+    .scroll-card:active {{ transform: scale(0.98); }}
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
-    .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
-    .today-card:active {{ transform: scale(0.97); }}
-    
-    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
-    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
+    .today-card:hover {{ transform: translateY(-6px); box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3) !important; }}
+    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: 0.2s; }}
+    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.1); color: #fff; }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; }}
-    
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
-    .scroll-item:hover {{ background: rgba(255,255,255,0.1); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
+    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(2px); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    
-    /* NAV ARROW BUTTONS (Hollow transparent bg, blue border) */
-    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
+    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
     .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
     
@@ -295,10 +279,15 @@ def inject_custom_css(bg_base64, logo_base64):
     .chevron-icon {{ transition: transform 0.3s; color: #94a3b8; margin-left:auto; }}
     details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }}
+    
+    /* GAYA EXPANDER PENGUMUMAN TO DO LIST */
+    div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; }}
+    div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
+    div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; }}
+    div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
     </style>
     """, unsafe_allow_html=True)
 
-    # Splash Screen hanya dimuat 1x per sesi pengguna
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
         st.markdown(f"""
@@ -313,26 +302,14 @@ def inject_custom_css(bg_base64, logo_base64):
             </div>
         </div>
         <style>
-        /* CSS KHUSUS SPLASH SCREEN (Perfect Centering) */
-        #splash-overlay {{ 
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            width: 100vw; height: 100vh; z-index: 999999; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            background: #ffffff !important; animation: overlayFade 2.5s forwards; 
-            margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden;
-        }}
-        .splash-content {{ 
-            text-align: center; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; width: 100%;
-            animation: moveToHeader 2.5s forwards; 
-        }}
-        .splash-fade-early {{ animation: fadeOutEarly 2.5s forwards; display: flex; flex-direction: column; align-items: center; }}
+        #splash-overlay {{ position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2s forwards; margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden; }}
+        .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; animation: moveToHeader 2s forwards; }}
+        .splash-fade-early {{ animation: fadeOutEarly 2s forwards; display: flex; flex-direction: column; align-items: center; }}
         .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 1.5s infinite alternate; }}
         .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 36px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
         .splash-subtitle {{ color: #64748b; font-size: 14px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; text-align: center; }}
         .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
         .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1s infinite; }}
-        
         @keyframes overlayFade {{ 0%, 70% {{ opacity: 1; visibility: visible; }} 99% {{ opacity: 0; visibility: visible; }} 100% {{ opacity: 0; visibility: hidden; display: none; }} }}
         @keyframes moveToHeader {{ 0%, 70% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-40vh) scale(0.4); opacity: 0; }} }}
         @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 70%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
@@ -343,7 +320,7 @@ def inject_custom_css(bg_base64, logo_base64):
 
 
 # =====================================================================
-# 5. HEADER & HUD COMPONENT (JS FIXED FOR SCROLL BUTTONS)
+# 5. KOMPONEN WIDGET: HEADER, HUD, DAN TO-DO LIST
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
@@ -362,7 +339,6 @@ def ui_header(logo_base64, pending_count):
 def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
     evt = EVENT_KALENDER.get(hari_ini, "Tidak ada event")
-    
     components.html(f"""
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
     <style>
@@ -407,7 +383,6 @@ def ui_live_hud_widget():
             var min = String(d.getMinutes()).padStart(2, '0');
             var sec = String(d.getSeconds()).padStart(2, '0');
             document.getElementById('clock').innerText = hrs + ':' + min + ':' + sec;
-            
             var options = {{ weekday: 'short', day: 'numeric', month: 'short' }};
             document.getElementById('date').innerText = d.toLocaleDateString('id-ID', options);
         }}
@@ -427,7 +402,6 @@ def ui_live_hud_widget():
                 var cw = json.current_weather;
                 document.getElementById('w-temp').innerText = cw.temperature + '°C'; 
                 document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; 
-                
                 var i = 'partly_cloudy_day'; var desc = 'Berawan'; 
                 if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'Cerah'; }} 
                 else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'Hujan'; }}
@@ -445,7 +419,7 @@ def ui_live_hud_widget():
                 function(err) {{ 
                     document.getElementById('loc-status').style.background = '#ef4444';
                     document.getElementById('loc-icon').innerText = 'location_off';
-                    fetchWeather(-6.200000, 106.816666);
+                    fetchWeather(-6.200000, 106.816666); 
                 }},
                 {{ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }}
             );
@@ -455,7 +429,6 @@ def ui_live_hud_widget():
             let heading = null;
             if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {{ heading = e.webkitCompassHeading; }} 
             else if(e.alpha !== null) {{ heading = 360 - e.alpha; }}
-            
             if(heading !== null) {{
                 document.getElementById('deg').innerText = Math.round(heading) + '°'; 
                 document.getElementById('compass').style.transform = 'rotate(-' + heading + 'deg)'; 
@@ -476,9 +449,27 @@ def ui_live_hud_widget():
     </script>
     """, height=90)
 
+def ui_todo_widget():
+    """Menampilkan To-Do List di bawah HUD untuk dilihat semua orang."""
+    st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
+    with st.expander("📢 PENGUMUMAN & TO-DO LIST HARI INI"):
+        td = st.session_state.todo_data
+        
+        if td['main_msg'].strip():
+            st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
+        
+        has_task = False
+        for op, task in td['tasks'].items():
+            if task.strip():
+                has_task = True
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px;'>{task}</span></div></div>", unsafe_allow_html=True)
+        
+        if not has_task and not td['main_msg'].strip():
+            st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
+
 
 # =====================================================================
-# 6. HALAMAN MANAJER
+# 6. HALAMAN MANAJER (DITAMBAH TAB TO-DO LIST)
 # =====================================================================
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -494,8 +485,34 @@ def ui_manager_panel(df_i, df_j):
     approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
     is_name_locked = approver_name == DAFTAR_MANAJER[0]
 
-    tab_edit, tab_izin = st.tabs(["⚙️ Panel Edit & Asisten AI", "📋 Panel Persetujuan Izin"])
+    # TAB BARU UNTUK TO DO LIST
+    tab_edit, tab_izin, tab_todo = st.tabs(["⚙️ Panel Edit & Asisten AI", "📋 Panel Persetujuan Izin", "📝 To-Do List Harian"])
     
+    with tab_todo:
+        st.markdown("<br><b style='color:#38bdf8;'>Buat Instruksi Harian</b>", unsafe_allow_html=True)
+        st.info("Isi pesan utama dan daftar tugas spesifik per orang. Data ini akan langsung muncul di panel bawah HUD semua orang.")
+        
+        new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=st.session_state.todo_data['main_msg'], placeholder="Tulis pengumuman umum di sini...")
+        
+        st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
+        # Ambil daftar nama unik dari database jadwal
+        operator_list = []
+        if not df_j.empty and 'Nama Operator' in df_j.columns:
+            operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
+            operator_list = [o for o in operator_list if o.lower() not in ['nan', 'none', '']]
+        
+        new_tasks = {}
+        for op in operator_list:
+            old_task = st.session_state.todo_data['tasks'].get(op, "")
+            new_tasks[op] = st.text_input(op, value=old_task, placeholder=f"Tugas untuk {op}...")
+            
+        if st.button("💾 Simpan Pengumuman & To-Do List", type="primary", disabled=is_name_locked):
+            st.session_state.todo_data['main_msg'] = new_main_msg
+            st.session_state.todo_data['tasks'] = new_tasks
+            st.success("✅ Berhasil diperbarui! Silakan cek di halaman Dashboard Utama.")
+            import time; time.sleep(1.5)
+            st.rerun()
+
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
         c_btn1, c_btn2 = st.columns(2)
@@ -510,7 +527,7 @@ def ui_manager_panel(df_i, df_j):
         else:
             if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
             perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
-            if st.button("Kirim Perintah", type="primary"):
+            if st.button("Kirim Perintah AI", type="primary"):
                 if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
                 else:
                     parsed = parse_natural_language_schedule(perintah, df_j)
@@ -637,7 +654,6 @@ def ui_timeline(df_j, df_i):
     st.markdown(html + '</div>', unsafe_allow_html=True)
     st.markdown("<hr style='opacity:0.1;'>", unsafe_allow_html=True)
 
-    # Injeksi JS untuk menghubungkan tombol panah ke fungsi scroll (karena diblokir oleh Streamlit Markdown)
     components.html("""
     <script>
         function attachScrollListeners() {
@@ -723,6 +739,7 @@ if __name__ == "__main__":
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
     ui_live_hud_widget() 
+    ui_todo_widget() # Widget To-Do list dipanggil tepat di bawah HUD
 
     if 'menu' not in st.session_state: st.session_state.menu = "Dash"
     
