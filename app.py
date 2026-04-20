@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("pertamina.png")
+    favicon = Image.open("logo-pertaminaregasv2.png")
 except:
     favicon = "⚡"
 
@@ -356,6 +356,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
+    
     .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
     .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
@@ -374,35 +375,17 @@ def inject_custom_css(bg_base64, logo_base64):
     div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }}
     div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
     
-    /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) AGAR TERLIHAT BERSIH */
-    div[data-testid="stExpander"] div[data-testid="stExpander"] {{ 
-        border: 1px solid rgba(255,255,255,0.1) !important; 
-        border-top: none !important;
-        border-radius: 0 0 8px 8px !important; 
-        background: rgba(0,0,0,0.2) !important; 
-        margin-top: 0px !important;
-        margin-bottom: 12px !important;
-        box-shadow: none !important;
-    }}
-    div[data-testid="stExpander"] div[data-testid="stExpander"] summary {{ 
-        background: rgba(255,255,255,0.03) !important; 
-        padding: 10px 15px !important; 
-        border-top: 1px solid rgba(255,255,255,0.05) !important;
-    }}
-    div[data-testid="stExpander"] div[data-testid="stExpander"] summary p {{ 
-        font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; 
-    }}
+    /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
+    div[data-testid="stExpander"] div[data-testid="stExpander"] {{ border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }}
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary {{ background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }}
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary p {{ font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }}
     div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg {{ color: #cbd5e1 !important; }}
     
     /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
-    @keyframes todoGlow {{ 
-        0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 
-        50% {{ box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); }} 
-    }}
+    @keyframes todoGlow {{ 0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 50% {{ box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); }} }}
     .todo-updated-animation {{ animation: todoGlow 1.5s infinite !important; }}
     .todo-updated-text {{ color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }}
     
-    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
     div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
     div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
     
@@ -610,11 +593,8 @@ def ui_todo_widget():
             
             if task_text.strip():
                 has_task = True
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
                 
-                # Kartu Tugas Utama (Dengan border-bottom rata untuk menyambung ke expander bawahnya)
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
-                
-                # Dropdown Balasan Khusus (Nested Expander)
                 with st.expander(f"💬 Tanggapan & Progress ({'1' if comment_text else 'Belum ada'})"):
                     if comment_text:
                         st.markdown(f"<div style='padding:8px 12px; border-left:3px solid #facc15; background:rgba(250, 204, 21, 0.1); margin-bottom:12px; border-radius:4px;'><span style='font-size:12px; color:#94a3b8;'>Laporan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>", unsafe_allow_html=True)
@@ -632,22 +612,34 @@ def ui_todo_widget():
                             else:
                                 st.error("Isi laporan!")
                                 
-                st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
-        
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("⬆️ Tutup Daftar Tugas", use_container_width=True):
-            components.html("""
-            <script>
-                const pDoc = window.parent.document;
-                const expanders = pDoc.querySelectorAll('div[data-testid="stExpander"] summary');
-                if(expanders.length > 0) {
-                    expanders[0].click(); 
+        # Tombol Tutup via Pure HTML/JS agar tidak tersendat (No Python Rerun)
+        components.html("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
+            body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+            button {
+                width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); 
+                color: #38bdf8; border-radius: 8px; padding: 8px 0; 
+                font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; 
+                cursor: pointer; transition: all 0.2s ease;
+            }
+            button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
+            button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.2); }
+        </style>
+        <button onclick="
+            const pDoc = window.parent.document;
+            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
+            if(expanders.length > 0) {
+                if(expanders[0].hasAttribute('open')) {
+                    expanders[0].querySelector('summary').click();
                 }
-            </script>
-            """, height=0, width=0)
+            }
+        ">⬆️ Tutup Daftar Tugas</button>
+        """, height=40)
 
 
 # =====================================================================
