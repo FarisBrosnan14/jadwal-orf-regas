@@ -160,24 +160,27 @@ def fetch_todo_from_sheet():
         try:
             ws = sh.worksheet("To_Do_List")
         except gspread.exceptions.WorksheetNotFound:
-            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=2)
-            ws.append_row(["Target", "Task"])
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+            ws.append_row(["Target", "Task", "Comment"])
         
         records = ws.get_all_records()
         for r in records:
             target = str(r.get("Target", ""))
             task = str(r.get("Task", ""))
+            comment = str(r.get("Comment", ""))
+            
             if target == "PENGUMUMAN_UTAMA":
                 default_data["main_msg"] = task
             elif target == "LAST_UPDATED":
                 default_data["last_updated"] = task
             elif target:
-                default_data["tasks"][target] = task
+                default_data["tasks"][target] = {"task": task, "comment": comment}
         return default_data
     except Exception as e:
         return default_data
 
 def push_todo_to_sheet(main_msg, tasks_dict):
+    """Menyimpan data dari Manajer, dengan mempertahankan komentar operator jika ada"""
     client = get_client()
     if not client: return False
     try:
@@ -185,16 +188,22 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         try:
             ws = sh.worksheet("To_Do_List")
         except:
-            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=2)
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+        
+        # Ambil data komentar lama sebelum di clear
+        existing_data = fetch_todo_from_sheet()
         
         ws.clear()
         time.sleep(0.5)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        rows = [["Target", "Task"], ["PENGUMUMAN_UTAMA", main_msg], ["LAST_UPDATED", timestamp]]
+        rows = [["Target", "Task", "Comment"], ["PENGUMUMAN_UTAMA", main_msg, ""], ["LAST_UPDATED", timestamp, ""]]
+        
         for op, task in tasks_dict.items():
             if task.strip():
-                rows.append([op, task.strip()])
+                # Pertahankan komentar lama jika operator sudah pernah komentar
+                old_comment = existing_data["tasks"].get(op, {}).get("comment", "")
+                rows.append([op, task.strip(), old_comment])
         
         try:
             ws.update(values=rows, range_name="A1")
@@ -209,6 +218,26 @@ def push_todo_to_sheet(main_msg, tasks_dict):
     except Exception as e:
         st.error(f"Gagal menyimpan pengumuman: {e}")
         return False
+
+def reply_todo_operator(nama_operator, komentar):
+    """Menyimpan balasan/tanggapan khusus untuk baris operator tertentu"""
+    client = get_client()
+    if not client: return False
+    try:
+        sh = client.open_by_key(ID_SHEET_JADWAL)
+        ws = sh.worksheet("To_Do_List")
+        
+        # Cari baris mana yang berisi nama operator ini
+        cell = ws.find(nama_operator, in_column=1)
+        if cell:
+            ws.update_cell(cell.row, 3, komentar) # Update kolom ke-3 (Comment)
+            fetch_todo_from_sheet.clear()
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Gagal mengirim tanggapan: {e}")
+        return False
+
 
 def load_all_data():
     df_j, df_i = load_jadwal_izin_data()
@@ -329,7 +358,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }}
+    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
     .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
     
@@ -342,7 +371,7 @@ def inject_custom_css(bg_base64, logo_base64):
     .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }}
     
     /* GAYA EXPANDER PENGUMUMAN TO DO LIST */
-    div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; }}
+    div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }}
     div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
     div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }}
     div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
@@ -556,14 +585,42 @@ def ui_todo_widget():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
         has_task = False
-        for op, task in td['tasks'].items():
-            if task.strip():
+        active_ops = []
+        
+        for op, data in td['tasks'].items():
+            task_text = data.get('task', '')
+            comment_text = data.get('comment', '')
+            
+            if task_text.strip():
                 has_task = True
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px;'>{task}</span></div></div>", unsafe_allow_html=True)
+                active_ops.append(op)
+                
+                reply_html = f"<div style='margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15);'><span style='font-size:12px; color:#94a3b8;'>Tanggapan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>" if comment_text else ""
+                
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span>{reply_html}</div></div>", unsafe_allow_html=True)
         
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
+        if has_task:
+            st.markdown("<div style='margin-top:15px; margin-bottom:5px; font-size:14px; font-weight:700; color:#38bdf8;'>💬 Kirim Tanggapan / Progress Tugas:</div>", unsafe_allow_html=True)
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                reply_name = st.selectbox("Nama Anda", ["-- Pilih Nama Anda --"] + active_ops, label_visibility="collapsed", key="reply_name_todo")
+            with c2:
+                reply_msg = st.text_input("Tanggapan", placeholder="Ketik status tugas (misal: Sudah selesai komandan)...", label_visibility="collapsed", key="reply_msg_todo")
+            
+            if st.button("Kirim Tanggapan", type="primary", use_container_width=True):
+                if reply_name == "-- Pilih Nama Anda --":
+                    st.error("Silakan pilih nama Anda!")
+                elif not reply_msg.strip():
+                    st.error("Tanggapan tidak boleh kosong!")
+                else:
+                    if reply_todo_operator(reply_name, reply_msg):
+                        st.success("Tanggapan berhasil dikirim!")
+                        time.sleep(1)
+                        st.rerun()
+
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("⬆️ Tutup Daftar Tugas", use_container_width=True):
             components.html("""
@@ -616,8 +673,14 @@ def ui_manager_panel(df_i, df_j):
             
             new_tasks = {}
             for op in operator_list:
-                old_task = td['tasks'].get(op, "")
-                new_tasks[op] = st.text_input(op, value=old_task, placeholder=f"Tugas untuk {op}...")
+                old_task = td['tasks'].get(op, {}).get('task', "")
+                old_comment = td['tasks'].get(op, {}).get('comment', "")
+                
+                st.markdown(f"<b style='font-size:14px; color:#e2e8f0;'>{op}</b>", unsafe_allow_html=True)
+                new_tasks[op] = st.text_input(f"Tugas {op}:", value=old_task, label_visibility="collapsed", placeholder=f"Tugas untuk {op}...")
+                
+                if old_comment:
+                    st.markdown(f"<div style='font-size:13px; color:#facc15; margin-top:-10px; margin-bottom:10px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:middle;'>chat</span> <b>Balasan:</b> {old_comment}</div>", unsafe_allow_html=True)
                 
             col_save, col_clear = st.columns(2)
             
@@ -707,7 +770,7 @@ def ui_manager_panel(df_i, df_j):
 
 
 # =====================================================================
-# 7. HALAMAN UTAMA (TIMELINE SCROLL)
+# 7. HALAMAN UTAMA (TIMELINE SCROLL) 
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("""
