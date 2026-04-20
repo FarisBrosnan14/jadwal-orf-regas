@@ -12,7 +12,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -97,7 +97,7 @@ def generate_html_card(row, col_reason, col_proof, delay):
     """
 
 # =====================================================================
-# 3. DATABASE (GSPREAD)
+# 3. DATABASE (GSPREAD) - TEROPTIMASI ANTI LAG
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -212,8 +212,9 @@ def clear_pending_requests(df_i):
         st.rerun()
     except Exception as e: st.error(f"Error: {e}")
 
+
 # =====================================================================
-# 4. CSS INJECTION
+# 4. CSS INJECTION (CENTERING & ANIMASI KARTU)
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
@@ -221,7 +222,7 @@ def inject_custom_css(bg_base64, logo_base64):
     
     st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
     
     html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
@@ -244,23 +245,49 @@ def inject_custom_css(bg_base64, logo_base64):
     .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }}
     .home-btn:hover {{ background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }}
     
+    /* SCROLL CONTAINER TIMELINE */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
     .scroll-container::-webkit-scrollbar {{ display: none; }}
-    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.2s, box-shadow 0.2s; scroll-snap-align: start; cursor: pointer; }}
-    .scroll-card:hover {{ transform: translateY(-4px); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 8px 20px rgba(56, 189, 248, 0.15); }}
-    .scroll-card:active {{ transform: scale(0.98); }}
+    
+    /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
+    .scroll-card {{ 
+        flex: 0 0 220px; 
+        background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); 
+        border: 1px solid rgba(255,255,255,0.1); 
+        border-radius: 14px; 
+        padding: 16px; 
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; 
+        scroll-snap-align: start; 
+        cursor: pointer;
+    }}
+    .scroll-card:hover {{ 
+        transform: translateY(-8px); 
+        border-color: rgba(56, 189, 248, 0.5); 
+        box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); 
+    }}
+    .scroll-card:active {{ 
+        transform: scale(0.97) translateY(0); 
+        box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); 
+    }}
+    
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
-    .today-card:hover {{ transform: translateY(-6px); box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3) !important; }}
-    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: 0.2s; }}
-    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.1); color: #fff; }}
+    .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
+    .today-card:active {{ transform: scale(0.97); }}
+    
+    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
+    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
     .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; }}
+    
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
-    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(2px); }}
+    .scroll-item:hover {{ background: rgba(255,255,255,0.1); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    .nav-arrow-btn {{ background: rgba(30,41,59,0.8); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: 0.2s; }}
-    .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.2); color: #fff; transform: scale(1.05); }}
-    .nav-arrow-btn:active {{ transform: scale(0.95); }}
+    
+    /* NAV ARROW BUTTONS (Hollow transparent bg, blue border) */
+    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
+    .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
+    .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
+    
     details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }}
     details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
     details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
@@ -271,6 +298,7 @@ def inject_custom_css(bg_base64, logo_base64):
     </style>
     """, unsafe_allow_html=True)
 
+    # Splash Screen hanya dimuat 1x per sesi pengguna
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
         st.markdown(f"""
@@ -285,12 +313,23 @@ def inject_custom_css(bg_base64, logo_base64):
             </div>
         </div>
         <style>
-        #splash-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2s forwards; margin: 0 !important; padding: 0 !important; pointer-events: none; }}
-        .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: moveToHeader 2s forwards; }}
-        .splash-fade-early {{ animation: fadeOutEarly 2s forwards; }}
+        /* CSS KHUSUS SPLASH SCREEN (Perfect Centering) */
+        #splash-overlay {{ 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh; z-index: 999999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            background: #ffffff !important; animation: overlayFade 2.5s forwards; 
+            margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden;
+        }}
+        .splash-content {{ 
+            text-align: center; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; width: 100%;
+            animation: moveToHeader 2.5s forwards; 
+        }}
+        .splash-fade-early {{ animation: fadeOutEarly 2.5s forwards; display: flex; flex-direction: column; align-items: center; }}
         .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 1.5s infinite alternate; }}
-        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; }}
-        .splash-subtitle {{ color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 36px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
+        .splash-subtitle {{ color: #64748b; font-size: 14px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; text-align: center; }}
         .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
         .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1s infinite; }}
         
@@ -304,7 +343,7 @@ def inject_custom_css(bg_base64, logo_base64):
 
 
 # =====================================================================
-# 5. HEADER & HUD COMPONENT
+# 5. HEADER & HUD COMPONENT (JS FIXED FOR SCROLL BUTTONS)
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
@@ -324,8 +363,6 @@ def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
     evt = EVENT_KALENDER.get(hari_ini, "Tidak ada event")
     
-    # PERBAIKAN: watchPosition digunakan agar kordinat & cuaca update jika bergerak.
-    # Kompas menggunakan logic deviceorientation absolute.
     components.html(f"""
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
     <style>
@@ -364,7 +401,6 @@ def ui_live_hud_widget():
     </div>
     
     <script>
-        // Real-Time Clock
         function updateTime() {{
             var d = new Date();
             var hrs = String(d.getHours()).padStart(2, '0');
@@ -375,12 +411,9 @@ def ui_live_hud_widget():
             var options = {{ weekday: 'short', day: 'numeric', month: 'short' }};
             document.getElementById('date').innerText = d.toLocaleDateString('id-ID', options);
         }}
-        setInterval(updateTime, 1000);
-        updateTime();
+        setInterval(updateTime, 1000); updateTime();
 
-        // Weather & Location tracker
         function fetchWeather(lat, lon) {{
-            // Reverse Geocoding to get City Name
             fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=id')
             .then(res => res.json())
             .then(data => {{
@@ -388,7 +421,6 @@ def ui_live_hud_widget():
                 document.getElementById('loc').innerText = locName;
             }}).catch(() => {{ document.getElementById('loc').innerText = "Titik Koordinat"; }});
 
-            // Fetch Weather
             fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true')
             .then(r => r.json())
             .then(json => {{
@@ -403,7 +435,6 @@ def ui_live_hud_widget():
             }}).catch(e => console.log(e));
         }}
 
-        // WATCH Position (Terus menerus update jika bergerak)
         if(navigator.geolocation) {{
             navigator.geolocation.watchPosition(
                 function(pos) {{ 
@@ -414,21 +445,16 @@ def ui_live_hud_widget():
                 function(err) {{ 
                     document.getElementById('loc-status').style.background = '#ef4444';
                     document.getElementById('loc-icon').innerText = 'location_off';
-                    fetchWeather(-6.200000, 106.816666); // Fallback Jakarta
+                    fetchWeather(-6.200000, 106.816666);
                 }},
                 {{ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }}
             );
         }} else {{ fetchWeather(-6.200000, 106.816666); }}
         
-        // COMPASS SENSOR
         function handleOrientation(e) {{
             let heading = null;
-            if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {{ 
-                heading = e.webkitCompassHeading; 
-            }} else if(e.alpha !== null) {{
-                // Absolute orientation untuk Android
-                heading = 360 - e.alpha; 
-            }}
+            if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {{ heading = e.webkitCompassHeading; }} 
+            else if(e.alpha !== null) {{ heading = 360 - e.alpha; }}
             
             if(heading !== null) {{
                 document.getElementById('deg').innerText = Math.round(heading) + '°'; 
@@ -436,19 +462,15 @@ def ui_live_hud_widget():
             }}
         }}
 
-        // Attempt Auto-start (Works on Android/Desktop)
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         window.addEventListener('deviceorientation', handleOrientation, true);
 
-        // Click-to-start (Required for iOS Safari)
         document.getElementById('compass-box').addEventListener('click', async function() {{
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {{
                 try {{
                     const perm = await DeviceOrientationEvent.requestPermission();
-                    if (perm === 'granted') {{
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                    }} else {{ alert("Izin kompas ditolak oleh browser Anda."); }}
-                }} catch (err) {{ console.error(err); }}
+                    if (perm === 'granted') window.addEventListener('deviceorientation', handleOrientation, true);
+                }} catch (err) {{}}
             }}
         }});
     </script>
@@ -556,8 +578,8 @@ def ui_timeline(df_j, df_i):
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
         <div style="display: flex; gap: 10px;">
-            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); if(c) c.scrollBy({left: -300, behavior: 'smooth'});" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button class="nav-arrow-btn" onclick="var c = document.querySelector('.scroll-container'); if(c) c.scrollBy({left: 300, behavior: 'smooth'});" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
+            <button id="btn-scroll-left" class="nav-arrow-btn" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
+            <button id="btn-scroll-right" class="nav-arrow-btn" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -614,6 +636,27 @@ def ui_timeline(df_j, df_i):
         html += '</div>'
     st.markdown(html + '</div>', unsafe_allow_html=True)
     st.markdown("<hr style='opacity:0.1;'>", unsafe_allow_html=True)
+
+    # Injeksi JS untuk menghubungkan tombol panah ke fungsi scroll (karena diblokir oleh Streamlit Markdown)
+    components.html("""
+    <script>
+        function attachScrollListeners() {
+            const pDoc = window.parent.document;
+            const btnLeft = pDoc.getElementById("btn-scroll-left");
+            const btnRight = pDoc.getElementById("btn-scroll-right");
+            const container = pDoc.querySelector(".scroll-container");
+            
+            if(btnLeft && container) {
+                btnLeft.onclick = function() { container.scrollBy({left: -320, behavior: 'smooth'}); };
+            }
+            if(btnRight && container) {
+                btnRight.onclick = function() { container.scrollBy({left: 320, behavior: 'smooth'}); };
+            }
+        }
+        setInterval(attachScrollListeners, 1500);
+        attachScrollListeners();
+    </script>
+    """, height=0, width=0)
 
 def ui_off_tracker(df_j, df_k):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
