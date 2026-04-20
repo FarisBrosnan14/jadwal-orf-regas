@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -25,7 +25,7 @@ URL_JADWAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_JADWAL}/edit#gid
 URL_IZIN = f"https://docs.google.com/spreadsheets/d/{ID_SHEET_IZIN}/edit"
 URL_GFORM = "https://forms.gle/KB9CkfEsLB4yY9MK9"
 PIN_MANAGER = "regas123"
-DAFTAR_MANAJER = ["-- Pilih Nama Anda --", "Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
+DAFTAR_MANAJER = ["Yosep Zulkarnain", "Ade Imat", "Benny Sulistio", "Ibrahim"]
 
 EVENT_KALENDER = {
     "01-01": "Tahun Baru Masehi", "02-08": "Isra Mikraj", "02-10": "Imlek", "03-11": "Nyepi",
@@ -34,7 +34,14 @@ EVENT_KALENDER = {
     "06-17": "Idul Adha", "07-07": "Tahun Baru Islam", "08-17": "HUT RI", "09-16": "Maulid Nabi", "12-25": "Natal"
 }
 
-# Inisialisasi Memori untuk Notifikasi Update To-Do List
+# =====================================================================
+# INISIALISASI MEMORI SESI (LOGIN & TRACKING)
+# =====================================================================
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_role = ""
+    st.session_state.user_name = ""
+
 if 'last_seen_todo' not in st.session_state:
     st.session_state.last_seen_todo = ""
 
@@ -215,7 +222,8 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         st.error(f"Gagal menyimpan pengumuman: {e}")
         return False
 
-def reply_todo_operator(nama_operator, komentar):
+def reply_todo_operator(nama_operator, komentar, user_name):
+    """Menambahkan chat/komentar tanpa menimpa chat sebelumnya"""
     client = get_client()
     if not client: return False
     try:
@@ -229,7 +237,14 @@ def reply_todo_operator(nama_operator, komentar):
         records = ws.get_all_records()
         for i, r in enumerate(records):
             if str(r.get("Target", "")) == nama_operator:
-                ws.update_cell(i + 2, 3, komentar)
+                old_comment = str(r.get("Comment", ""))
+                time_str = datetime.now().strftime("%H:%M")
+                
+                # Format Balasan seperti Chat Group
+                new_chat = f"<div style='margin-bottom:4px;'><span style='color:#94a3b8; font-size:11px;'>[{time_str}]</span> <b style='color:#38bdf8;'>{user_name}:</b> <span style='color:#e2e8f0;'>{komentar}</span></div>"
+                final_comment = f"{old_comment}{new_chat}" if old_comment else new_chat
+                
+                ws.update_cell(i + 2, 3, final_comment)
                 fetch_todo_from_sheet.clear()
                 return True
         return False
@@ -356,7 +371,6 @@ def inject_custom_css(bg_base64, logo_base64):
     .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    
     .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
     .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
@@ -382,10 +396,14 @@ def inject_custom_css(bg_base64, logo_base64):
     div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg {{ color: #cbd5e1 !important; }}
     
     /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
-    @keyframes todoGlow {{ 0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 50% {{ box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); }} }}
+    @keyframes todoGlow {{ 
+        0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 
+        50% {{ box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); }} 
+    }}
     .todo-updated-animation {{ animation: todoGlow 1.5s infinite !important; }}
     .todo-updated-text {{ color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }}
     
+    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
     div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
     div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
     
@@ -423,20 +441,67 @@ def inject_custom_css(bg_base64, logo_base64):
         </style>
         """, unsafe_allow_html=True)
 
+# =====================================================================
+# 5. SISTEM LOGIN AWAL
+# =====================================================================
+def ui_login(df_j):
+    st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #f8fafc; font-weight: 800; letter-spacing: 1px;'>LOGIN SISTEM</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>Silakan masuk untuk mengakses NR ORF Command</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        with st.container(border=True):
+            role = st.selectbox("Masuk Sebagai:", ["Operator", "Manajer"])
+            
+            if role == "Manajer":
+                nama = st.selectbox("Nama Manajer:", DAFTAR_MANAJER)
+                pin = st.text_input("PIN Keamanan:", type="password")
+            else:
+                op_list = []
+                if not df_j.empty and 'Nama Operator' in df_j.columns:
+                    op_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
+                    op_list = [o for o in op_list if o.lower() not in ['nan', 'none', '']]
+                nama = st.selectbox("Nama Operator:", op_list)
+                pin = ""
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Masuk (Login)", type="primary", use_container_width=True):
+                if role == "Manajer" and pin != PIN_MANAGER:
+                    st.error("❌ PIN Keamanan Salah!")
+                elif not nama:
+                    st.error("❌ Silakan pilih nama Anda!")
+                else:
+                    st.session_state.logged_in = True
+                    st.session_state.user_role = role
+                    st.session_state.user_name = nama
+                    st.rerun()
+
 
 # =====================================================================
-# 5. HEADER, HUD, DAN TO-DO WIDGET
+# 6. HEADER, HUD, DAN TO-DO WIDGET
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
     notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
+    
+    # Tombol Keluar / Logout di pojok kanan atas
+    c_space, c_btn = st.columns([10, 2])
+    with c_btn:
+        if st.button("🚪 Keluar", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+
     st.markdown(f"""
-    <div class="header-bar">
+    <div class="header-bar" style="margin-top:-10px;">
         <div style="display:flex; align-items:center; gap:20px;">
             <form action="javascript:window.location.reload()"><button type="submit" class="home-btn" title="Home"><span class="material-symbols-rounded">home</span></button></form>
             <div>{logo}</div>
         </div>
-        <h1 style="color:#004D95; font-weight:800; font-size:clamp(18px, 3vw, 24px); margin:0;">NR ORF Integrated Command</h1>
+        <div style="flex-grow:1; text-align:center;">
+            <h1 style="color:#004D95; font-weight:800; font-size:clamp(16px, 3vw, 24px); margin:0;">NR ORF Integrated Command</h1>
+            <span style="font-size:12px; color:#64748b; font-weight:600;">Halo, {st.session_state.user_name} ({st.session_state.user_role})</span>
+        </div>
         <div>{notif}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -593,30 +658,32 @@ def ui_todo_widget():
             
             if task_text.strip():
                 has_task = True
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
                 
-                with st.expander(f"💬 Tanggapan & Progress ({'1' if comment_text else 'Belum ada'})"):
+                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
+                
+                with st.expander(f"💬 Diskusi & Progress"):
                     if comment_text:
-                        st.markdown(f"<div style='padding:8px 12px; border-left:3px solid #facc15; background:rgba(250, 204, 21, 0.1); margin-bottom:12px; border-radius:4px;'><span style='font-size:12px; color:#94a3b8;'>Laporan {op}:</span><br><b style='color:#facc15; font-size:14px;'>{comment_text}</b></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='padding:10px 12px; border-left:3px solid #facc15; background:rgba(0, 0, 0, 0.2); margin-bottom:12px; border-radius:4px; max-height: 200px; overflow-y: auto;'>{comment_text}</div>", unsafe_allow_html=True)
                     
                     c1, c2 = st.columns([3, 1])
                     with c1:
-                        reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik laporan {op}...", label_visibility="collapsed", key=f"reply_msg_{op}")
+                        reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik pesan sebagai {st.session_state.user_name}...", label_visibility="collapsed", key=f"reply_msg_{op}")
                     with c2:
                         if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
                             if reply_msg.strip():
-                                if reply_todo_operator(op, reply_msg):
+                                if reply_todo_operator(op, reply_msg, st.session_state.user_name):
                                     st.success("Terkirim!")
                                     time.sleep(1)
                                     st.rerun()
                             else:
-                                st.error("Isi laporan!")
+                                st.error("Isi pesan!")
                                 
+                st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
+        
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Tombol Tutup via Pure HTML/JS agar tidak tersendat (No Python Rerun)
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
@@ -640,141 +707,6 @@ def ui_todo_widget():
             }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
-
-
-# =====================================================================
-# 6. HALAMAN MANAJER
-# =====================================================================
-def ui_manager_panel(df_i, df_j):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
-    if 'is_manager' not in st.session_state: st.session_state.is_manager = False
-    
-    pin_input = st.text_input("Kunci Keamanan", type="password", placeholder="Masukkan PIN Manajer...")
-    is_locked = pin_input != PIN_MANAGER
-    st.session_state.is_manager = not is_locked
-
-    if is_locked:
-        return st.markdown("<div style='border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(15,23,42,0.6); padding:30px; text-align:center;'><span class='material-symbols-rounded' style='font-size:48px; color:#64748b; margin-bottom:10px;'>lock</span><br><span style='color:#cbd5e1; font-size:14px;'>Akses terkunci. Silakan masukkan PIN otoritas.</span></div>", unsafe_allow_html=True)
-
-    approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
-    is_name_locked = approver_name == DAFTAR_MANAJER[0]
-
-    tab_todo, tab_edit, tab_izin = st.tabs(["📝 To-Do List Harian", "⚙️ Panel Edit & AI", "📋 Panel Persetujuan"])
-    
-    with tab_todo:
-        st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
-        td = fetch_todo_from_sheet()
-        if td['main_msg'].strip():
-            st.info(td['main_msg'])
-        else:
-            st.write("Belum ada pengumuman umum.")
-            
-        with st.expander("✏️ Edit Pengumuman & Tugas Individu", expanded=True):
-            st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
-            new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
-            
-            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
-            operator_list = []
-            if not df_j.empty and 'Nama Operator' in df_j.columns:
-                operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
-                operator_list = [o for o in operator_list if o.lower() not in ['nan', 'none', '']]
-            
-            new_tasks = {}
-            for op in operator_list:
-                old_task = td['tasks'].get(op, {}).get('task', "")
-                old_comment = td['tasks'].get(op, {}).get('comment', "")
-                
-                st.markdown(f"<b style='font-size:14px; color:#e2e8f0;'>{op}</b>", unsafe_allow_html=True)
-                new_tasks[op] = st.text_input(f"Tugas {op}:", value=old_task, label_visibility="collapsed", placeholder=f"Tugas untuk {op}...")
-                
-                if old_comment:
-                    st.markdown(f"<div style='font-size:13px; color:#facc15; margin-top:-10px; margin-bottom:10px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:middle;'>chat</span> <b>Balasan:</b> {old_comment}</div>", unsafe_allow_html=True)
-                
-            col_save, col_clear = st.columns(2)
-            
-            if col_save.button("💾 Simpan Perubahan ke Database", type="primary", use_container_width=True):
-                if push_todo_to_sheet(new_main_msg, new_tasks):
-                    st.success("✅ Berhasil diperbarui!")
-                    time.sleep(1)
-                    st.rerun()
-            if col_clear.button("🗑️ Bersihkan Semua", use_container_width=True):
-                if push_todo_to_sheet("", {}):
-                    st.success("✅ To-Do List berhasil dikosongkan!")
-                    time.sleep(1)
-                    st.rerun()
-
-    with tab_edit:
-        st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
-        c_btn1, c_btn2 = st.columns(2)
-        with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
-        with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
-        
-        st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-        st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
-        
-        if is_name_locked: 
-            st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
-        else:
-            if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
-            perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
-            if st.button("Kirim Perintah", type="primary"):
-                if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
-                else:
-                    parsed = parse_natural_language_schedule(perintah, df_j)
-                    if not parsed['nama']: st.error("❌ Saya tidak menemukan nama personel tersebut di database.")
-                    elif not parsed['status']: st.error("❌ Saya tidak menangkap status yang diinginkan (sakit/cuti/off/pagi/malam).")
-                    elif not parsed['tgl_mulai']: st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka atau rentang.")
-                    else: st.session_state.ai_parsed_data = parsed
-
-            if st.session_state.ai_parsed_data:
-                p = st.session_state.ai_parsed_data
-                tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
-                st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
-                c_y, c_n = st.columns(2)
-                if c_y.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
-                    execute_smart_edit(p['nama'], p['status'], p['tgl_mulai'], p['tgl_selesai'], df_j)
-                    st.session_state.ai_parsed_data = None
-                if c_n.button("❌ Batal", use_container_width=True):
-                    st.session_state.ai_parsed_data = None
-                    st.rerun()
-
-    with tab_izin:
-        if df_i.empty or 'Status Approval' not in df_i.columns: 
-            st.warning("Menunggu sinkronisasi data izin...")
-        else:
-            df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
-            col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
-            col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
-            pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
-
-            col_hdr1, col_hdr2 = st.columns([2, 1])
-            with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
-            with col_hdr2:
-                if not pending_df.empty and not is_name_locked:
-                    if st.button("🗑️ Hapus Semua Antrean"): clear_pending_requests(df_i)
-
-            if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
-            else:
-                if is_name_locked: st.warning("Pilih Nama Approver di atas untuk mengaktifkan tombol persetujuan.")
-                for idx, row in pending_df.head(5).iterrows():
-                    with st.container(border=True):
-                        st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
-                        c1, c2 = st.columns(2)
-                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
-                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
-
-            st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
-            history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
-            
-            if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
-            else:
-                for idx, row in history_df.tail(5).iloc[::-1].iterrows():
-                    status = str(row['Status Approval']).upper()
-                    is_appr = "APPROVED" in status
-                    c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
-                    with st.container(border=True):
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
 
 
 # =====================================================================
@@ -919,36 +851,170 @@ def ui_kalender_lengkap(df_j):
 
 
 # =====================================================================
+# 8. HALAMAN MANAJER (HANYA TERLIHAT OLEH MANAJER)
+# =====================================================================
+def ui_manager_panel(df_i, df_j):
+    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
+    
+    approver_name = st.session_state.user_name
+
+    tab_todo, tab_edit, tab_izin = st.tabs(["📝 To-Do List Harian", "⚙️ Panel Edit & AI", "📋 Panel Persetujuan"])
+    
+    with tab_todo:
+        st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
+        td = fetch_todo_from_sheet()
+        if td['main_msg'].strip():
+            st.info(td['main_msg'])
+        else:
+            st.write("Belum ada pengumuman umum.")
+            
+        with st.expander("✏️ Edit Pengumuman & Tugas Individu", expanded=True):
+            st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
+            new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
+            
+            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
+            operator_list = []
+            if not df_j.empty and 'Nama Operator' in df_j.columns:
+                operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
+                operator_list = [o for o in operator_list if o.lower() not in ['nan', 'none', '']]
+            
+            new_tasks = {}
+            for op in operator_list:
+                old_task = td['tasks'].get(op, {}).get('task', "")
+                old_comment = td['tasks'].get(op, {}).get('comment', "")
+                
+                st.markdown(f"<b style='font-size:14px; color:#e2e8f0;'>{op}</b>", unsafe_allow_html=True)
+                new_tasks[op] = st.text_input(f"Tugas {op}:", value=old_task, label_visibility="collapsed", placeholder=f"Tugas untuk {op}...")
+                
+                if old_comment:
+                    st.markdown(f"<div style='font-size:13px; color:#facc15; margin-top:-10px; margin-bottom:10px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:middle;'>chat</span> <b>Balasan:</b> <div style='background:rgba(0,0,0,0.2); padding:8px; border-radius:4px; margin-top:4px;'>{old_comment}</div></div>", unsafe_allow_html=True)
+                
+            col_save, col_clear = st.columns(2)
+            
+            if col_save.button("💾 Simpan Perubahan ke Database", type="primary", use_container_width=True):
+                if push_todo_to_sheet(new_main_msg, new_tasks):
+                    st.success("✅ Berhasil diperbarui!")
+                    time.sleep(1)
+                    st.rerun()
+            if col_clear.button("🗑️ Bersihkan Semua", use_container_width=True):
+                if push_todo_to_sheet("", {}):
+                    st.success("✅ To-Do List berhasil dikosongkan!")
+                    time.sleep(1)
+                    st.rerun()
+
+    with tab_edit:
+        st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
+        c_btn1, c_btn2 = st.columns(2)
+        with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
+        with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
+        
+        st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
+        st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
+        
+        if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
+        perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
+        if st.button("Kirim Perintah", type="primary"):
+            if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
+            else:
+                parsed = parse_natural_language_schedule(perintah, df_j)
+                if not parsed['nama']: st.error("❌ Saya tidak menemukan nama personel tersebut di database.")
+                elif not parsed['status']: st.error("❌ Saya tidak menangkap status yang diinginkan (sakit/cuti/off/pagi/malam).")
+                elif not parsed['tgl_mulai']: st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka atau rentang.")
+                else: st.session_state.ai_parsed_data = parsed
+
+        if st.session_state.ai_parsed_data:
+            p = st.session_state.ai_parsed_data
+            tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
+            st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
+            c_y, c_n = st.columns(2)
+            if c_y.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
+                execute_smart_edit(p['nama'], p['status'], p['tgl_mulai'], p['tgl_selesai'], df_j)
+                st.session_state.ai_parsed_data = None
+            if c_n.button("❌ Batal", use_container_width=True):
+                st.session_state.ai_parsed_data = None
+                st.rerun()
+
+    with tab_izin:
+        if df_i.empty or 'Status Approval' not in df_i.columns: 
+            st.warning("Menunggu sinkronisasi data izin...")
+        else:
+            df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
+            col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
+            col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
+            pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
+
+            col_hdr1, col_hdr2 = st.columns([2, 1])
+            with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
+            with col_hdr2:
+                if not pending_df.empty:
+                    if st.button("🗑️ Hapus Semua Antrean"): clear_pending_requests(df_i)
+
+            if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
+            else:
+                for idx, row in pending_df.head(5).iterrows():
+                    with st.container(border=True):
+                        st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
+                        c1, c2 = st.columns(2)
+                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
+                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j)
+
+            st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
+            history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
+            
+            if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
+            else:
+                for idx, row in history_df.tail(5).iloc[::-1].iterrows():
+                    status = str(row['Status Approval']).upper()
+                    is_appr = "APPROVED" in status
+                    c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+                    with st.container(border=True):
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
+                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True): execute_database_action(idx, row, "UNDO", approver_name, df_j)
+
+
+# =====================================================================
 # MAIN RUNNER
 # =====================================================================
 if __name__ == "__main__":
     inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"))
     df_j, df_i, df_k = load_all_data()
 
-    pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
-
-    ui_header(get_base64_image("pertamina.png"), pending_count)
-    ui_live_hud_widget() 
-    ui_todo_widget()
-
-    if 'menu' not in st.session_state: st.session_state.menu = "Dash"
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1: st.button("Dashboard Utama", type="primary" if st.session_state.menu == "Dash" else "secondary", on_click=lambda: st.session_state.update(menu="Dash"), use_container_width=True)
-    with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.menu == "Kal" else "secondary", on_click=lambda: st.session_state.update(menu="Kal"), use_container_width=True)
-    with c3: st.button("Panel Manajer", type="primary" if st.session_state.menu == "Mgr" else "secondary", on_click=lambda: st.session_state.update(menu="Mgr"), use_container_width=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    ui_timeline(df_j, df_i)
-
-    if st.session_state.menu == "Dash":
-        col_m, col_s = st.columns([2.5, 1.5])
-        with col_m: 
-            st.info("Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
-        with col_s: 
-            ui_off_tracker(df_j, df_k)
-    elif st.session_state.menu == "Kal":
-        ui_kalender_lengkap(df_j)
+    # LAYAR LOGIN
+    if not st.session_state.logged_in:
+        ui_login(df_j)
     else:
-        ui_manager_panel(df_i, df_j)
+        pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
+
+        ui_header(get_base64_image("pertamina.png"), pending_count)
+        ui_live_hud_widget() 
+        ui_todo_widget()
+
+        if 'menu' not in st.session_state: st.session_state.menu = "Dash"
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # MENU DINAMIS BERDASARKAN ROLE
+        if st.session_state.user_role == "Manajer":
+            c1, c2, c3 = st.columns(3)
+            with c1: st.button("Dashboard Utama", type="primary" if st.session_state.menu == "Dash" else "secondary", on_click=lambda: st.session_state.update(menu="Dash"), use_container_width=True)
+            with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.menu == "Kal" else "secondary", on_click=lambda: st.session_state.update(menu="Kal"), use_container_width=True)
+            with c3: st.button("Panel Manajer", type="primary" if st.session_state.menu == "Mgr" else "secondary", on_click=lambda: st.session_state.update(menu="Mgr"), use_container_width=True)
+        else:
+            c1, c2 = st.columns(2)
+            with c1: st.button("Dashboard Utama", type="primary" if st.session_state.menu == "Dash" else "secondary", on_click=lambda: st.session_state.update(menu="Dash"), use_container_width=True)
+            with c2: st.button("Kalender Lengkap", type="primary" if st.session_state.menu == "Kal" else "secondary", on_click=lambda: st.session_state.update(menu="Kal"), use_container_width=True)
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        ui_timeline(df_j, df_i)
+
+        if st.session_state.menu == "Dash":
+            col_m, col_s = st.columns([2.5, 1.5])
+            with col_m: 
+                st.info("Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
+            with col_s: 
+                ui_off_tracker(df_j, df_k)
+        elif st.session_state.menu == "Kal":
+            ui_kalender_lengkap(df_j)
+        elif st.session_state.menu == "Mgr" and st.session_state.user_role == "Manajer":
+            ui_manager_panel(df_i, df_j)
