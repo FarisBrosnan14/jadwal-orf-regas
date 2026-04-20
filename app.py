@@ -42,7 +42,7 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
-    # FITUR SSO (AUTO-LOGIN VIA TOKEN)
+    # FITUR SSO (AUTO-LOGIN VIA TOKEN DI URL)
     if "auth" in st.query_params:
         try:
             token = st.query_params["auth"]
@@ -333,100 +333,144 @@ def clear_pending_requests(df_i):
 
 
 # =====================================================================
-# 4. CSS INJECTION (GLOBAL)
+# 4. CSS INJECTION KONDISIONAL (LOGIN VS DASHBOARD)
 # =====================================================================
-def inject_custom_css(bg_base64, logo_base64):
-    bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
-    logo_src = f"data:image/png;base64,{logo_base64}" if logo_base64 else ""
+def inject_custom_css(bg_base64, logo_base64, is_login=False):
+    if is_login:
+        bg_overlay = "rgba(15,23,42,0.2), rgba(15,23,42,0.5)" # Terang agar foto jelas
+        container_bg = "rgba(255, 255, 255, 0.95)" # Kaca putih
+        container_border = "rgba(255, 255, 255, 0.6)"
+        box_shadow = "0 10px 40px rgba(0,0,0,0.15)"
+        blur_fx = "blur(15px)"
+    else:
+        bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)" # Gelap elegan
+        container_bg = "linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9))"
+        container_border = "rgba(255,255,255,0.1)"
+        box_shadow = "none"
+        blur_fx = "blur(0px)"
+
+    bg_css = f"linear-gradient({bg_overlay}), url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else f"linear-gradient({bg_overlay})"
+
+    css = "<style>\n"
+    css += "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');\n"
+    css += "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');\n"
     
-    st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
+    css += f"html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}\n"
+    css += f".stApp {{ background-image: {bg_css} !important; background-size: cover; background-attachment: fixed; }}\n"
+    css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
+    css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
+    css += "header[data-testid=\"stHeader\"] { display: none !important; }\n"
     
-    html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
-    .stApp {{ background-image: linear-gradient(rgba(15,23,42,0.88), rgba(15,23,42,0.88)), {bg_img}; background-size: cover; background-attachment: fixed; }}
-    
-    [data-testid="collapsedControl"] {{ display: none; }}
-    .block-container {{ max-width: 1200px !important; padding-top: 2rem !important; }} 
-    header[data-testid="stHeader"] {{ display: none !important; }}
-    
-    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{ background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }}
-    div[data-baseweb="input"] input, div[data-baseweb="select"] span {{ color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }}
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; border: 1px solid rgba(255,255,255,0.1); padding: 24px; transition: all 0.3s; }}
-    .stButton>button {{ border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }}
-    button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }}
-    
-    @keyframes headerGlow {{ 0%, 100% {{ box-shadow: 0 0 20px rgba(0,77,149,0.6); border-color: rgba(0,77,149,0.9); }} 33% {{ box-shadow: 0 0 20px rgba(239,68,68,0.6); border-color: rgba(239,68,68,0.9); }} 66% {{ box-shadow: 0 0 20px rgba(130,195,65,0.6); border-color: rgba(130,195,65,0.9); }} }}
-    .header-bar {{ background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }}
-    @keyframes bellFlash {{ 0%, 100% {{ color: #1e293b; transform: scale(1); }} 50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); }} }}
-    .bell-active {{ animation: bellFlash 1.5s infinite; }}
-    .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }}
-    .home-btn:hover {{ background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }}
-    
-    /* SCROLL CONTAINER TIMELINE */
-    .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
-    .scroll-container::-webkit-scrollbar {{ display: none; }}
-    
-    /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
-    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }}
-    .scroll-card:hover {{ transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }}
-    .scroll-card:active {{ transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }}
-    .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
-    .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
-    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
-    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
-    .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
-    .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
-    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
-    .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
-    .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
-    .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
-    .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
-    
-    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }}
-    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
-    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
-    details.off-personnel summary::-webkit-details-marker {{ display: none; }}
-    .chevron-icon {{ transition: transform 0.3s; color: #94a3b8; margin-left:auto; }}
-    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
-    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }}
-    
-    /* GAYA EXPANDER PENGUMUMAN TO DO LIST (UTAMA) */
-    div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }}
-    div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
-    div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }}
-    div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
-    
-    /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
-    div[data-testid="stExpander"] div[data-testid="stExpander"] {{ border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }}
-    div[data-testid="stExpander"] div[data-testid="stExpander"] summary {{ background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }}
-    div[data-testid="stExpander"] div[data-testid="stExpander"] summary p {{ font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }}
-    div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg {{ color: #cbd5e1 !important; }}
-    
-    /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
-    @keyframes todoGlow {{ 
-        0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 
-        50% {{ box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); }} 
+    # Targeting the main block containers robustly
+    css += f"""
+    div[data-testid="stVerticalBlockBorderWrapper"] > div,
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ 
+        border-radius: 16px; 
+        background: {container_bg} !important; 
+        border: 1px solid {container_border} !important; 
+        box-shadow: {box_shadow} !important;
+        backdrop-filter: {blur_fx} !important;
+        -webkit-backdrop-filter: {blur_fx} !important;
+        padding: 24px; 
+        transition: all 0.3s; 
     }}
-    .todo-updated-animation {{ animation: todoGlow 1.5s infinite !important; }}
-    .todo-updated-text {{ color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }}
+    """
     
-    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
-    div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
-    div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
-    
-    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; }} .header-title {{ font-size: 20px !important; text-align: center; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
-    </style>
-    """, unsafe_allow_html=True)
+    if is_login:
+        css += """
+        /* OVERRIDES KHUSUS HALAMAN LOGIN */
+        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+            border-radius: 8px !important;
+        }
+        div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 14px !important; }
+        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
+        .stButton>button { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; padding: 10px; }
+        .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(2, 132, 199, 0.3); }
+        """
+    else:
+        css += """
+        /* OVERRIDES KHUSUS DASHBOARD */
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
+        div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
+        .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
+        button[kind="primary"] { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }
+        
+        @keyframes headerGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0,77,149,0.6); border-color: rgba(0,77,149,0.9); } 33% { box-shadow: 0 0 20px rgba(239,68,68,0.6); border-color: rgba(239,68,68,0.9); } 66% { box-shadow: 0 0 20px rgba(130,195,65,0.6); border-color: rgba(130,195,65,0.9); } }
+        .header-bar { background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }
+        @keyframes bellFlash { 0%, 100% { color: #1e293b; transform: scale(1); } 50% { color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); } }
+        .bell-active { animation: bellFlash 1.5s infinite; }
+        .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
+        .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
+        
+        /* SCROLL CONTAINER TIMELINE */
+        .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
+        .scroll-container::-webkit-scrollbar { display: none; }
+        .scroll-card { flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }
+        .scroll-card:hover { transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }
+        .scroll-card:active { transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }
+        .today-card { border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }
+        .today-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }
+        .scroll-header { text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }
+        .scroll-card:hover .scroll-header { background: rgba(56, 189, 248, 0.15); color: #ffffff; }
+        .today-header { background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }
+        .scroll-item { margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }
+        .scroll-item:hover { background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }
+        .status-badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }
+        .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+        .nav-arrow-btn { background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+        .nav-arrow-btn:hover { background: rgba(56,189,248,0.1); transform: scale(1.05); }
+        .nav-arrow-btn:active { transform: scale(0.95); background: rgba(56,189,248,0.3); }
+        
+        details.off-personnel { background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
+        details.off-personnel:hover { background: rgba(56,189,248,0.08); transform: translateX(4px); }
+        details.off-personnel summary { padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }
+        details.off-personnel summary::-webkit-details-marker { display: none; }
+        .chevron-icon { transition: transform 0.3s; color: #94a3b8; margin-left:auto; }
+        details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
+        .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
+        
+        /* GAYA EXPANDER PENGUMUMAN TO DO LIST (UTAMA) */
+        div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
+        div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
+        div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
+        div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
+        
+        /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
+        div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
+        
+        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
+        @keyframes todoGlow { 
+            0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
+            50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
+        }
+        .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
+        .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
+        
+        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
+        div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
+        div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
+        
+        @media (max-width: 768px) { .header-bar { flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; } .header-title { font-size: 20px !important; text-align: center; } .stButton>button { padding: 16px 10px !important; font-size: 14px !important; } }
+        """
+        
+    css += "</style>"
+    st.markdown(css, unsafe_allow_html=True)
 
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
+        logo_src_splash = f"data:image/png;base64,{logo_base64}" if logo_base64 else ""
         st.markdown(f"""
         <div id="splash-overlay">
             <div class="splash-content">
-                <img src="{logo_src}" class="splash-logo" alt="Logo">
+                <img src="{logo_src_splash}" class="splash-logo" alt="Logo">
                 <h2 class="splash-title">NR ORF COMMAND</h2>
                 <div class="splash-fade-early">
                     <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
@@ -451,27 +495,12 @@ def inject_custom_css(bg_base64, logo_base64):
         </style>
         """, unsafe_allow_html=True)
 
+
 # =====================================================================
-# 5. SISTEM LOGIN AWAL (TEMA TERANG)
+# 5. SISTEM LOGIN AWAL
 # =====================================================================
 def ui_login(df_j):
     logo_base64 = get_base64_image("logo-pertaminaregasv2.png")
-    
-    # CSS Injeksi Khusus Halaman Login agar background-nya terang (Kaca Putih)
-    st.markdown("""
-    <style>
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        background: rgba(255, 255, 255, 0.9) !important;
-        backdrop-filter: blur(15px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important;
-    }
-    .login-title { color: #004D95 !important; font-weight: 800; text-align: center; font-size: 28px; margin-bottom: 5px; letter-spacing: 1px; }
-    .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 25px; font-weight: 600; font-size: 14px; }
-    div[data-baseweb="select"] span { color: #0f172a !important; }
-    label { color: #1e293b !important; font-weight: 700 !important; font-size: 14px !important; }
-    </style>
-    """, unsafe_allow_html=True)
     
     st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
     
@@ -1018,11 +1047,13 @@ def ui_manager_panel(df_i, df_j):
 # MAIN RUNNER
 # =====================================================================
 if __name__ == "__main__":
-    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"))
+    is_login_page = not st.session_state.get('logged_in', False)
+    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"), is_login=is_login_page)
+
     df_j, df_i, df_k = load_all_data()
 
     # LAYAR LOGIN
-    if not st.session_state.logged_in:
+    if is_login_page:
         ui_login(df_j)
     else:
         pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
