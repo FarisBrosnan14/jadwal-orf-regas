@@ -6,13 +6,14 @@ import gspread
 from google.oauth2.service_account import Credentials
 import base64
 import re
+import time
 from PIL import Image
 
 # =====================================================================
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -32,16 +33,6 @@ EVENT_KALENDER = {
     "05-01": "Hari Buruh", "05-09": "Kenaikan Isa Al Masih", "05-23": "Waisak", "06-01": "Lahir Pancasila",
     "06-17": "Idul Adha", "07-07": "Tahun Baru Islam", "08-17": "HUT RI", "09-16": "Maulid Nabi", "12-25": "Natal"
 }
-
-# =====================================================================
-# INISIALISASI MEMORI TO-DO LIST
-# =====================================================================
-if 'todo_data' not in st.session_state:
-    st.session_state.todo_data = {
-        "main_msg": "",
-        "tasks": {}
-    }
-
 
 # =====================================================================
 # 2. UTILITIES & AI PARSER
@@ -106,6 +97,7 @@ def generate_html_card(row, col_reason, col_proof, delay):
     </div>
     """
 
+
 # =====================================================================
 # 3. DATABASE (GSPREAD)
 # =====================================================================
@@ -152,6 +144,66 @@ def load_jadwal_izin_data():
                 df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
     except: pass
     return df_j, df_i
+
+@st.cache_data(ttl=60)
+def fetch_todo_from_sheet():
+    """Mengambil Data To-Do List yang Tersimpan Permanen di Google Sheets"""
+    client = get_client()
+    default_data = {"main_msg": "", "tasks": {}}
+    if not client: return default_data
+    try:
+        sh = client.open_by_key(ID_SHEET_JADWAL)
+        try:
+            ws = sh.worksheet("To_Do_List")
+        except gspread.exceptions.WorksheetNotFound:
+            # Jika tab To_Do_List belum ada, otomatis buatkan
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=2)
+            ws.append_row(["Target", "Task"])
+        
+        records = ws.get_all_records()
+        for r in records:
+            target = str(r.get("Target", ""))
+            task = str(r.get("Task", ""))
+            if target == "PENGUMUMAN_UTAMA":
+                default_data["main_msg"] = task
+            elif target:
+                default_data["tasks"][target] = task
+        return default_data
+    except Exception as e:
+        return default_data
+
+def push_todo_to_sheet(main_msg, tasks_dict):
+    """Menyimpan Data To-Do List ke Google Sheets agar Permanen"""
+    client = get_client()
+    if not client: return False
+    try:
+        sh = client.open_by_key(ID_SHEET_JADWAL)
+        try:
+            ws = sh.worksheet("To_Do_List")
+        except:
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=2)
+        
+        ws.clear()
+        time.sleep(0.5)
+        
+        rows = [["Target", "Task"], ["PENGUMUMAN_UTAMA", main_msg]]
+        for op, task in tasks_dict.items():
+            if task.strip():
+                rows.append([op, task.strip()])
+        
+        try:
+            ws.update(values=rows, range_name="A1")
+        except:
+            try:
+                ws.update("A1", rows)
+            except:
+                ws.append_rows(rows)
+                
+        fetch_todo_from_sheet.clear()
+        return True
+    except Exception as e:
+        st.error(f"Gagal menyimpan pengumuman: {e}")
+        return False
 
 def load_all_data():
     df_j, df_i = load_jadwal_izin_data()
@@ -204,7 +256,7 @@ def execute_smart_edit(nama, status, d_start, d_end, df_j):
             if updates: 
                 sh_aktual.update_cells(updates)
                 load_jadwal_izin_data.clear()
-                import time; time.sleep(1)
+                time.sleep(1)
                 st.rerun()
     except: pass
 
@@ -218,9 +270,10 @@ def clear_pending_requests(df_i):
         indices = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         for r in indices: sh_izin.delete_rows(r)
         load_jadwal_izin_data.clear()
-        import time; time.sleep(1)
+        time.sleep(1)
         st.rerun()
     except Exception as e: st.error(f"Error: {e}")
+
 
 # =====================================================================
 # 4. CSS INJECTION
@@ -254,21 +307,45 @@ def inject_custom_css(bg_base64, logo_base64):
     .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }}
     .home-btn:hover {{ background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }}
     
+    /* SCROLL CONTAINER TIMELINE */
     .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
     .scroll-container::-webkit-scrollbar {{ display: none; }}
-    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.2s, box-shadow 0.2s; scroll-snap-align: start; cursor: pointer; }}
-    .scroll-card:hover {{ transform: translateY(-4px); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 8px 20px rgba(56, 189, 248, 0.15); }}
-    .scroll-card:active {{ transform: scale(0.98); }}
+    
+    /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
+    .scroll-card {{ 
+        flex: 0 0 220px; 
+        background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); 
+        border: 1px solid rgba(255,255,255,0.1); 
+        border-radius: 14px; 
+        padding: 16px; 
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; 
+        scroll-snap-align: start; 
+        cursor: pointer;
+    }}
+    .scroll-card:hover {{ 
+        transform: translateY(-8px); 
+        border-color: rgba(56, 189, 248, 0.5); 
+        box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); 
+    }}
+    .scroll-card:active {{ 
+        transform: scale(0.97) translateY(0); 
+        box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); 
+    }}
+    
     .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
-    .today-card:hover {{ transform: translateY(-6px); box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3) !important; }}
-    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: 0.2s; }}
-    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.1); color: #fff; }}
-    .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; }}
+    .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
+    
+    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
+    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
+    .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
+    
     .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
-    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(2px); }}
+    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
     .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
     .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
-    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }}
+    
+    /* NAV ARROW BUTTONS */
+    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
     .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
     .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
     
@@ -285,6 +362,12 @@ def inject_custom_css(bg_base64, logo_base64):
     div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
     div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; }}
     div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
+    
+    /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
+    div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
+    div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
+    
+    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; }} .header-title {{ font-size: 20px !important; text-align: center; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -320,7 +403,7 @@ def inject_custom_css(bg_base64, logo_base64):
 
 
 # =====================================================================
-# 5. KOMPONEN WIDGET: HEADER, HUD, DAN TO-DO LIST
+# 5. HEADER, HUD, DAN TO-DO WIDGET (DASHBOARD)
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
@@ -450,10 +533,11 @@ def ui_live_hud_widget():
     """, height=90)
 
 def ui_todo_widget():
-    """Menampilkan To-Do List di bawah HUD untuk dilihat semua orang."""
+    """Menampilkan To-Do List yang di-fetch dari Google Sheets ke layar utama"""
+    td = fetch_todo_from_sheet()
+    
     st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
     with st.expander("📢 PENGUMUMAN & TO-DO LIST HARI INI"):
-        td = st.session_state.todo_data
         
         if td['main_msg'].strip():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
@@ -469,7 +553,7 @@ def ui_todo_widget():
 
 
 # =====================================================================
-# 6. HALAMAN MANAJER (DITAMBAH TAB TO-DO LIST)
+# 6. HALAMAN MANAJER
 # =====================================================================
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
@@ -485,33 +569,42 @@ def ui_manager_panel(df_i, df_j):
     approver_name = st.selectbox("Nama Approver:", DAFTAR_MANAJER)
     is_name_locked = approver_name == DAFTAR_MANAJER[0]
 
-    # TAB BARU UNTUK TO DO LIST
-    tab_edit, tab_izin, tab_todo = st.tabs(["⚙️ Panel Edit & Asisten AI", "📋 Panel Persetujuan Izin", "📝 To-Do List Harian"])
+    tab_todo, tab_edit, tab_izin = st.tabs(["📝 To-Do List Harian", "⚙️ Panel Edit & AI", "📋 Panel Persetujuan"])
     
     with tab_todo:
-        st.markdown("<br><b style='color:#38bdf8;'>Buat Instruksi Harian</b>", unsafe_allow_html=True)
-        st.info("Isi pesan utama dan daftar tugas spesifik per orang. Data ini akan langsung muncul di panel bawah HUD semua orang.")
-        
-        new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=st.session_state.todo_data['main_msg'], placeholder="Tulis pengumuman umum di sini...")
-        
-        st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
-        # Ambil daftar nama unik dari database jadwal
-        operator_list = []
-        if not df_j.empty and 'Nama Operator' in df_j.columns:
-            operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
-            operator_list = [o for o in operator_list if o.lower() not in ['nan', 'none', '']]
-        
-        new_tasks = {}
-        for op in operator_list:
-            old_task = st.session_state.todo_data['tasks'].get(op, "")
-            new_tasks[op] = st.text_input(op, value=old_task, placeholder=f"Tugas untuk {op}...")
+        st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
+        td = fetch_todo_from_sheet()
+        if td['main_msg'].strip():
+            st.info(td['main_msg'])
+        else:
+            st.write("Belum ada pengumuman umum.")
             
-        if st.button("💾 Simpan Pengumuman & To-Do List", type="primary", disabled=is_name_locked):
-            st.session_state.todo_data['main_msg'] = new_main_msg
-            st.session_state.todo_data['tasks'] = new_tasks
-            st.success("✅ Berhasil diperbarui! Silakan cek di halaman Dashboard Utama.")
-            import time; time.sleep(1.5)
-            st.rerun()
+        with st.expander("✏️ Edit Pengumuman & Tugas Individu", expanded=True):
+            st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
+            new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
+            
+            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
+            operator_list = []
+            if not df_j.empty and 'Nama Operator' in df_j.columns:
+                operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
+                operator_list = [o for o in operator_list if o.lower() not in ['nan', 'none', '']]
+            
+            new_tasks = {}
+            for op in operator_list:
+                old_task = td['tasks'].get(op, "")
+                new_tasks[op] = st.text_input(op, value=old_task, placeholder=f"Tugas untuk {op}...")
+                
+            col_save, col_clear = st.columns(2)
+            if col_save.button("💾 Simpan Perubahan ke Database", type="primary", disabled=is_name_locked, use_container_width=True):
+                if push_todo_to_sheet(new_main_msg, new_tasks):
+                    st.success("✅ Berhasil diperbarui!")
+                    time.sleep(1)
+                    st.rerun()
+            if col_clear.button("🗑️ Bersihkan Semua", disabled=is_name_locked, use_container_width=True):
+                if push_todo_to_sheet("", {}):
+                    st.success("✅ To-Do List berhasil dikosongkan!")
+                    time.sleep(1)
+                    st.rerun()
 
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
@@ -527,7 +620,7 @@ def ui_manager_panel(df_i, df_j):
         else:
             if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
             perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
-            if st.button("Kirim Perintah AI", type="primary"):
+            if st.button("Kirim Perintah", type="primary"):
                 if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
                 else:
                     parsed = parse_natural_language_schedule(perintah, df_j)
@@ -588,7 +681,7 @@ def ui_manager_panel(df_i, df_j):
 
 
 # =====================================================================
-# 7. HALAMAN UTAMA (TIMELINE SCROLL) 
+# 7. HALAMAN UTAMA (TIMELINE SCROLL)
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("""
@@ -739,7 +832,7 @@ if __name__ == "__main__":
 
     ui_header(get_base64_image("pertamina.png"), pending_count)
     ui_live_hud_widget() 
-    ui_todo_widget() # Widget To-Do list dipanggil tepat di bawah HUD
+    ui_todo_widget()
 
     if 'menu' not in st.session_state: st.session_state.menu = "Dash"
     
