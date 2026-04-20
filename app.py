@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -89,16 +89,16 @@ def generate_html_card(row, col_reason, col_proof, delay):
     alasan = str(row.get(col_reason, '-')).strip()
     if alasan.lower() in ['nan', '']: alasan = 'Tidak ada keterangan'
     bukti = str(row.get(col_proof, '')).strip()
-    bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#64748b;'>Tidak ada lampiran</span>"
+    bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#94a3b8;'>Tidak ada lampiran</span>"
     return f"""
     <div style='animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) {delay}s both;'>
-        <div style='display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>person</span><b style='font-size:16px; color:#fff;'>{row['Nama Lengkap Operator']}</b></div>
-        <div style='font-size:14px; margin-top:12px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} | ⏱️ Shift: {row.get('Shift Izin', 'Pg')}</div>
-        <div style='margin-top:12px; background: rgba(255,255,255,0.03); border-left: 3px solid #64748b; padding: 12px; border-radius: 6px;'>
-            <div style='font-size:13px; color:#cbd5e1;'><b>Alasan:</b> {alasan}</div>
-            <div style='font-size:13px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;'>{bukti_html}</div>
+        <div style='display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#0ea5e9;'>person</span><b style='font-size:16px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b></div>
+        <div style='font-size:14px; margin-top:12px; color:#f8fafc;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} | ⏱️ Shift: {row.get('Shift Izin', 'Pg')}</div>
+        <div style='margin-top:12px; background: rgba(255,255,255,0.06); border-left: 4px solid #94a3b8; padding: 12px; border-radius: 6px;'>
+            <div style='font-size:14px; color:#f1f5f9;'><b>Alasan:</b> {alasan}</div>
+            <div style='font-size:13px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:8px;'>{bukti_html}</div>
         </div>
-        <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+        <div style='font-size:14px; color:#fee2e2; font-weight:700; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.25); padding: 6px 12px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
     </div>
     """
 
@@ -281,7 +281,7 @@ def clear_pending_requests(df_i):
 
 
 # =====================================================================
-# 4. CSS INJECTION
+# 4. CSS INJECTION (KONTRAS TINGGI)
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64):
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
@@ -292,72 +292,80 @@ def inject_custom_css(bg_base64, logo_base64):
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
     
-    html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}
-    .stApp {{ background-image: linear-gradient(rgba(15,23,42,0.88), rgba(15,23,42,0.88)), {bg_img}; background-size: cover; background-attachment: fixed; }}
+    html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #ffffff; }}
+    .stApp {{ background-image: linear-gradient(rgba(15,23,42,0.92), rgba(15,23,42,0.92)), {bg_img}; background-size: cover; background-attachment: fixed; }}
     
     [data-testid="collapsedControl"] {{ display: none; }}
     .block-container {{ max-width: 1200px !important; padding-top: 2rem !important; }} 
     header[data-testid="stHeader"] {{ display: none !important; }}
     
-    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{ background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }}
-    div[data-baseweb="input"] input, div[data-baseweb="select"] span {{ color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }}
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; border: 1px solid rgba(255,255,255,0.1); padding: 24px; transition: all 0.3s; }}
-    .stButton>button {{ border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }}
-    button[kind="primary"] {{ background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }}
+    /* INPUTS KONTRAS */
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }}
+    div[data-baseweb="input"] input, div[data-baseweb="select"] span {{ color: #0f172a !important; font-weight: 800 !important; font-size: 14px !important; }}
     
-    @keyframes headerGlow {{ 0%, 100% {{ box-shadow: 0 0 20px rgba(0,77,149,0.6); border-color: rgba(0,77,149,0.9); }} 33% {{ box-shadow: 0 0 20px rgba(239,68,68,0.6); border-color: rgba(239,68,68,0.9); }} 66% {{ box-shadow: 0 0 20px rgba(130,195,65,0.6); border-color: rgba(130,195,65,0.9); }} }}
-    .header-bar {{ background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }}
-    @keyframes bellFlash {{ 0%, 100% {{ color: #1e293b; transform: scale(1); }} 50% {{ color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); }} }}
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.85), rgba(15,23,42,0.95)) !important; border: 1px solid rgba(56,189,248,0.3); padding: 24px; transition: all 0.3s; }}
+    
+    .stButton>button {{ border-radius: 12px; font-weight: 800 !important; width: 100%; transition: all 0.2s; border: 1px solid rgba(14,165,233,0.5) !important; }}
+    button[kind="primary"] {{ background: linear-gradient(135deg, #0ea5e9, #0284c7) !important; color: white !important; box-shadow: 0 4px 15px rgba(14,165,233,0.4) !important; }}
+    
+    @keyframes headerGlow {{ 0%, 100% {{ box-shadow: 0 0 20px rgba(14,165,233,0.7); border-color: rgba(14,165,233,0.9); }} 50% {{ box-shadow: 0 0 25px rgba(56,189,248,0.9); border-color: rgba(56,189,248,1); }} }}
+    .header-bar {{ background: #ffffff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }}
+    
+    @keyframes bellFlash {{ 0%, 100% {{ color: #1e293b; transform: scale(1); }} 50% {{ color: #ef4444; transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(239,68,68,0.9)); }} }}
     .bell-active {{ animation: bellFlash 1.5s infinite; }}
-    .home-btn {{ display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }}
-    .home-btn:hover {{ background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }}
+    .home-btn {{ display: flex; background: rgba(14,165,233,0.1); color: #0284c7; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(14,165,233,0.3); cursor: pointer; text-decoration: none; transition: 0.2s; font-weight: 800; }}
+    .home-btn:hover {{ background: rgba(14,165,233,0.25); color: #0369a1; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(14,165,233,0.3); }}
     
     /* SCROLL CONTAINER TIMELINE */
-    .scroll-container {{ display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
+    .scroll-container {{ display: flex; overflow-x: auto; gap: 16px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }}
     .scroll-container::-webkit-scrollbar {{ display: none; }}
     
     /* TIMELINE CARDS INTERACTIVE HOVER & TOUCH */
-    .scroll-card {{ flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }}
-    .scroll-card:hover {{ transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }}
+    .scroll-card {{ flex: 0 0 230px; background: linear-gradient(145deg, rgba(30,41,59,0.95), rgba(15,23,42,1)); border: 1px solid rgba(56,189,248,0.3); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }}
+    .scroll-card:hover {{ transform: translateY(-6px); border-color: rgba(56, 189, 248, 0.7); box-shadow: 0 12px 25px rgba(56, 189, 248, 0.25); }}
     .scroll-card:active {{ transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }}
-    .today-card {{ border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
-    .today-card:hover {{ transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }}
-    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }}
-    .scroll-card:hover .scroll-header {{ background: rgba(56, 189, 248, 0.15); color: #ffffff; }}
-    .today-header {{ background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }}
-    .scroll-item {{ margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }}
-    .scroll-item:hover {{ background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }}
-    .status-badge {{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }}
-    .status-dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; }}
+    
+    .today-card {{ border: 2px solid #0ea5e9 !important; box-shadow: 0 0 20px rgba(14,165,233,0.4) !important; background: linear-gradient(145deg, rgba(14,165,233,0.2), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }}
+    .today-card:hover {{ transform: translateY(-8px); box-shadow: 0 15px 35px rgba(14,165,233,0.6) !important; }}
+    
+    .scroll-header {{ text-align: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-weight: 800; margin-bottom: 16px; font-size: 14px; color:#e2e8f0; border-bottom:3px solid #0ea5e9; transition: background 0.3s, color 0.3s; }}
+    .scroll-card:hover .scroll-header {{ background: rgba(14, 165, 233, 0.2); color: #ffffff; }}
+    .today-header {{ background: linear-gradient(135deg, #0ea5e9, #0284c7) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(14,165,233,0.5); }}
+    
+    .scroll-item {{ margin-bottom: 14px; font-size: 15px; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s, transform 0.2s; }}
+    .scroll-item:hover {{ background: rgba(255,255,255,0.12); transform: translateX(3px); border-color: rgba(56,189,248,0.4); }}
+    
+    .status-badge {{ display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:800; padding:6px 10px; border-radius:6px; margin-top:8px; width: 100%; box-sizing: border-box; text-shadow: 0px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.5px; }}
+    .status-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; box-shadow: 0 0 5px rgba(255,255,255,0.5); }}
     
     /* NAV ARROW BUTTONS */
-    .nav-arrow-btn {{ background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }}
-    .nav-arrow-btn:hover {{ background: rgba(56,189,248,0.1); transform: scale(1.05); }}
-    .nav-arrow-btn:active {{ transform: scale(0.95); background: rgba(56,189,248,0.3); }}
+    .nav-arrow-btn {{ background: rgba(15,23,42,0.8); border: 2px solid #0ea5e9; color: #0ea5e9; border-radius: 8px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; font-weight: 900; }}
+    .nav-arrow-btn:hover {{ background: #0ea5e9; color: #ffffff; transform: scale(1.05); box-shadow: 0 4px 15px rgba(14,165,233,0.4); }}
+    .nav-arrow-btn:active {{ transform: scale(0.95); }}
     
-    details.off-personnel {{ background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }}
-    details.off-personnel:hover {{ background: rgba(56,189,248,0.08); transform: translateX(4px); }}
-    details.off-personnel summary {{ padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }}
+    details.off-personnel {{ background: rgba(255,255,255,0.05); border-left: 4px solid #0ea5e9; border-radius: 8px; margin-bottom: 12px; transition: 0.2s; }}
+    details.off-personnel:hover {{ background: rgba(14,165,233,0.15); transform: translateX(5px); }}
+    details.off-personnel summary {{ padding: 16px; cursor: pointer; font-size: 15px; font-weight: 700; color: #ffffff; display: flex; align-items: center; list-style: none; }}
     details.off-personnel summary::-webkit-details-marker {{ display: none; }}
-    .chevron-icon {{ transition: transform 0.3s; color: #94a3b8; margin-left:auto; }}
-    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #38bdf8; }}
-    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }}
+    .chevron-icon {{ transition: transform 0.3s; color: #cbd5e1; margin-left:auto; font-size: 20px; }}
+    details.off-personnel[open] .chevron-icon {{ transform: rotate(180deg); color: #0ea5e9; }}
+    .off-details-content {{ padding: 0 16px 16px 16px; font-size: 15px; color:#f1f5f9; }}
     
     /* GAYA EXPANDER PENGUMUMAN TO DO LIST */
-    div[data-testid="stExpander"] {{ border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; }}
-    div[data-testid="stExpander"] summary {{ background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }}
-    div[data-testid="stExpander"] summary p {{ font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: color 0.3s; }}
-    div[data-testid="stExpander"] summary svg {{ color: #38bdf8 !important; }}
+    div[data-testid="stExpander"] {{ border: 2px solid rgba(14,165,233,0.6) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,1)) !important; overflow: hidden; }}
+    div[data-testid="stExpander"] summary {{ background: rgba(14,165,233,0.2) !important; padding: 15px 20px !important; }}
+    div[data-testid="stExpander"] summary p {{ font-weight: 900 !important; color: #ffffff !important; font-size: 17px !important; letter-spacing: 0.5px; transition: color 0.3s; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }}
+    div[data-testid="stExpander"] summary svg {{ color: #0ea5e9 !important; }}
     
     /* ANIMASI GLOW UPDATE TO DO LIST */
-    @keyframes todoGlow {{ 0%, 100% {{ box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); }} 50% {{ box-shadow: 0 0 20px rgba(74, 222, 128, 0.6); border-color: #4ade80; }} }}
-    .todo-updated-animation {{ animation: todoGlow 2s infinite !important; }}
-    .todo-updated-text {{ color: #4ade80 !important; }}
+    @keyframes todoGlow {{ 0%, 100% {{ box-shadow: 0 0 5px rgba(74, 222, 128, 0.2); border-color: rgba(14,165,233,0.6); }} 50% {{ box-shadow: 0 0 25px rgba(74, 222, 128, 0.8); border-color: #4ade80; }} }}
+    .todo-updated-animation {{ animation: todoGlow 2s infinite !important; border: 2px solid #4ade80 !important; }}
+    .todo-updated-text {{ color: #4ade80 !important; text-shadow: 0 0 8px rgba(74, 222, 128, 0.5) !important; }}
     
-    div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }}
-    div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #38bdf8 !important; }}
+    div[data-testid="stTabs"] button {{ font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 700 !important; font-size: 16px !important; color: #cbd5e1 !important; }}
+    div[data-testid="stTabs"] button[aria-selected="true"] {{ color: #0ea5e9 !important; border-bottom-color: #0ea5e9 !important; }}
     
-    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; }} .header-title {{ font-size: 20px !important; text-align: center; }} .stButton>button {{ padding: 16px 10px !important; font-size: 14px !important; }} }}
+    @media (max-width: 768px) {{ .header-bar {{ flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; }} .header-title {{ font-size: 22px !important; text-align: center; }} .stButton>button {{ padding: 16px 10px !important; font-size: 15px !important; }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -378,15 +386,15 @@ def inject_custom_css(bg_base64, logo_base64):
         #splash-overlay {{ position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2s forwards; margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden; }}
         .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; animation: moveToHeader 2s forwards; }}
         .splash-fade-early {{ animation: fadeOutEarly 2s forwards; display: flex; flex-direction: column; align-items: center; }}
-        .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 1.5s infinite alternate; }}
-        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 36px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
-        .splash-subtitle {{ color: #64748b; font-size: 14px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; text-align: center; }}
-        .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
-        .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1s infinite; }}
+        .splash-logo {{ max-height: 80px; margin-bottom: 24px; animation: floatLogo 1.5s infinite alternate; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 38px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
+        .splash-subtitle {{ color: #475569; font-size: 15px; font-weight: 700; letter-spacing: 3px; margin-top: 18px; opacity: 0.9; text-align: center; }}
+        .loading-bar-container {{ width: 220px; height: 6px; background: #e2e8f0; border-radius: 6px; margin-top: 24px; overflow: hidden; position: relative; }}
+        .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #0ea5e9; animation: loadingSwipe 1s infinite; }}
         @keyframes overlayFade {{ 0%, 70% {{ opacity: 1; visibility: visible; }} 99% {{ opacity: 0; visibility: visible; }} 100% {{ opacity: 0; visibility: hidden; display: none; }} }}
         @keyframes moveToHeader {{ 0%, 70% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-40vh) scale(0.4); opacity: 0; }} }}
         @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 70%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
-        @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 20px rgba(0,0,0,0.15)); }} }}
+        @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.15)); }} 100% {{ transform: translateY(-12px); filter: drop-shadow(0 18px 25px rgba(0,0,0,0.2)); }} }}
         @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
         </style>
         """, unsafe_allow_html=True)
@@ -397,14 +405,14 @@ def inject_custom_css(bg_base64, logo_base64):
 # =====================================================================
 def ui_header(logo_base64, pending_count):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
-    notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
+    notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:32px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:3px 7px; font-size:12px; font-weight:900; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.5;"><span class="material-symbols-rounded" style="font-size:32px; color:#1e293b;">notifications</span></div>'
     st.markdown(f"""
     <div class="header-bar">
         <div style="display:flex; align-items:center; gap:20px;">
             <form action="javascript:window.location.reload()"><button type="submit" class="home-btn" title="Home"><span class="material-symbols-rounded">home</span></button></form>
             <div>{logo}</div>
         </div>
-        <h1 style="color:#004D95; font-weight:800; font-size:clamp(18px, 3vw, 24px); margin:0;">NR ORF Integrated Command</h1>
+        <h1 style="color:#004D95; font-weight:900; font-size:clamp(20px, 3vw, 26px); margin:0; text-shadow: 0px 1px 2px rgba(0,0,0,0.1);">NR ORF Integrated Command</h1>
         <div>{notif}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -413,40 +421,40 @@ def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
     evt = EVENT_KALENDER.get(hari_ini, "Tidak ada event")
     components.html(f"""
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800;900&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
     <style>
         body {{ margin:0; padding:5px; font-family:'Plus Jakarta Sans'; overflow:hidden; }}
-        .hud-container {{ display:flex; align-items:center; gap:20px; background:linear-gradient(145deg, #1e293b, #0f172a); border:1px solid rgba(56,189,248,0.4); border-radius:16px; padding:12px 20px; color:#f8fafc; overflow-x:auto; scrollbar-width:none; }}
+        .hud-container {{ display:flex; align-items:center; gap:20px; background:linear-gradient(145deg, #1e293b, #0f172a); border:2px solid rgba(14,165,233,0.5); border-radius:16px; padding:14px 24px; color:#f8fafc; overflow-x:auto; scrollbar-width:none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }}
         .hud-container::-webkit-scrollbar {{ display:none; }}
-        .section {{ display:flex; align-items:center; gap:12px; flex:0 0 auto; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 20px; }}
+        .section {{ display:flex; align-items:center; gap:16px; flex:0 0 auto; border-left: 2px solid rgba(255,255,255,0.15); padding-left: 24px; }}
         .section:first-child {{ border:none; padding-left:0; }}
-        .box {{ display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:6px 14px; border-radius:10px; position:relative; cursor: pointer; transition: 0.2s; }}
-        .box:hover {{ background:rgba(56,189,248,0.1); }}
-        .clock {{ font-size:26px; font-weight:800; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4); font-variant-numeric: tabular-nums; }}
-        .val {{ color:#4ade80; font-weight:800; font-size:14px; }}
-        .event {{ font-size: 13px; font-weight: 700; color: #1e293b; background: #facc15; padding: 6px 14px; border-radius: 8px; box-shadow: 0 0 15px rgba(250,204,21,0.4); display:flex; align-items:center; gap:6px; }}
-        #loc-status {{ position: absolute; top: -6px; right: -6px; background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center; }}
+        .box {{ display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.08); padding:8px 16px; border-radius:12px; position:relative; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); }}
+        .box:hover {{ background:rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.4); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }}
+        .clock {{ font-size:30px; font-weight:900; color:#0ea5e9; text-shadow:0 0 15px rgba(14,165,233,0.6); font-variant-numeric: tabular-nums; letter-spacing: 1px; }}
+        .val {{ color:#4ade80; font-weight:900; font-size:15px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }}
+        .event {{ font-size: 14px; font-weight: 800; color: #0f172a; background: linear-gradient(135deg, #fde047, #facc15); padding: 8px 16px; border-radius: 8px; box-shadow: 0 4px 15px rgba(250,204,21,0.5); display:flex; align-items:center; gap:8px; text-transform: uppercase; letter-spacing: 0.5px; }}
+        #loc-status {{ position: absolute; top: -8px; right: -8px; background: #3b82f6; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #0f172a; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(59,130,246,0.6); }}
     </style>
     <div class="hud-container">
         <div class="section">
-            <span class="material-symbols-rounded" style="color:#38bdf8; font-size:30px;">schedule</span>
-            <span class="clock" id="clock">--:--:--</span><div style="width:2px; height:30px; background:rgba(255,255,255,0.2);"></div><span id="date" style="font-weight:600;">Memuat...</span>
+            <span class="material-symbols-rounded" style="color:#0ea5e9; font-size:34px; text-shadow: 0 0 10px rgba(14,165,233,0.5);">schedule</span>
+            <span class="clock" id="clock">--:--:--</span><div style="width:3px; height:34px; background:rgba(255,255,255,0.25); border-radius:2px;"></div><span id="date" style="font-weight:800; font-size:16px; color:#f8fafc;">Memuat...</span>
         </div>
         <div class="section">
             <div class="box" id="compass-box" title="Klik untuk aktifkan sensor kompas">
-                <span class="material-symbols-rounded" id="compass" style="color:#f87171; font-size:26px; transition:transform 0.1s ease-out;">navigation</span>
-                <div><div id="loc" style="font-size:11px; font-weight:700; color:#cbd5e1;">Mencari GPS...</div><span class="val" id="deg" style="color:#38bdf8;">--°</span></div>
+                <span class="material-symbols-rounded" id="compass" style="color:#f87171; font-size:30px; transition:transform 0.1s ease-out; text-shadow: 0 0 10px rgba(248,113,113,0.5);">navigation</span>
+                <div><div id="loc" style="font-size:12px; font-weight:800; color:#e2e8f0; letter-spacing:0.5px;">Mencari GPS...</div><span class="val" id="deg" style="color:#0ea5e9;">--°</span></div>
             </div>
         </div>
         <div class="section">
-            <div class="box"><span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:26px;">partly_cloudy_day</span>
-                <div id="loc-status"><span class="material-symbols-rounded" style="font-size:10px; color:white;" id="loc-icon">location_searching</span></div>
-                <div><div id="w-desc" style="font-size:11px; font-weight:700; color:#cbd5e1;">Memuat...</div>
-                <span class="material-symbols-rounded" style="font-size:12px; color:#f87171;">thermostat</span><span class="val" id="w-temp" style="margin-right:8px;">--</span>
-                <span class="material-symbols-rounded" style="font-size:12px; color:#94a3b8;">air</span><span class="val" id="w-wind">--</span></div>
+            <div class="box"><span class="material-symbols-rounded" id="w-icon" style="color:#facc15; font-size:30px; text-shadow: 0 0 10px rgba(250,204,21,0.5);">partly_cloudy_day</span>
+                <div id="loc-status"><span class="material-symbols-rounded" style="font-size:12px; color:white;" id="loc-icon">location_searching</span></div>
+                <div><div id="w-desc" style="font-size:12px; font-weight:800; color:#e2e8f0; letter-spacing:0.5px;">Memuat...</div>
+                <span class="material-symbols-rounded" style="font-size:14px; color:#f87171;">thermostat</span><span class="val" id="w-temp" style="margin-right:10px;">--</span>
+                <span class="material-symbols-rounded" style="font-size:14px; color:#94a3b8;">air</span><span class="val" id="w-wind">--</span></div>
             </div>
         </div>
-        <div class="section"><span class="event"><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> {evt}</span></div>
+        <div class="section"><span class="event"><span class="material-symbols-rounded" style="font-size:20px;">campaign</span> {evt}</span></div>
     </div>
     
     <script>
@@ -457,7 +465,7 @@ def ui_live_hud_widget():
             var sec = String(d.getSeconds()).padStart(2, '0');
             document.getElementById('clock').innerText = hrs + ':' + min + ':' + sec;
             var options = {{ weekday: 'short', day: 'numeric', month: 'short' }};
-            document.getElementById('date').innerText = d.toLocaleDateString('id-ID', options);
+            document.getElementById('date').innerText = d.toLocaleDateString('id-ID', options).toUpperCase();
         }}
         setInterval(updateTime, 1000); updateTime();
 
@@ -466,8 +474,8 @@ def ui_live_hud_widget():
             .then(res => res.json())
             .then(data => {{
                 let locName = data.locality || data.city || (lat.toFixed(2) + ", " + lon.toFixed(2));
-                document.getElementById('loc').innerText = locName;
-            }}).catch(() => {{ document.getElementById('loc').innerText = "Titik Koordinat"; }});
+                document.getElementById('loc').innerText = locName.toUpperCase();
+            }}).catch(() => {{ document.getElementById('loc').innerText = "TITIK KOORDINAT"; }});
 
             fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true')
             .then(r => r.json())
@@ -475,9 +483,9 @@ def ui_live_hud_widget():
                 var cw = json.current_weather;
                 document.getElementById('w-temp').innerText = cw.temperature + '°C'; 
                 document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; 
-                var i = 'partly_cloudy_day'; var desc = 'Berawan'; 
-                if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'Cerah'; }} 
-                else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'Hujan'; }}
+                var i = 'partly_cloudy_day'; var desc = 'BERAWAN'; 
+                if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'CERAH'; }} 
+                else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'HUJAN'; }}
                 document.getElementById('w-icon').innerText = i; document.getElementById('w-desc').innerText = desc;
             }}).catch(e => console.log(e));
         }}
@@ -486,11 +494,13 @@ def ui_live_hud_widget():
             navigator.geolocation.watchPosition(
                 function(pos) {{ 
                     document.getElementById('loc-status').style.background = '#22c55e';
+                    document.getElementById('loc-status').style.boxShadow = '0 0 10px rgba(34,197,94,0.8)';
                     document.getElementById('loc-icon').innerText = 'my_location';
                     fetchWeather(pos.coords.latitude, pos.coords.longitude); 
                 }},
                 function(err) {{ 
                     document.getElementById('loc-status').style.background = '#ef4444';
+                    document.getElementById('loc-status').style.boxShadow = '0 0 10px rgba(239,68,68,0.8)';
                     document.getElementById('loc-icon').innerText = 'location_off';
                     fetchWeather(-6.200000, 106.816666); 
                 }},
@@ -520,23 +530,20 @@ def ui_live_hud_widget():
             }}
         }});
     </script>
-    """, height=90)
+    """, height=105)
 
 def ui_todo_widget():
     td = fetch_todo_from_sheet()
     
-    # Logic untuk animasi berkedip jika ada update baru
     is_new = False
     if td['last_updated'] and td['last_updated'] != st.session_state.last_seen_todo:
         is_new = True
-        # Injeksi JS untuk menambahkan class CSS animasi glow pada expander To Do List
         components.html("""
         <script>
             setTimeout(() => {
                 const pDoc = window.parent.document;
                 const expanders = pDoc.querySelectorAll('div[data-testid="stExpander"]');
                 if(expanders.length > 0) {
-                    // Expander pertama adalah To Do List
                     expanders[0].classList.add("todo-updated-animation");
                     const summaryText = expanders[0].querySelector("summary p");
                     if(summaryText) summaryText.classList.add("todo-updated-text");
@@ -547,37 +554,31 @@ def ui_todo_widget():
     
     st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
     
-    # Label "NEW" jika ada update
     expander_title = "📢 PENGUMUMAN & TO-DO LIST HARI INI ✨ BARU" if is_new else "📢 PENGUMUMAN & TO-DO LIST HARI INI"
     
     with st.expander(expander_title):
-        # Saat expander dibuka/dirender isinya, update last_seen_todo
         if is_new:
             st.session_state.last_seen_todo = td['last_updated']
             
         if td['main_msg'].strip():
-            st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:linear-gradient(135deg, rgba(14,165,233,0.2), rgba(2,132,199,0.1)); border-left:5px solid #0ea5e9; padding:16px 20px; border-radius:10px; margin-bottom:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'><b style='color:#38bdf8; font-size:16px; text-transform:uppercase; letter-spacing:1px;'><span class='material-symbols-rounded' style='font-size:20px; vertical-align:text-bottom; margin-right:4px;'>campaign</span> Pesan Utama:</b><br><span style='color:#ffffff; font-size:15px; line-height:1.6; display:block; margin-top:8px;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
         has_task = False
         for op, task in td['tasks'].items():
             if task.strip():
                 has_task = True
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px;'>{task}</span></div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:rgba(255,255,255,0.06); padding:14px; border-radius:10px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.15); display:flex; gap:12px; align-items:center; transition:0.2s;' onmouseover=\"this.style.background='rgba(255,255,255,0.1)';\" onmouseout=\"this.style.background='rgba(255,255,255,0.06)';\"><span class='material-symbols-rounded' style='color:#4ade80; font-size:24px; text-shadow:0 0 10px rgba(74,222,128,0.5);'>check_circle</span><div><b style='color:#4ade80; font-size:15px; letter-spacing:0.5px;'>{op}</b><br><span style='color:#f1f5f9; font-size:14px;'>{task}</span></div></div>", unsafe_allow_html=True)
         
         if not has_task and not td['main_msg'].strip():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
-        # Tombol Tutup Otomatis di Bawah
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("⬆️ Tutup Daftar Tugas", use_container_width=True):
-            # Injeksi JS untuk mengklik paksa tombol expander dari dalam
             components.html("""
             <script>
                 const pDoc = window.parent.document;
                 const expanders = pDoc.querySelectorAll('div[data-testid="stExpander"] summary');
-                if(expanders.length > 0) {
-                    expanders[0].click(); // Tutup expander
-                }
+                if(expanders.length > 0) { expanders[0].click(); }
             </script>
             """, height=0, width=0)
 
@@ -586,7 +587,7 @@ def ui_todo_widget():
 # 6. HALAMAN MANAJER
 # =====================================================================
 def ui_manager_panel(df_i, df_j):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#0ea5e9;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
     if 'is_manager' not in st.session_state: st.session_state.is_manager = False
     
     pin_input = st.text_input("Kunci Keamanan", type="password", placeholder="Masukkan PIN Manajer...")
@@ -602,7 +603,7 @@ def ui_manager_panel(df_i, df_j):
     tab_todo, tab_edit, tab_izin = st.tabs(["📝 To-Do List Harian", "⚙️ Panel Edit & AI", "📋 Panel Persetujuan"])
     
     with tab_todo:
-        st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
+        st.markdown("<br><b style='color:#0ea5e9; font-size:18px;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
         td = fetch_todo_from_sheet()
         if td['main_msg'].strip():
             st.info(td['main_msg'])
@@ -613,7 +614,7 @@ def ui_manager_panel(df_i, df_j):
             st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
             new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
             
-            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
+            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80; font-size:16px;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
             operator_list = []
             if not df_j.empty and 'Nama Operator' in df_j.columns:
                 operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
@@ -638,20 +639,20 @@ def ui_manager_panel(df_i, df_j):
                     st.rerun()
 
     with tab_edit:
-        st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
+        st.markdown("<br><div style='background:linear-gradient(135deg, rgba(14,165,233,0.2), rgba(15,23,42,0.6)); padding:16px; border-radius:12px; border-left:4px solid #0ea5e9; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#0ea5e9;'>database</span> <b style='color:#ffffff;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
         c_btn1, c_btn2 = st.columns(2)
         with c_btn1: st.link_button("Edit Jadwal Aktual", URL_JADWAL, use_container_width=True)
         with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
         
-        st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-        st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
+        st.markdown("<hr style='opacity:0.2; margin: 30px 0;'><h4 style='color:white; font-size:18px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='font-size:24px; color:#0ea5e9;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
+        st.markdown("<div style='background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.4); border-radius: 12px 12px 12px 0; padding: 14px 18px; margin-bottom: 12px; font-size: 15px; line-height: 1.6;'><span style='background: #0ea5e9; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; margin-right: 8px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
         
         if is_name_locked: 
             st.warning("⚠️ Pilih Nama Approver di atas terlebih dahulu untuk menggunakan Asisten AI.")
         else:
             if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
             perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
-            if st.button("Kirim Perintah", type="primary"):
+            if st.button("Kirim Perintah AI", type="primary"):
                 if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
                 else:
                     parsed = parse_natural_language_schedule(perintah, df_j)
@@ -663,7 +664,7 @@ def ui_manager_panel(df_i, df_j):
             if st.session_state.ai_parsed_data:
                 p = st.session_state.ai_parsed_data
                 tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
-                st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:rgba(250,204,21,0.15); border:1px solid rgba(250,204,21,0.6); padding:16px; border-radius:12px; margin-top:12px;'><b style='color:#fde047;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b style='color:#ffffff;'>{p['nama']}</b> menjadi <b style='color:#0ea5e9;'>{p['status']}</b> untuk tanggal <b style='color:#ffffff;'>{tgl_str}</b>?</div>", unsafe_allow_html=True)
                 c_y, c_n = st.columns(2)
                 if c_y.button("✅ Ya, Eksekusi", use_container_width=True, type="primary"):
                     execute_smart_edit(p['nama'], p['status'], p['tgl_mulai'], p['tgl_selesai'], df_j)
@@ -682,7 +683,7 @@ def ui_manager_panel(df_i, df_j):
             pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
-            with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
+            with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:18px; margin-top:0; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='font-size:24px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
             with col_hdr2:
                 if not pending_df.empty and not is_name_locked:
                     if st.button("🗑️ Hapus Semua Antrean"): clear_pending_requests(df_i)
@@ -697,7 +698,7 @@ def ui_manager_panel(df_i, df_j):
                         if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
                         if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "REJECT", approver_name, df_j)
 
-            st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
+            st.markdown("<hr style='opacity:0.2; margin: 30px 0;'><h4 style='color:white; font-size:18px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='font-size:24px; color:#cbd5e1;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
             history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
             
             if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
@@ -705,22 +706,22 @@ def ui_manager_panel(df_i, df_j):
                 for idx, row in history_df.tail(5).iloc[::-1].iterrows():
                     status = str(row['Status Approval']).upper()
                     is_appr = "APPROVED" in status
-                    c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+                    c_text, c_bg, icon = ("#22c55e", "rgba(34,197,94,0.2)", "check_circle") if is_appr else ("#f87171", "rgba(239,68,68,0.2)", "cancel")
                     with st.container(border=True):
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:15px; color:#ffffff;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:13px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:16px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
                         if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True, disabled=is_name_locked): execute_database_action(idx, row, "UNDO", approver_name, df_j)
 
 
 # =====================================================================
-# 7. HALAMAN UTAMA (TIMELINE SCROLL)
+# 7. HALAMAN UTAMA (TIMELINE SCROLL KONTRAS TINGGI)
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
-        <div style="display: flex; gap: 10px;">
-            <button id="btn-scroll-left" class="nav-arrow-btn" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button id="btn-scroll-right" class="nav-arrow-btn" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
+        <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#0ea5e9; font-size:32px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
+        <div style="display: flex; gap: 12px;">
+            <button id="btn-scroll-left" class="nav-arrow-btn" title="Geser Kiri"><span class="material-symbols-rounded" style="font-size: 28px;">arrow_back_ios_new</span></button>
+            <button id="btn-scroll-right" class="nav-arrow-btn" title="Geser Kanan"><span class="material-symbols-rounded" style="font-size: 28px;">arrow_forward_ios</span></button>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -759,24 +760,37 @@ def ui_timeline(df_j, df_i):
                     name = str(row['Nama Operator']).replace('*', '').strip()
                     status = str(row[d_str]).upper()
                     
+                    # LOGIKA WARNA KONTRAS TINGGI
                     if any(k in status for k in ["DINAS", "PD"]): 
-                        badge = f'<div class="status-badge" style="background:rgba(249,115,22,0.15); color:#fdba74;"><div class="status-dot" style="background:#f97316;"></div>{status}</div>'
+                        c_bg = "rgba(249,115,22,0.25)"
+                        c_txt = "#ffedd5"
+                        c_dot = "#f97316"
                     elif any(k in status for k in ["IZIN", "SAKIT", "CUTI"]): 
-                        badge = f'<div class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5;"><div class="status-dot" style="background:#ef4444;"></div>{status}</div>'
+                        c_bg = "rgba(239,68,68,0.25)"
+                        c_txt = "#fee2e2"
+                        c_dot = "#ef4444"
                     elif name.lower() in subs_map.get(d_str, []): 
-                        badge = f'<div class="status-badge" style="background:rgba(56,189,248,0.15); color:#7dd3fc;"><div class="status-dot" style="background:#38bdf8;"></div>SUB / {status}</div>'
+                        c_bg = "rgba(56,189,248,0.25)"
+                        c_txt = "#e0f2fe"
+                        c_dot = "#38bdf8"
+                        status = f"SUB / {status}"
                     else: 
-                        badge = f'<div class="status-badge" style="background:rgba(34,197,94,0.15); color:#4ade80;"><div class="status-dot" style="background:#22c55e;"></div>SHIFT {status}</div>'
+                        c_bg = "rgba(34,197,94,0.25)"
+                        c_txt = "#dcfce7"
+                        c_dot = "#22c55e"
+                        status = f"SHIFT {status}"
                         
-                    html += f'<div class="scroll-item"><b style="color:#f8fafc; font-size:14px;">{name}</b><br>{badge}</div>'
+                    badge = f'<div class="status-badge" style="background:{c_bg}; color:{c_txt}; border: 1px solid {c_bg};"><div class="status-dot" style="background:{c_dot};"></div>{status}</div>'
+                        
+                    html += f'<div class="scroll-item"><b style="color:#ffffff; font-size:15px; letter-spacing:0.5px;">{name}</b><br>{badge}</div>'
             else: 
-                html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Semua OFF</div>'
+                html += '<div class="scroll-item" style="text-align:center; color:#94a3b8; font-style:italic; border:none; font-weight:600;">Semua OFF</div>'
         else: 
-            html += '<div class="scroll-item" style="text-align:center; color:#64748b; font-style:italic; border:none;">Data belum dirilis</div>'
+            html += '<div class="scroll-item" style="text-align:center; color:#94a3b8; font-style:italic; border:none; font-weight:600;">Data belum dirilis</div>'
         
         html += '</div>'
     st.markdown(html + '</div>', unsafe_allow_html=True)
-    st.markdown("<hr style='opacity:0.1;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='opacity:0.2;'>", unsafe_allow_html=True)
 
     components.html("""
     <script>
@@ -793,13 +807,13 @@ def ui_timeline(df_j, df_i):
                 btnRight.onclick = function() { container.scrollBy({left: 320, behavior: 'smooth'}); };
             }
         }
-        setInterval(attachScrollListeners, 1500);
+        setInterval(attachScrollListeners, 1000);
         attachScrollListeners();
     </script>
     """, height=0, width=0)
 
 def ui_off_tracker(df_j, df_k):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#0ea5e9;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
     tgl_cek = st.date_input("Pilih Tanggal Pengecekan:", value=datetime.now().date())
     tgl_str = tgl_cek.strftime('%Y-%m-%d')
     
@@ -825,19 +839,19 @@ def ui_off_tracker(df_j, df_k):
                     if match.empty: match = df_k[clean_db.str.contains(target, na=False)]
                     if not match.empty: hp = str(match.iloc[0][col_hp]).strip()
 
-                st.markdown(f"<details class='off-personnel' style='animation: slideInRight 0.3s {i*0.05}s ease-out backwards;'><summary><div style='background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 8px; border-radius:4px; font-size:11px; margin-right:10px;'>OFF</div><span style='font-size:14px;'>{name}</span><span class='material-symbols-rounded chevron-icon'>expand_more</span></summary><div class='off-details-content'><div style='display:flex; align-items:center; gap:8px; margin-top:8px;'><span class='material-symbols-rounded' style='color:#94a3b8; font-size:18px;'>call</span><span style='color:#94a3b8;'>No. Handphone:</span> <b style='color:#e2e8f0; font-size:14px; letter-spacing:0.5px;'>{hp}</b></div></div></details>", unsafe_allow_html=True)
+                st.markdown(f"<details class='off-personnel' style='animation: slideInRight 0.3s {i*0.05}s ease-out backwards;'><summary><div style='background:rgba(14,165,233,0.2); color:#0ea5e9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:800; margin-right:12px;'>OFF</div><span style='font-size:15px;'>{name}</span><span class='material-symbols-rounded chevron-icon'>expand_more</span></summary><div class='off-details-content'><div style='display:flex; align-items:center; gap:8px; margin-top:8px;'><span class='material-symbols-rounded' style='color:#0ea5e9; font-size:20px;'>call</span><span style='color:#cbd5e1;'>No. Handphone:</span> <b style='color:#ffffff; font-size:15px; letter-spacing:1px;'>{hp}</b></div></div></details>", unsafe_allow_html=True)
                 
     st.markdown("<br>", unsafe_allow_html=True)
     st.link_button("Ajukan Form Izin / Tukar Shift", URL_GFORM, use_container_width=True, type="primary")
 
 def ui_kalender_lengkap(df_j):
-    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#0ea5e9;'>event_note</span> Pencarian Jadwal Spesifik</h3>", unsafe_allow_html=True)
     with st.container(border=True): tgl = st.date_input("Pilih Tanggal Pengecekan:", key="tgl_lengkap").strftime('%Y-%m-%d')
     
     if df_j.empty or tgl not in df_j.columns:
         st.warning("⚠️ Data jadwal untuk tanggal ini belum tersedia.")
     else:
-        st.markdown(f"<br><h4 style='color:white; font-size:18px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#94a3b8;'>check_circle</span> Status Personel: <b style='color:#38bdf8;'>{tgl}</b></h4>", unsafe_allow_html=True)
+        st.markdown(f"<br><h4 style='color:white; font-size:20px; display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span> Status Personel: <b style='color:#0ea5e9;'>{tgl}</b></h4>", unsafe_allow_html=True)
         df_day = df_j[['Nama Operator', tgl]].dropna().copy()
         df_day['Status'] = df_day[tgl].fillna('').astype(str).str.strip().str.upper()
 
@@ -845,9 +859,9 @@ def ui_kalender_lengkap(df_j):
         df_abs = df_day[df_day['Status'].str.contains('IZIN|SAKIT|CUTI|DINAS|PD', na=False)]
         df_hdr = df_day[~df_day['Nama Operator'].isin(df_off['Nama Operator']) & ~df_day['Nama Operator'].isin(df_abs['Nama Operator'])]
 
-        for title, df_data, clr_border, clr_bg, show_sts in [("Hadir / Bertugas", df_hdr, "rgba(34,197,94,0.4)", "rgba(34,197,94,0.15)", True), ("Sedang OFF", df_off, "rgba(56,189,248,0.4)", "rgba(56,189,248,0.15)", False), ("Absen / Dinas Luar", df_abs, "rgba(239,68,68,0.4)", "rgba(239,68,68,0.15)", True)]:
+        for title, df_data, clr_border, clr_bg, show_sts in [("Hadir / Bertugas", df_hdr, "rgba(34,197,94,0.5)", "rgba(34,197,94,0.15)", True), ("Sedang OFF", df_off, "rgba(14,165,233,0.5)", "rgba(14,165,233,0.15)", False), ("Absen / Dinas Luar", df_abs, "rgba(239,68,68,0.5)", "rgba(239,68,68,0.15)", True)]:
             with st.container(border=True):
-                st.markdown(f"<div style='background:{clr_bg}; padding:12px; border-radius:8px; border:1px solid {clr_border}; margin-bottom:12px; display:flex; align-items:center; gap:8px;'><b style='color:white; font-size:15px;'>{title} ({len(df_data)})</b></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:{clr_bg}; padding:14px; border-radius:10px; border:2px solid {clr_border}; margin-bottom:14px; display:flex; align-items:center; gap:10px;'><b style='color:white; font-size:16px;'>{title} ({len(df_data)})</b></div>", unsafe_allow_html=True)
                 if not df_data.empty: st.dataframe(df_data[['Nama Operator', 'Status']] if show_sts else df_data[['Nama Operator']], hide_index=True, use_container_width=True)
                 else: st.write("Tidak ada data pada kategori ini.")
 
@@ -879,7 +893,7 @@ if __name__ == "__main__":
     if st.session_state.menu == "Dash":
         col_m, col_s = st.columns([2.5, 1.5])
         with col_m: 
-            st.info("Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
+            st.info("💡 Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
         with col_s: 
             ui_off_tracker(df_j, df_k)
     elif st.session_state.menu == "Kal":
