@@ -336,65 +336,65 @@ def clear_pending_requests(df_i):
 # 4. CSS INJECTION KONDISIONAL (LOGIN VS DASHBOARD)
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64, is_login=False):
-    # Pengaturan Background
-    if is_login:
-        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" # Lebih gelap sedikit agar kotak putih login menonjol
-    else:
-        bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)" # Gelap elegan untuk Dashboard
-        
-    bg_css = f"linear-gradient({bg_overlay}), url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else f"linear-gradient({bg_overlay})"
-
+    bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
+    
     css = "<style>\n"
     css += "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');\n"
     css += "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');\n"
     
-    # Global HTML & Body
-    css += f"html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}\n"
-    css += f".stApp {{ background-image: {bg_css} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+    # CSS Dasar
+    css += "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }\n"
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
     css += "header[data-testid=\"stHeader\"] { display: none !important; }\n"
+    css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" # Hilangkan ikon link header
     
     if is_login:
-        # CSS KHUSUS HALAMAN LOGIN (KOTAK PUTIH, ISIAN ABU, TEKS HITAM)
-        css += """
-        /* Sembunyikan ikon link header bawaan Streamlit */
-        .stMarkdown a.header-anchor, svg.icon-link { display: none !important; }
+        # ---------------- HALAMAN LOGIN ----------------
+        css += f".stApp {{ background-image: linear-gradient(rgba(15,23,42,0.6), rgba(15,23,42,0.8)), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
-        /* Memaksa Kontainer Login menjadi Putih Solid */
+        css += """
+        /* KOTAK LOGIN PUTIH SOLID */
         div[data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="stVerticalBlock"] > div[style*="border"] { 
-            background-color: #ffffff !important; 
+        div[data-testid="stVerticalBlockBorderWrapper"] > div,
+        div[data-testid="stVerticalBlock"] > div[style*="border"] {
+            background-color: #ffffff !important;
             background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
+            border: none !important;
             border-radius: 16px !important;
-            padding: 30px !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+            padding: 20px !important;
+            opacity: 1 !important;
         }
         
-        /* Warna Teks Label */
-        label p, .stMarkdown p { color: #334155 !important; font-weight: 700 !important; }
+        /* WARNA TEKS DALAM KOTAK */
+        [data-testid="stVerticalBlockBorderWrapper"] label p, 
+        [data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+        }
         
-        /* Judul Login */
-        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
-        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
+        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 30px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 25px; font-weight: 600; font-size: 14px; }
         
-        /* Isian Dropdown & Input Text (Warna Abu Terang) */
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+        /* ISIAN FORM (ABU TERANG) */
+        div[data-baseweb="input"] > div, 
+        div[data-baseweb="select"] > div {
             background-color: #f1f5f9 !important; 
-            border: 1px solid #cbd5e1 !important;
+            border: 2px solid #cbd5e1 !important;
             border-radius: 8px !important;
             min-height: 42px !important;
         }
         
-        /* Teks dalam Isian (Warna Hitam) */
-        div[data-baseweb="input"] input, div[data-baseweb="select"] span { 
+        /* TEKS INPUT (HITAM PEKAT) */
+        div[data-baseweb="input"] input, 
+        div[data-baseweb="select"] span { 
             color: #0f172a !important; 
             font-weight: 700 !important; 
             font-size: 14px !important; 
         }
         
-        /* Tombol Login */
+        /* TOMBOL MASUK */
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
             color: white !important; 
@@ -402,14 +402,18 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             border-radius: 10px !important; 
             font-weight: 700 !important; 
             width: 100% !important; 
-            transition: all 0.2s !important; 
             padding: 10px !important; 
+            margin-top: 10px !important;
+            transition: all 0.2s !important; 
         }
         .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
-        # CSS KHUSUS DASHBOARD (GELAP ELEGAN)
+        # ---------------- HALAMAN DASHBOARD ----------------
+        css += f".stApp {{ background-image: linear-gradient(rgba(15,23,42,0.88), rgba(15,23,42,0.88)), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+        
         css += """
+        /* KOTAK DASHBOARD (KACA GELAP) */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] { 
             border-radius: 16px; 
@@ -419,8 +423,11 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             transition: all 0.3s; 
         }
         
+        /* INPUT FORM DASHBOARD */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
+        
+        /* TOMBOL DASHBOARD */
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
         button[kind="primary"] { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }
         
@@ -434,6 +441,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
+        
         .scroll-card { flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }
         .scroll-card:hover { transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }
         .scroll-card:active { transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }
@@ -446,6 +454,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .scroll-item:hover { background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }
         .status-badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }
         .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+        
         .nav-arrow-btn { background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
         .nav-arrow-btn:hover { background: rgba(56,189,248,0.1); transform: scale(1.05); }
         .nav-arrow-btn:active { transform: scale(0.95); background: rgba(56,189,248,0.3); }
@@ -458,27 +467,23 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
         .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
         
-        /* GAYA EXPANDER PENGUMUMAN TO DO LIST (UTAMA) */
+        /* EXPANDER TO DO LIST */
         div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
         div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
         div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
         div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
         
-        /* GAYA SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
+        /* NESTED EXPANDER (TANGGAPAN) */
         div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
         
-        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
-        @keyframes todoGlow { 
-            0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
-            50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
-        }
+        /* ANIMASI GLOW TO DO LIST */
+        @keyframes todoGlow { 0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } }
         .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
         .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
         
-        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
         div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
         div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
         
@@ -490,7 +495,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
 
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
-        logo_src_splash = f"data:image/png;base64,{logo_base64}" if logo_base64 else ""
+        logo_src_splash = f"data:image/png;base64,{get_base64_image('pertamina.png')}"
         st.markdown(f"""
         <div id="splash-overlay">
             <div class="splash-content">
@@ -561,6 +566,7 @@ def ui_login(df_j):
                 elif not nama or nama == "-- Pilih Nama Anda --":
                     st.error("❌ Silakan pilih nama Anda terlebih dahulu!")
                 else:
+                    # Buat Token Auto-Login (SSO Simulation)
                     token_str = f"{role}::{nama}"
                     token_b64 = base64.b64encode(token_str.encode("utf-8")).decode("utf-8")
                     st.query_params["auth"] = token_b64
