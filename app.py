@@ -347,48 +347,49 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
     css += "header[data-testid=\"stHeader\"] { display: none !important; }\n"
-    css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" # Hilangkan ikon link header bawaan Streamlit
+    css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" 
     
     if is_login:
-        # ---------------- HALAMAN LOGIN (ANTI OVERRIDE DARK MODE) ----------------
-        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" # Lebih terang agar kontras
+        # ---------------- HALAMAN LOGIN (TEKS PUTIH KONTRAST) ----------------
+        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)"
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN PUTIH SOLID (Memaksa background putih menggunakan :has() untuk akurasi) */
-        div[data-testid="stVerticalBlock"]:has(.login-title),
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.login-title) {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+        /* KOTAK LOGIN (KACA GELAP) */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"] {
+            background-color: rgba(15, 23, 42, 0.6) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 16px !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
             padding: 30px !important;
         }
         
-        /* WARNA TEKS LABEL (Hitam Peat) */
-        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
+        /* WARNA TEKS LABEL (PUTIH) */
+        label p, .stMarkdown p { color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; }
         
-        /* Judul Login */
-        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
-        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
+        /* Judul Login (PUTIH) */
+        .login-title { color: #ffffff !important; font-weight: 900; text-align: center; font-size: 34px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.8) !important; }
+        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; }
         
         /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
         div[data-baseweb="select"] > div {
-            background-color: #f1f5f9 !important; 
+            background-color: #f8fafc !important; 
             border: 2px solid #cbd5e1 !important;
             border-radius: 8px !important;
             min-height: 42px !important;
         }
         
-        /* TEKS INPUT (HITAM PEKAT) - Memaksa semua elemen dalam selectbox/input menjadi hitam */
+        /* TEKS INPUT (HITAM PEKAT) */
         div[data-baseweb="input"] input, 
         div[data-baseweb="select"] span,
         div[data-baseweb="select"] div,
         div[data-baseweb="select"] div[class*="singleValue"] { 
             color: #0f172a !important; 
-            font-weight: 700 !important; 
+            font-weight: 800 !important; 
             -webkit-text-fill-color: #0f172a !important;
         }
         
@@ -396,7 +397,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
             color: white !important; 
-            border: none !important; 
+            border: 1px solid rgba(56, 189, 248, 0.5) !important; 
             border-radius: 10px !important; 
             font-weight: 700 !important; 
             width: 100% !important; 
@@ -454,10 +455,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .status-badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }
         .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
         
-        .nav-arrow-btn { background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-        .nav-arrow-btn:hover { background: rgba(56,189,248,0.1); transform: scale(1.05); }
-        .nav-arrow-btn:active { transform: scale(0.95); background: rgba(56,189,248,0.3); }
-        
         details.off-personnel { background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
         details.off-personnel:hover { background: rgba(56,189,248,0.08); transform: translateX(4px); }
         details.off-personnel summary { padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }
@@ -466,23 +463,27 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
         .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
         
-        /* EXPANDER TO DO LIST */
+        /* EXPANDER TO DO LIST (UTAMA) */
         div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
         div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
         div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
         div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
         
-        /* NESTED EXPANDER (TANGGAPAN) */
+        /* SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
         div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
         
-        /* ANIMASI GLOW TO DO LIST */
-        @keyframes todoGlow { 0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } }
+        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
+        @keyframes todoGlow { 
+            0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
+            50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
+        }
         .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
         .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
         
+        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
         div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
         div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
         
@@ -542,7 +543,6 @@ def ui_login(df_j):
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         with st.container(border=True):
-            # Penambahan Class login-title agar ditangkap oleh CSS baru
             st.markdown("<h2 class='login-title'>SISTEM LOGIN</h2>", unsafe_allow_html=True)
             st.markdown("<p class='login-subtitle'>Akses Terintegrasi NR ORF Command</p>", unsafe_allow_html=True)
             
@@ -782,7 +782,7 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Tombol Tutup dengan JS Murni (No-Lag)
+        # Tombol Tutup dengan CSS & Javascript Anti Lag
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
@@ -798,12 +798,11 @@ def ui_todo_widget():
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            const expanders = pDoc.querySelectorAll('details');
-            expanders.forEach(exp => {
-                if(exp.hasAttribute('open')) {
-                    exp.removeAttribute('open');
-                }
-            });
+            // Menutup expander utama (yang paling atas/parent)
+            const mainExpander = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
+            if(mainExpander && mainExpander.hasAttribute('open')) {
+                mainExpander.querySelector('summary').click();
+            }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
@@ -818,18 +817,30 @@ def ui_timeline(df_j, df_i):
     </div>
     """, unsafe_allow_html=True)
     
-    # Tombol scroll diletakkan menggunakan Streamlit columns dan components HTML
+    # Tombol scroll menggunakan HTML langsung agar instan tanpa loading Streamlit
     col_l, col_r = st.columns([1, 1])
     with col_l:
         components.html("""
-        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: -320, behavior: 'smooth'});" 
-        style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; width: 100%; font-weight:bold;">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
+            body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+            button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
+            button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.3); }
+        </style>
+        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: -320, behavior: 'smooth'});">
         ⬅️ Geser Kiri</button>
         """, height=40)
     with col_r:
         components.html("""
-        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: 320, behavior: 'smooth'});" 
-        style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; width: 100%; font-weight:bold;">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
+            body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+            button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
+            button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.3); }
+        </style>
+        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: 320, behavior: 'smooth'});">
         Geser Kanan ➡️</button>
         """, height=40)
     
