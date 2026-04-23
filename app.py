@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -336,65 +336,89 @@ def clear_pending_requests(df_i):
 # 4. CSS INJECTION KONDISIONAL (LOGIN VS DASHBOARD)
 # =====================================================================
 def inject_custom_css(bg_base64, logo_base64, is_login=False):
+    # Pengaturan Background
     if is_login:
-        bg_overlay = "rgba(15,23,42,0.2), rgba(15,23,42,0.5)" # Terang agar foto jelas
-        container_bg = "rgba(255, 255, 255, 0.95)" # Kaca putih
-        container_border = "rgba(255, 255, 255, 0.6)"
-        box_shadow = "0 10px 40px rgba(0,0,0,0.15)"
-        blur_fx = "blur(15px)"
+        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" # Lebih gelap sedikit agar kotak putih login menonjol
     else:
-        bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)" # Gelap elegan
-        container_bg = "linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9))"
-        container_border = "rgba(255,255,255,0.1)"
-        box_shadow = "none"
-        blur_fx = "blur(0px)"
-
+        bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)" # Gelap elegan untuk Dashboard
+        
     bg_css = f"linear-gradient({bg_overlay}), url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else f"linear-gradient({bg_overlay})"
 
     css = "<style>\n"
     css += "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');\n"
     css += "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');\n"
     
+    # Global HTML & Body
     css += f"html, body, .stApp {{ font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }}\n"
-    css += f".stApp {{ background-image: {bg_css} !important; background-size: cover; background-attachment: fixed; }}\n"
+    css += f".stApp {{ background-image: {bg_css} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
     css += "header[data-testid=\"stHeader\"] { display: none !important; }\n"
     
-    # Targeting the main block containers robustly
-    css += f"""
-    div[data-testid="stVerticalBlockBorderWrapper"] > div,
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {{ 
-        border-radius: 16px; 
-        background: {container_bg} !important; 
-        border: 1px solid {container_border} !important; 
-        box-shadow: {box_shadow} !important;
-        backdrop-filter: {blur_fx} !important;
-        -webkit-backdrop-filter: {blur_fx} !important;
-        padding: 24px; 
-        transition: all 0.3s; 
-    }}
-    """
-    
     if is_login:
+        # CSS KHUSUS HALAMAN LOGIN (KOTAK PUTIH, ISIAN ABU, TEKS HITAM)
         css += """
-        /* OVERRIDES KHUSUS HALAMAN LOGIN */
-        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #0f172a !important;
-            border-radius: 8px !important;
+        /* Sembunyikan ikon link header bawaan Streamlit */
+        .stMarkdown a.header-anchor, svg.icon-link { display: none !important; }
+        
+        /* Memaksa Kontainer Login menjadi Putih Solid */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"] { 
+            background-color: #ffffff !important; 
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
+            border-radius: 16px !important;
+            padding: 30px !important;
         }
-        div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 14px !important; }
+        
+        /* Warna Teks Label */
+        label p, .stMarkdown p { color: #334155 !important; font-weight: 700 !important; }
+        
+        /* Judul Login */
         .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
         .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
-        .stButton>button { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; padding: 10px; }
-        .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(2, 132, 199, 0.3); }
+        
+        /* Isian Dropdown & Input Text (Warna Abu Terang) */
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            background-color: #f1f5f9 !important; 
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            min-height: 42px !important;
+        }
+        
+        /* Teks dalam Isian (Warna Hitam) */
+        div[data-baseweb="input"] input, div[data-baseweb="select"] span { 
+            color: #0f172a !important; 
+            font-weight: 700 !important; 
+            font-size: 14px !important; 
+        }
+        
+        /* Tombol Login */
+        .stButton>button { 
+            background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
+            color: white !important; 
+            border: none !important; 
+            border-radius: 10px !important; 
+            font-weight: 700 !important; 
+            width: 100% !important; 
+            transition: all 0.2s !important; 
+            padding: 10px !important; 
+        }
+        .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
+        # CSS KHUSUS DASHBOARD (GELAP ELEGAN)
         css += """
-        /* OVERRIDES KHUSUS DASHBOARD */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"] { 
+            border-radius: 16px; 
+            background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; 
+            border: 1px solid rgba(255,255,255,0.1) !important; 
+            padding: 24px; 
+            transition: all 0.3s; 
+        }
+        
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
@@ -527,7 +551,7 @@ def ui_login(df_j):
                 if not df_j.empty and 'Nama Operator' in df_j.columns:
                     op_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
                     op_list = [o for o in op_list if o.lower() not in ['nan', 'none', '']]
-                nama = st.selectbox("Nama Operator:", op_list)
+                nama = st.selectbox("Nama Operator:", ["-- Pilih Nama Anda --"] + op_list)
                 pin = ""
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -537,7 +561,6 @@ def ui_login(df_j):
                 elif not nama or nama == "-- Pilih Nama Anda --":
                     st.error("❌ Silakan pilih nama Anda terlebih dahulu!")
                 else:
-                    # Buat Token Auto-Login (SSO Simulation)
                     token_str = f"{role}::{nama}"
                     token_b64 = base64.b64encode(token_str.encode("utf-8")).decode("utf-8")
                     st.query_params["auth"] = token_b64
@@ -558,7 +581,7 @@ def ui_header(logo_base64, pending_count):
     c_space, c_btn = st.columns([10, 2])
     with c_btn:
         if st.button("🚪 Keluar", use_container_width=True):
-            st.query_params.clear() # Hapus token SSO dari URL
+            st.query_params.clear() 
             st.session_state.clear()
             st.rerun()
 
@@ -928,7 +951,6 @@ def ui_manager_panel(df_i, df_j):
     
     approver_name = st.session_state.user_name
 
-    # URUTAN TAB DISESUAIKAN: IZIN -> EDIT -> TO-DO
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
@@ -1048,7 +1070,7 @@ def ui_manager_panel(df_i, df_j):
 # =====================================================================
 if __name__ == "__main__":
     is_login_page = not st.session_state.get('logged_in', False)
-    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("pertamina.png"), is_login=is_login_page)
+    inject_custom_css(get_base64_image("fsru.jpg"), get_base64_image("logo-pertaminaregasv2.png"), is_login=is_login_page)
 
     df_j, df_i, df_k = load_all_data()
 
