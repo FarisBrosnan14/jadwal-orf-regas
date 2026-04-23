@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("logopertaminaregasv2.png")
 except:
     favicon = "⚡"
 
