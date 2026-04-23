@@ -347,35 +347,31 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
     css += "header[data-testid=\"stHeader\"] { display: none !important; }\n"
-    css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" # Hilangkan ikon link header
+    css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" # Hilangkan ikon link header bawaan Streamlit
     
     if is_login:
-        # ---------------- HALAMAN LOGIN ----------------
-        css += f".stApp {{ background-image: linear-gradient(rgba(15,23,42,0.6), rgba(15,23,42,0.8)), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+        # ---------------- HALAMAN LOGIN (ANTI OVERRIDE DARK MODE) ----------------
+        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" # Lebih terang agar kontras
+        css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN PUTIH SOLID */
-        div[data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="stVerticalBlockBorderWrapper"] > div,
-        div[data-testid="stVerticalBlock"] > div[style*="border"] {
+        /* KOTAK LOGIN PUTIH SOLID (Memaksa background putih menggunakan :has() untuk akurasi) */
+        div[data-testid="stVerticalBlock"]:has(.login-title),
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.login-title) {
             background-color: #ffffff !important;
             background: #ffffff !important;
-            border: none !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 16px !important;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
-            padding: 20px !important;
-            opacity: 1 !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
+            padding: 30px !important;
         }
         
-        /* WARNA TEKS DALAM KOTAK */
-        [data-testid="stVerticalBlockBorderWrapper"] label p, 
-        [data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p {
-            color: #1e293b !important;
-            font-weight: 700 !important;
-        }
+        /* WARNA TEKS LABEL (Hitam Peat) */
+        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
         
-        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 30px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
-        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 25px; font-weight: 600; font-size: 14px; }
+        /* Judul Login */
+        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
         
         /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
@@ -386,12 +382,14 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             min-height: 42px !important;
         }
         
-        /* TEKS INPUT (HITAM PEKAT) */
+        /* TEKS INPUT (HITAM PEKAT) - Memaksa semua elemen dalam selectbox/input menjadi hitam */
         div[data-baseweb="input"] input, 
-        div[data-baseweb="select"] span { 
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div,
+        div[data-baseweb="select"] div[class*="singleValue"] { 
             color: #0f172a !important; 
             font-weight: 700 !important; 
-            font-size: 14px !important; 
+            -webkit-text-fill-color: #0f172a !important;
         }
         
         /* TOMBOL MASUK */
@@ -402,15 +400,16 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             border-radius: 10px !important; 
             font-weight: 700 !important; 
             width: 100% !important; 
-            padding: 10px !important; 
-            margin-top: 10px !important;
+            padding: 12px !important; 
+            margin-top: 15px !important;
             transition: all 0.2s !important; 
         }
         .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
         # ---------------- HALAMAN DASHBOARD ----------------
-        css += f".stApp {{ background-image: linear-gradient(rgba(15,23,42,0.88), rgba(15,23,42,0.88)), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+        bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)"
+        css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
         /* KOTAK DASHBOARD (KACA GELAP) */
@@ -543,6 +542,7 @@ def ui_login(df_j):
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         with st.container(border=True):
+            # Penambahan Class login-title agar ditangkap oleh CSS baru
             st.markdown("<h2 class='login-title'>SISTEM LOGIN</h2>", unsafe_allow_html=True)
             st.markdown("<p class='login-subtitle'>Akses Terintegrasi NR ORF Command</p>", unsafe_allow_html=True)
             
@@ -566,7 +566,6 @@ def ui_login(df_j):
                 elif not nama or nama == "-- Pilih Nama Anda --":
                     st.error("❌ Silakan pilih nama Anda terlebih dahulu!")
                 else:
-                    # Buat Token Auto-Login (SSO Simulation)
                     token_str = f"{role}::{nama}"
                     token_b64 = base64.b64encode(token_str.encode("utf-8")).decode("utf-8")
                     st.query_params["auth"] = token_b64
@@ -783,6 +782,7 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
+        # Tombol Tutup dengan JS Murni (No-Lag)
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
@@ -798,12 +798,12 @@ def ui_todo_widget():
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
-            if(expanders.length > 0) {
-                if(expanders[0].hasAttribute('open')) {
-                    expanders[0].querySelector('summary').click();
+            const expanders = pDoc.querySelectorAll('details');
+            expanders.forEach(exp => {
+                if(exp.hasAttribute('open')) {
+                    exp.removeAttribute('open');
                 }
-            }
+            });
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
@@ -815,12 +815,23 @@ def ui_timeline(df_j, df_i):
     st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 class='section-title' style='margin-bottom: 0;'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>view_timeline</span> Tinjauan 14 Hari Kedepan</h3>
-        <div style="display: flex; gap: 10px;">
-            <button id="btn-scroll-left" class="nav-arrow-btn" title="Geser Kiri"><span class="material-symbols-rounded">arrow_back_ios_new</span></button>
-            <button id="btn-scroll-right" class="nav-arrow-btn" title="Geser Kanan"><span class="material-symbols-rounded">arrow_forward_ios</span></button>
-        </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Tombol scroll diletakkan menggunakan Streamlit columns dan components HTML
+    col_l, col_r = st.columns([1, 1])
+    with col_l:
+        components.html("""
+        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: -320, behavior: 'smooth'});" 
+        style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; width: 100%; font-weight:bold;">
+        ⬅️ Geser Kiri</button>
+        """, height=40)
+    with col_r:
+        components.html("""
+        <button onclick="window.parent.document.querySelector('.scroll-container').scrollBy({left: 320, behavior: 'smooth'});" 
+        style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; padding: 6px 12px; cursor: pointer; width: 100%; font-weight:bold;">
+        Geser Kanan ➡️</button>
+        """, height=40)
     
     if df_j.empty: return st.warning("Sedang menyinkronisasi jadwal...")
 
@@ -875,25 +886,6 @@ def ui_timeline(df_j, df_i):
     st.markdown(html + '</div>', unsafe_allow_html=True)
     st.markdown("<hr style='opacity:0.1;'>", unsafe_allow_html=True)
 
-    components.html("""
-    <script>
-        function attachScrollListeners() {
-            const pDoc = window.parent.document;
-            const btnLeft = pDoc.getElementById("btn-scroll-left");
-            const btnRight = pDoc.getElementById("btn-scroll-right");
-            const container = pDoc.querySelector(".scroll-container");
-            
-            if(btnLeft && container) {
-                btnLeft.onclick = function() { container.scrollBy({left: -320, behavior: 'smooth'}); };
-            }
-            if(btnRight && container) {
-                btnRight.onclick = function() { container.scrollBy({left: 320, behavior: 'smooth'}); };
-            }
-        }
-        setInterval(attachScrollListeners, 1500);
-        attachScrollListeners();
-    </script>
-    """, height=0, width=0)
 
 def ui_off_tracker(df_j, df_k):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8; font-size:28px;'>group_off</span> Pencarian Personel OFF</h3>", unsafe_allow_html=True)
