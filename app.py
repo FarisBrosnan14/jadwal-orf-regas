@@ -13,7 +13,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -42,7 +42,6 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
-    # FITUR SSO (AUTO-LOGIN VIA TOKEN DI URL)
     if "auth" in st.query_params:
         try:
             token = st.query_params["auth"]
@@ -59,7 +58,7 @@ if 'last_seen_todo' not in st.session_state:
 
 
 # =====================================================================
-# 2. UTILITIES & AI PARSER
+# 2. UTILITIES & AI PARSER (SMART COLUMN DETECTION)
 # =====================================================================
 @st.cache_data
 def get_base64_image(file_name):
@@ -72,6 +71,13 @@ def find_col(df, keywords, default_name):
     for col in df.columns:
         if any(kw in str(col).lower() for kw in keywords): return col
     return default_name
+
+def get_val(row, keywords, default='-'):
+    """Mengambil nilai baris berdasarkan kata kunci kolom, kebal terhadap perubahan nama form"""
+    for col in row.index:
+        if any(kw in str(col).lower() for kw in keywords):
+            return row[col]
+    return default
 
 def parse_natural_language_schedule(text, df_j):
     text = text.lower()
@@ -104,20 +110,28 @@ def parse_natural_language_schedule(text, df_j):
         except: pass
     return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
 
-def generate_html_card(row, col_reason, col_proof, delay):
-    alasan = str(row.get(col_reason, '-')).strip()
-    if alasan.lower() in ['nan', '']: alasan = 'Tidak ada keterangan'
-    bukti = str(row.get(col_proof, '')).strip()
+def generate_html_card(row, delay):
+    nama = get_val(row, ['nama', 'pengaju', 'operator'], 'Tidak Diketahui')
+    tgl_mulai = get_val(row, ['mulai', 'dari'], '-')
+    tgl_selesai = get_val(row, ['selesai', 'sampai'], '-')
+    shift = get_val(row, ['shift'], 'Pg')
+    alasan = str(get_val(row, ['alasan', 'keterangan'], '-')).strip()
+    bukti = str(get_val(row, ['bukti', 'upload', 'dokumen'], '')).strip()
+    pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], '-')
+    jenis = get_val(row, ['jenis', 'kategori'], 'Izin')
+    
+    if alasan.lower() in ['nan', 'none', '']: alasan = 'Tidak ada keterangan'
     bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#64748b;'>Tidak ada lampiran</span>"
+    
     return f"""
     <div style='animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) {delay}s both;'>
-        <div style='display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>person</span><b style='font-size:16px; color:#fff;'>{row['Nama Lengkap Operator']}</b></div>
-        <div style='font-size:14px; margin-top:12px; color:#e2e8f0;'>📅 {row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']} | ⏱️ Shift: {row.get('Shift Izin', 'Pg')}</div>
+        <div style='display:flex; align-items:center; gap:8px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>person</span><b style='font-size:16px; color:#fff;'>{nama}</b> <span style='color:#94a3b8; font-size:12px;'>({jenis})</span></div>
+        <div style='font-size:14px; margin-top:12px; color:#e2e8f0;'>📅 {tgl_mulai} s/d {tgl_selesai} | ⏱️ Shift: {shift}</div>
         <div style='margin-top:12px; background: rgba(255,255,255,0.03); border-left: 3px solid #64748b; padding: 12px; border-radius: 6px;'>
             <div style='font-size:13px; color:#cbd5e1;'><b>Alasan:</b> {alasan}</div>
             <div style='font-size:13px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;'>{bukti_html}</div>
         </div>
-        <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {row.get('Nama Lengkap Operator Pengganti', '-')}</div>
+        <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {pengganti}</div>
     </div>
     """
 
@@ -163,9 +177,12 @@ def load_jadwal_izin_data():
         ws_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
         if len(ws_i) > 1:
             df_i = pd.DataFrame(ws_i[1:], columns=ws_i[0])
-            if 'Nama Lengkap Operator' in df_i.columns:
-                df_i = df_i[df_i['Nama Lengkap Operator'].astype(str).str.strip() != '']
-                df_i = df_i[~df_i['Nama Lengkap Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+            
+            # Dinamis mencari kolom nama
+            col_nama = find_col(df_i, ['nama', 'lengkap', 'operator'], None)
+            if col_nama:
+                df_i = df_i[df_i[col_nama].astype(str).str.strip() != '']
+                df_i = df_i[~df_i[col_nama].astype(str).str.lower().isin(['nan', 'none', 'null'])]
     except: pass
     return df_j, df_i
 
@@ -220,13 +237,10 @@ def push_todo_to_sheet(main_msg, tasks_dict):
                 old_comment = existing_data["tasks"].get(op, {}).get("comment", "")
                 rows.append([op, task.strip(), old_comment])
         
-        try:
-            ws.update(values=rows, range_name="A1")
+        try: ws.update(values=rows, range_name="A1")
         except:
-            try:
-                ws.update("A1", rows)
-            except:
-                ws.append_rows(rows)
+            try: ws.update("A1", rows)
+            except: ws.append_rows(rows)
                 
         fetch_todo_from_sheet.clear()
         return True
@@ -259,7 +273,6 @@ def reply_todo_operator(nama_operator, komentar, user_name):
                 return True
         return False
     except Exception as e:
-        st.error(f"Gagal mengirim tanggapan: {e}")
         return False
 
 def load_all_data():
@@ -272,26 +285,48 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
     if not client: return st.error("Gagal terhubung.")
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        c_idx = row.index.get_loc('Status Approval') + 1
-        sh_izin.update_cell(int(idx)+2, c_idx, f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else "")
         
-        stat = str(row.get('Status Approval', '')).upper()
+        # Cari lokasi kolom Status, buat jika tidak ada
+        col_status = find_col(row.to_frame().T, ['status', 'approval', 'appr'], None)
+        if col_status:
+            c_idx = row.index.get_loc(col_status) + 1
+        else:
+            c_idx = len(row.index) + 1
+            sh_izin.update_cell(1, c_idx, "Status Approval") # Inject Header baru
+            
+        status_text = f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else ""
+        sh_izin.update_cell(int(idx)+2, c_idx, status_text)
+        
+        stat = str(get_val(row, ['status', 'approval'], '')).upper()
         if action_type == "APPROVE" or (action_type == "UNDO" and "APPROVED" in stat):
             sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
-            d_start, d_end = pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date(), pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()
-            app, sub = str(row['Nama Lengkap Operator']).strip().lower(), str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
+            
+            t_mulai = get_val(row, ['mulai', 'dari'])
+            t_selesai = get_val(row, ['selesai', 'sampai'])
+            
+            try:
+                d_start = pd.to_datetime(t_mulai, dayfirst=True).date()
+                d_end = pd.to_datetime(t_selesai, dayfirst=True).date()
+            except:
+                st.error("Format tanggal tidak valid. Lewati integrasi jadwal.")
+                return
+            
+            app = str(get_val(row, ['nama', 'pengaju', 'operator'], '')).strip().lower()
+            sub = str(get_val(row, ['pengganti', 'backup'], '')).strip().lower()
+            jenis = str(get_val(row, ['jenis', 'kategori'], 'IZIN')).upper()
+            shift = str(get_val(row, ['shift'], 'PG')).title()
             
             updates = []
             for d in pd.date_range(d_start, d_end):
                 d_str = d.strftime('%Y-%m-%d')
                 if d_str in df_j.columns:
                     c_date = list(df_j.columns).index(d_str) + 1
-                    v_app = str(row['Jenis Izin yang Diajukan']).upper() if action_type == "APPROVE" else str(row.get('Shift Izin', 'PG')).title()
-                    v_sub = str(row.get('Shift Izin', 'PG')).title() if action_type == "APPROVE" else 'OFF'
+                    v_app = jenis if action_type == "APPROVE" else shift
+                    v_sub = shift if action_type == "APPROVE" else 'OFF'
                     
                     m_p = df_j[df_j.iloc[:,0].astype(str).str.strip().str.lower() == app]
                     if not m_p.empty: updates.append(gspread.Cell(int(m_p.index[0])+2, c_date, v_app))
-                    if sub and sub not in ['nan', 'tidak ada', '']:
+                    if sub and sub not in ['nan', 'tidak ada', '-', '']:
                         m_s = df_j[df_j.iloc[:,0].astype(str).str.strip().str.lower() == sub]
                         if not m_s.empty: updates.append(gspread.Cell(int(m_s.index[0])+2, c_date, v_sub))
             if updates: sh_aktual.update_cells(updates)
@@ -320,9 +355,16 @@ def execute_smart_edit(nama, status, d_start, d_end, df_j):
 def clear_pending_requests(df_i):
     client = get_client()
     try:
+        col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
+        if not col_status or col_status not in df_i.columns:
+            return st.info("Tidak ada antrean (Kolom Status tidak ditemukan).")
+            
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
-        pending_rows = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
+        col_nama = find_col(df_i, ['nama', 'operator'], None)
+        if not col_nama: return
+        
+        df_valid = df_i.dropna(subset=[col_nama])
+        pending_rows = df_valid[df_valid[col_status].isna() | (df_valid[col_status].astype(str).str.strip() == "")]
         if pending_rows.empty: return st.info("Tidak ada antrean.")
         indices = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         for r in indices: sh_izin.delete_rows(r)
@@ -342,7 +384,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');\n"
     css += "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');\n"
     
-    # CSS Dasar
     css += "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }\n"
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
@@ -350,54 +391,46 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" 
     
     if is_login:
-        # ---------------- HALAMAN LOGIN (TEKS PUTIH KONTRAST) ----------------
-        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)"
+        # ---------------- HALAMAN LOGIN (ANTI OVERRIDE DARK MODE) ----------------
+        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" 
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN (KACA GELAP) */
-        div[data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="stVerticalBlock"] > div[style*="border"] {
-            background-color: rgba(15, 23, 42, 0.6) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        div[data-testid="stVerticalBlock"]:has(.login-title),
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.login-title) {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 16px !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
             padding: 30px !important;
         }
         
-        /* WARNA TEKS LABEL (PUTIH) */
-        label p, .stMarkdown p { color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; }
+        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
+        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
         
-        /* Judul Login (PUTIH) */
-        .login-title { color: #ffffff !important; font-weight: 900; text-align: center; font-size: 34px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.8) !important; }
-        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; }
-        
-        /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
         div[data-baseweb="select"] > div {
-            background-color: #f8fafc !important; 
+            background-color: #f1f5f9 !important; 
             border: 2px solid #cbd5e1 !important;
             border-radius: 8px !important;
             min-height: 42px !important;
         }
         
-        /* TEKS INPUT (HITAM PEKAT) */
         div[data-baseweb="input"] input, 
         div[data-baseweb="select"] span,
         div[data-baseweb="select"] div,
         div[data-baseweb="select"] div[class*="singleValue"] { 
             color: #0f172a !important; 
-            font-weight: 800 !important; 
+            font-weight: 700 !important; 
             -webkit-text-fill-color: #0f172a !important;
         }
         
-        /* TOMBOL MASUK */
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
             color: white !important; 
-            border: 1px solid rgba(56, 189, 248, 0.5) !important; 
+            border: none !important; 
             border-radius: 10px !important; 
             font-weight: 700 !important; 
             width: 100% !important; 
@@ -413,7 +446,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK DASHBOARD (KACA GELAP) */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] { 
             border-radius: 16px; 
@@ -423,11 +455,8 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             transition: all 0.3s; 
         }
         
-        /* INPUT FORM DASHBOARD */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
-        
-        /* TOMBOL DASHBOARD */
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
         button[kind="primary"] { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }
         
@@ -438,7 +467,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
         .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
         
-        /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
         
@@ -463,19 +491,16 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
         .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
         
-        /* EXPANDER TO DO LIST (UTAMA) */
         div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
         div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
         div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
         div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
         
-        /* SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
         div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
         
-        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
         @keyframes todoGlow { 
             0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
             50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
@@ -483,7 +508,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
         .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
         
-        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
         div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
         div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
         
@@ -782,7 +806,6 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Tombol Tutup dengan CSS & Javascript Anti Lag
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
@@ -798,10 +821,11 @@ def ui_todo_widget():
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            // Menutup expander utama (yang paling atas/parent)
-            const mainExpander = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
-            if(mainExpander && mainExpander.hasAttribute('open')) {
-                mainExpander.querySelector('summary').click();
+            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
+            if(expanders.length > 0) {
+                if(expanders[0].hasAttribute('open')) {
+                    expanders[0].querySelector('summary').click();
+                }
             }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
@@ -817,7 +841,6 @@ def ui_timeline(df_j, df_i):
     </div>
     """, unsafe_allow_html=True)
     
-    # Tombol scroll menggunakan HTML langsung agar instan tanpa loading Streamlit
     col_l, col_r = st.columns([1, 1])
     with col_l:
         components.html("""
@@ -848,14 +871,17 @@ def ui_timeline(df_j, df_i):
 
     today = datetime.now().date()
     subs_map = {}
-    if not df_i.empty and 'Status Approval' in df_i.columns:
-        for _, row in df_i[df_i['Status Approval'].astype(str).str.upper().str.contains('APPROVED', na=False)].iterrows():
-            try:
-                sub = str(row.get('Nama Lengkap Operator Pengganti', '')).strip().lower()
-                if sub and sub not in ['nan', '']:
-                    for d in pd.date_range(pd.to_datetime(row['Tanggal Mulai Izin'], dayfirst=True).date(), pd.to_datetime(row['Tanggal Selesai Izin'], dayfirst=True).date()):
-                        subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
-            except Exception: pass
+    if not df_i.empty:
+        col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
+        if col_status and col_status in df_i.columns:
+            appr_df = df_i[df_i[col_status].astype(str).str.upper().str.contains('APPROVED', na=False)]
+            for _, row in appr_df.iterrows():
+                try:
+                    sub = str(get_val(row, ['pengganti', 'backup'], '')).strip().lower()
+                    if sub and sub not in ['nan', '']:
+                        for d in pd.date_range(pd.to_datetime(get_val(row, ['mulai'], today), dayfirst=True).date(), pd.to_datetime(get_val(row, ['selesai'], today), dayfirst=True).date()):
+                            subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
+                except Exception: pass
 
     html = '<div class="scroll-container">'
     for i in range(14):
@@ -963,13 +989,18 @@ def ui_manager_panel(df_i, df_j):
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
-        if df_i.empty or 'Status Approval' not in df_i.columns: 
-            st.warning("Menunggu sinkronisasi data izin...")
+        col_nama = find_col(df_i, ['nama', 'pengaju', 'operator'], None)
+        col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
+        
+        if df_i.empty or not col_nama: 
+            st.warning("Data form izin kosong atau belum ada pengajuan.")
         else:
-            df_valid = df_i.dropna(subset=['Nama Lengkap Operator'])
-            col_reason = find_col(df_i, ['alasan', 'keterangan'], 'Alasan Izin')
-            col_proof = find_col(df_i, ['upload', 'bukti', 'dokumen'], 'Bukti Izin')
-            pending_df = df_valid[df_valid['Status Approval'].isna() | (df_valid['Status Approval'] == "")]
+            if not col_status or col_status not in df_i.columns:
+                df_i["Status Approval"] = ""
+                col_status = "Status Approval"
+                
+            df_valid = df_i.dropna(subset=[col_nama])
+            pending_df = df_valid[df_valid[col_status].isna() | (df_valid[col_status].astype(str).str.strip() == "")]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
             with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
@@ -979,25 +1010,30 @@ def ui_manager_panel(df_i, df_j):
 
             if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
             else:
-                for idx, row in pending_df.head(5).iterrows():
+                for i, (idx, row) in enumerate(pending_df.head(5).iterrows()):
                     with st.container(border=True):
-                        st.markdown(generate_html_card(row, col_reason, col_proof, idx*0.1), unsafe_allow_html=True)
+                        st.markdown(generate_html_card(row, delay=i*0.1), unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
                         if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
                         if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j)
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
-            history_df = df_valid[df_valid['Status Approval'].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
+            history_df = df_valid[df_valid[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
             
             if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
             else:
-                for idx, row in history_df.tail(5).iloc[::-1].iterrows():
-                    status = str(row['Status Approval']).upper()
+                for _, row in history_df.tail(5).iloc[::-1].iterrows():
+                    status = str(row[col_status]).upper()
                     is_appr = "APPROVED" in status
                     c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+                    
+                    nama_pengaju = get_val(row, ['nama', 'pengaju', 'operator'], 'Tidak Diketahui')
+                    t_mulai = get_val(row, ['mulai', 'dari'], '-')
+                    t_selesai = get_val(row, ['selesai', 'sampai'], '-')
+                    
                     with st.container(border=True):
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{row['Nama Lengkap Operator']}</b><br><span style='font-size:12px; color:#94a3b8;'>{row['Tanggal Mulai Izin']} s/d {row['Tanggal Selesai Izin']}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{idx}", use_container_width=True): execute_database_action(idx, row, "UNDO", approver_name, df_j)
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
+                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): execute_database_action(_, row, "UNDO", approver_name, df_j)
 
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
@@ -1087,7 +1123,12 @@ if __name__ == "__main__":
     if is_login_page:
         ui_login(df_j)
     else:
-        pending_count = len(df_i.dropna(subset=['Nama Lengkap Operator'])[df_i['Status Approval'].isna() | (df_i['Status Approval'] == "")]) if not df_i.empty and 'Status Approval' in df_i.columns else 0
+        # Pengecekan pending count agar lebih tangguh
+        col_status_global = find_col(df_i, ['status', 'approval', 'appr'], None)
+        pending_count = 0
+        if not df_i.empty and col_status_global and col_status_global in df_i.columns:
+            df_v = df_i.dropna(subset=[find_col(df_i, ['nama', 'operator'], 'Nama Operator')])
+            pending_count = len(df_v[df_v[col_status_global].isna() | (df_v[col_status_global].astype(str).str.strip() == "")])
 
         ui_header(get_base64_image("pertamina.png"), pending_count)
         ui_live_hud_widget() 
