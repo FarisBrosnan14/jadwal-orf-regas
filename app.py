@@ -18,7 +18,7 @@ try:
 except:
     favicon = "⚡"
 
-st.set_page_config(page_title="NR ORF Command", page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Dashboard Distribusi Gas NR", page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
@@ -315,7 +315,6 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
         
-        # Cari urutan kolom aktual di Google Sheet (Mencegah salah tulis kolom)
         header_row = sh_izin.row_values(1)
         col_status_idx = -1
         for i, h in enumerate(header_row):
@@ -364,7 +363,6 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
                         if not m_s.empty: updates.append(gspread.Cell(int(m_s.index[0])+2, c_date, v_sub))
             if updates: sh_aktual.update_cells(updates)
             
-        # JEDA 1.5 DETIK AGAR GOOGLE SHEETS SEMPAT MENYIMPAN SEBELUM HALAMAN DI-REFRESH
         time.sleep(1.5)
         load_jadwal_izin_data.clear()
         st.rerun()
@@ -425,7 +423,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" 
     
     if is_login:
-        # ---------------- HALAMAN LOGIN (ANTI OVERRIDE DARK MODE) ----------------
         bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" 
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
@@ -488,7 +485,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
-        # ---------------- HALAMAN DASHBOARD ----------------
         bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)"
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
@@ -571,7 +567,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         <div id="splash-overlay">
             <div class="splash-content">
                 <img src="{logo_src_splash}" class="splash-logo" alt="Logo">
-                <h2 class="splash-title">NR ORF COMMAND</h2>
+                <h2 class="splash-title">DASHBOARD DISTRIBUSI GAS NR</h2>
                 <div class="splash-fade-early">
                     <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
                     <div class="loading-bar-container"><div class="loading-bar"></div></div>
@@ -583,7 +579,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; animation: moveToHeader 2s forwards; }}
         .splash-fade-early {{ animation: fadeOutEarly 2s forwards; display: flex; flex-direction: column; align-items: center; }}
         .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 1.5s infinite alternate; }}
-        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 36px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
         .splash-subtitle {{ color: #64748b; font-size: 14px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; text-align: center; }}
         .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
         .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1s infinite; }}
@@ -615,7 +611,7 @@ def ui_login(df_j):
     with col2:
         with st.container(border=True):
             st.markdown("<h2 class='login-title'>SISTEM LOGIN</h2>", unsafe_allow_html=True)
-            st.markdown("<p class='login-subtitle'>Akses Terintegrasi NR ORF Command</p>", unsafe_allow_html=True)
+            st.markdown("<p class='login-subtitle'>Akses Terintegrasi Dashboard Distribusi Gas NR</p>", unsafe_allow_html=True)
             
             role = st.selectbox("Masuk Sebagai:", ["Operator", "Manajer"])
             
@@ -650,9 +646,18 @@ def ui_login(df_j):
 # =====================================================================
 # 6. HEADER, HUD, DAN TO-DO WIDGET
 # =====================================================================
-def ui_header(logo_base64, pending_count):
+def ui_header(logo_base64, pending_count, is_manager):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
-    notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>' if pending_count > 0 else '<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
+    
+    # KLIK LONCENG HANYA UNTUK MANAJER
+    if is_manager and pending_count > 0:
+        bell_click = "cursor:pointer; transition: transform 0.2s;"
+        bell_onclick = "onclick=\"const btns = Array.from(window.parent.document.querySelectorAll('button')); const mgrBtn = btns.find(b => b.innerText.includes('Panel Manajer')); if(mgrBtn) mgrBtn.click(); setTimeout(() => { const tabs = Array.from(window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']')); const izinTab = tabs.find(t => t.innerText.includes('Persetujuan Izin')); if(izinTab) izinTab.click(); }, 300);\""
+        notif = f'<div style="position:relative; {bell_click}" {bell_onclick} title="Klik untuk buka Antrean Izin!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
+    elif pending_count > 0:
+        notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
+    else:
+        notif = f'<div style="opacity:0.4;"><span class="material-symbols-rounded" style="font-size:28px; color:#1e293b;">notifications</span></div>'
     
     c_space, c_btn = st.columns([10, 2])
     with c_btn:
@@ -668,7 +673,7 @@ def ui_header(logo_base64, pending_count):
             <div>{logo}</div>
         </div>
         <div style="flex-grow:1; text-align:center;">
-            <h1 style="color:#004D95; font-weight:800; font-size:clamp(16px, 3vw, 24px); margin:0;">NR ORF Integrated Command</h1>
+            <h1 style="color:#004D95; font-weight:800; font-size:clamp(16px, 3vw, 24px); margin:0;">Dashboard Distribusi Gas NR</h1>
             <span style="font-size:12px; color:#64748b; font-weight:600;">Halo, {st.session_state.user_name} ({st.session_state.user_role})</span>
         </div>
         <div>{notif}</div>
@@ -1034,15 +1039,15 @@ def ui_manager_panel(df_i, df_j):
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
+        col_status = find_col(df_i, ['status', 'approval', 'appr'])
+        if not col_status and not df_i.empty:
+            df_i["Status Approval"] = ""
+            col_status = "Status Approval"
+            
         if df_i.empty: 
             st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
         else:
-            col_status = find_col(df_i, ['status', 'approval', 'appr'])
-            if not col_status or col_status not in df_i.columns:
-                df_i["Status Approval"] = ""
-                col_status = "Status Approval"
-                
-            pending_df = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
+            pending_df = df_i[df_i[col_status].astype(str).str.lower().isin(["", "nan", "none", "null"])]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
             with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
@@ -1059,10 +1064,10 @@ def ui_manager_panel(df_i, df_j):
                         st.markdown(generate_izin_card_html(row, delay=rendered_count*0.1), unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
                         if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): 
-                            with st.spinner("Menyimpan & Mensinkronisasi..."):
+                            with st.spinner("Menyimpan..."):
                                 execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
                         if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): 
-                            with st.spinner("Menyimpan Penolakan..."):
+                            with st.spinner("Menolak..."):
                                 execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
@@ -1079,13 +1084,13 @@ def ui_manager_panel(df_i, df_j):
                     t_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
                     t_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
                     
-                    # FITUR TANDA CONTRENG (✅) DI SAMPING NAMA JIKA APPROVED
+                    # FITUR TANDA CONTRENG (✅) JIKA APPROVED
                     mark = "✅" if is_appr else "❌"
                     
                     with st.container(border=True):
                         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:15px; color:white;'>{mark} {nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
                         if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): 
-                            with st.spinner("Membatalkan Keputusan..."):
+                            with st.spinner("Membatalkan..."):
                                 execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
 
     with tab_edit:
@@ -1178,11 +1183,10 @@ if __name__ == "__main__":
         col_status_global = find_col(df_i, ['status', 'approval', 'appr'])
         pending_count = 0
         if not df_i.empty and col_status_global and col_status_global in df_i.columns:
-            # Menghitung Antrean yang belum diapprove
             df_v = df_i[df_i[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])]
             pending_count = len(df_v)
 
-        ui_header(get_base64_image("pertamina.png"), pending_count)
+        ui_header(get_base64_image("pertamina.png"), pending_count, is_manager=(st.session_state.user_role == "Manajer"))
         ui_live_hud_widget() 
         ui_todo_widget()
 
