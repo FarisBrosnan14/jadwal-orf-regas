@@ -668,7 +668,7 @@ def ui_header(logo_base64, pending_count):
             <div>{logo}</div>
         </div>
         <div style="flex-grow:1; text-align:center;">
-            <h1 style="color:#004D95; font-weight:800; font-size:clamp(16px, 3vw, 24px); margin:0;">NR ORF Integrated Command</h1>
+            <h1 style="color:#004D95; font-weight:800; font-size:clamp(16px, 3vw, 24px); margin:0;">Dashboard Distribusi Gas</h1>
             <span style="font-size:12px; color:#64748b; font-weight:600;">Halo, {st.session_state.user_name} ({st.session_state.user_role})</span>
         </div>
         <div>{notif}</div>
