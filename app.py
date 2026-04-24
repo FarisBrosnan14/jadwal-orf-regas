@@ -42,7 +42,6 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
-    # FITUR SSO (AUTO-LOGIN VIA TOKEN DI URL)
     if "auth" in st.query_params:
         try:
             token = st.query_params["auth"]
@@ -74,9 +73,13 @@ def find_col(df, keywords, default_name):
     return default_name
 
 def get_val(row, keywords, default='-'):
+    """Mengambil nilai baris berdasarkan kata kunci kolom dengan pelindung NaN"""
     for col in row.index:
         if any(kw in str(col).lower() for kw in keywords):
-            return row[col]
+            val = str(row[col]).strip()
+            if val.lower() in ['nan', 'none', 'null', '']:
+                return default
+            return val
     return default
 
 def parse_natural_language_schedule(text, df_j):
@@ -110,18 +113,26 @@ def parse_natural_language_schedule(text, df_j):
         except: pass
     return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
 
-def generate_html_card(row, delay):
-    nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], 'Tidak Diketahui')
+def generate_html_card(row, col_nama, delay):
+    # Fallback yang aman untuk pembacaan kolom
+    nama = str(row.get(col_nama, get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], 'Tidak Diketahui'))).strip()
+    if nama.lower() in ['nan', 'none', 'null', '']: nama = 'Tidak Diketahui'
+    
     tgl_mulai = get_val(row, ['mulai', 'dari'], '-')
     tgl_selesai = get_val(row, ['selesai', 'sampai'], '-')
     shift = get_val(row, ['shift'], 'Pg')
-    alasan = str(get_val(row, ['alasan', 'keterangan'], '-')).strip()
-    bukti = str(get_val(row, ['bukti', 'upload', 'dokumen'], '')).strip()
-    pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], '-')
-    jenis = get_val(row, ['jenis', 'kategori', 'izin'], 'Izin')
     
-    if alasan.lower() in ['nan', 'none', '']: alasan = 'Tidak ada keterangan'
+    alasan = str(get_val(row, ['alasan', 'keterangan'], '-')).strip()
+    if alasan.lower() in ['nan', 'none', 'null', '']: alasan = 'Tidak ada keterangan'
+    
+    bukti = str(get_val(row, ['bukti', 'upload', 'dokumen'], '')).strip()
     bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#64748b;'>Tidak ada lampiran</span>"
+    
+    pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], '-')
+    if pengganti.lower() in ['nan', 'none', 'null', '']: pengganti = '-'
+    
+    jenis = get_val(row, ['jenis', 'kategori', 'izin'], 'Izin')
+    if jenis.lower() in ['nan', 'none', 'null', '']: jenis = 'Izin'
     
     return f"""
     <div style='animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) {delay}s both;'>
@@ -137,7 +148,7 @@ def generate_html_card(row, delay):
 
 
 # =====================================================================
-# 3. DATABASE (GSPREAD) - KEBAL ERROR
+# 3. DATABASE (GSPREAD) - ANTI DUMMY ROWS
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -156,14 +167,14 @@ def load_kontak_data():
             if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
                 raw_k = ws.get_all_values()
                 if raw_k:
-                    # Memastikan tidak ada kolom duplikat yang membuat Pandas crash
+                    # Memastikan header unik
                     headers = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(raw_k[0])]
                     df_k = pd.DataFrame(raw_k[1:], columns=headers)
                 break
     except: pass
     return df_k
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=30)
 def load_jadwal_izin_data():
     client = get_client()
     df_j, df_i = pd.DataFrame(), pd.DataFrame()
@@ -177,20 +188,20 @@ def load_jadwal_izin_data():
             df_j = pd.DataFrame(ws_j_data[1:], columns=headers_j)
             if 'Nama Operator' in df_j.columns:
                 df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
+                df_j = df_j[~df_j['Nama Operator'].astype(str).str.lower().isin(['nan', 'none', 'null'])]
     except: pass
 
-    # Load Izin (ANTI CRASH)
+    # Load Izin (ANTI DUMMY ROW)
     try:
         ws_i_data = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
         if len(ws_i_data) > 1:
-            # Memaksa pemberian nama unik jika kolom dari Google Form kosong/duplikat
             headers_i = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_i_data[0])]
             df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
             
-            col_nama = find_col(df_i, ['nama', 'lengkap', 'operator', 'pengaju'], None)
-            if col_nama:
-                df_i = df_i[df_i[col_nama].astype(str).str.strip() != '']
-                df_i = df_i[~df_i[col_nama].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+            # PEMBERSIHAN KETAT: Buang baris yang kolom pertamanya (Timestamp) kosong
+            col_0 = df_i.columns[0]
+            df_i = df_i[df_i[col_0].astype(str).str.strip() != '']
+            df_i = df_i[~df_i[col_0].astype(str).str.lower().isin(['nan', 'none', 'null'])]
     except: pass
     
     return df_j, df_i
@@ -221,7 +232,7 @@ def fetch_todo_from_sheet():
             elif target:
                 default_data["tasks"][target] = {"task": task, "comment": comment}
         return default_data
-    except:
+    except Exception as e:
         return default_data
 
 def push_todo_to_sheet(main_msg, tasks_dict):
@@ -371,8 +382,9 @@ def clear_pending_requests(df_i):
         col_nama = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
         if not col_nama: return
         
-        df_valid = df_i.dropna(subset=[col_nama])
-        pending_rows = df_valid[df_valid[col_status].isna() | (df_valid[col_status].astype(str).str.strip() == "")]
+        df_valid = df_i[~df_i[col_nama].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+        pending_rows = df_valid[df_valid[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
+        
         if pending_rows.empty: return st.info("Tidak ada antrean.")
         indices = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         for r in indices: sh_izin.delete_rows(r)
@@ -404,24 +416,31 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN PUTIH SOLID - MENGALAHKAN DARK MODE */
+        /* KOTAK LOGIN PUTIH SOLID - MENGALAHKAN DARK MODE SECARA MUTLAK */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] {
-            background-color: rgba(15, 23, 42, 0.4) !important;
-            background: rgba(15, 23, 42, 0.4) !important;
-            backdrop-filter: blur(15px) !important;
-            -webkit-backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
             border-radius: 16px !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
             padding: 30px !important;
+            backdrop-filter: none !important; 
+            -webkit-backdrop-filter: none !important;
         }
         
-        /* TULISAN JUDUL (TERANG) */
-        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.5) !important; }
-        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+        /* WARNA SEMUA TEKS DALAM KOTAK LOGIN DIJADIKAN GELAP MUTLAK */
+        div[data-testid="stVerticalBlockBorderWrapper"] p, 
+        div[data-testid="stVerticalBlockBorderWrapper"] span,
+        div[data-testid="stVerticalBlockBorderWrapper"] label,
+        div[data-testid="stVerticalBlockBorderWrapper"] div { 
+            color: #0f172a !important; 
+            text-shadow: none !important;
+        }
         
-        label p, .stMarkdown p { color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+        /* Judul Login */
+        .login-title { color: #004D95 !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
         
         /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
@@ -443,7 +462,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             -webkit-text-fill-color: #0f172a !important;
         }
         
-        /* TOMBOL MASUK */
+        /* TOMBOL MASUK KEMBALI WARNA PUTIH/BIRU */
         div[data-testid="stVerticalBlockBorderWrapper"] button,
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
@@ -478,6 +497,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             transition: all 0.3s; 
         }
         
+        /* INPUT FORM DASHBOARD */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
@@ -490,6 +510,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
         .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
         
+        /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
         
@@ -849,12 +870,8 @@ def ui_todo_widget():
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
-            if(expanders.length > 0) {
-                if(expanders[0].hasAttribute('open')) {
-                    expanders[0].querySelector('summary').click();
-                }
-            }
+            const mainExp = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
+            if(mainExp && mainExp.hasAttribute('open')) { mainExp.querySelector('summary').click(); }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
@@ -1029,8 +1046,9 @@ def ui_manager_panel(df_i, df_j):
                 df_i["Status Approval"] = ""
                 col_status = "Status Approval"
                 
-            df_valid = df_i[df_i[col_nama].astype(str).str.strip() != ""]
-            pending_df = df_valid[df_valid[col_status].isna() | (df_valid[col_status].astype(str).str.strip() == "")]
+            # Filter yang benar-benar bersih dari NaN string
+            df_valid = df_i[~df_i[col_nama].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+            pending_df = df_valid[df_valid[col_status].astype(str).str.lower().isin(["", "nan", "none", "null"])]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
             with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
@@ -1153,12 +1171,14 @@ if __name__ == "__main__":
     if is_login_page:
         ui_login(df_j)
     else:
-        # Pengecekan pending count agar lebih tangguh
+        # Penghitungan Antrean Izin (Kebal Dummy Rows)
         col_status_global = find_col(df_i, ['status', 'approval', 'appr'], None)
+        col_nama_global = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
+        
         pending_count = 0
-        if not df_i.empty and col_status_global and col_status_global in df_i.columns:
-            df_v = df_i.dropna(subset=[find_col(df_i, ['nama', 'operator'], 'Nama Operator')])
-            pending_count = len(df_v[df_v[col_status_global].isna() | (df_v[col_status_global].astype(str).str.strip() == "")])
+        if not df_i.empty and col_nama_global and col_status_global and col_status_global in df_i.columns:
+            df_v = df_i[~df_i[col_nama_global].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+            pending_count = len(df_v[df_v[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])])
 
         ui_header(get_base64_image("pertamina.png"), pending_count)
         ui_live_hud_widget() 
