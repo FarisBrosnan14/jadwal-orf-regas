@@ -118,7 +118,7 @@ def generate_html_card(row, delay):
     alasan = str(get_val(row, ['alasan', 'keterangan'], '-')).strip()
     bukti = str(get_val(row, ['bukti', 'upload', 'dokumen'], '')).strip()
     pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], '-')
-    jenis = get_val(row, ['jenis', 'kategori'], 'Izin')
+    jenis = get_val(row, ['jenis', 'kategori', 'izin'], 'Izin')
     
     if alasan.lower() in ['nan', 'none', '']: alasan = 'Tidak ada keterangan'
     bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#64748b;'>Tidak ada lampiran</span>"
@@ -137,7 +137,7 @@ def generate_html_card(row, delay):
 
 
 # =====================================================================
-# 3. DATABASE (GSPREAD)
+# 3. DATABASE (GSPREAD) - KEBAL ERROR
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -156,29 +156,43 @@ def load_kontak_data():
             if 'data' in ws.title.lower() and 'operator' in ws.title.lower():
                 raw_k = ws.get_all_values()
                 if raw_k:
-                    temp_df = pd.DataFrame(raw_k)
-                    h_idx = next((i for i, r in temp_df.iterrows() if any('nama' in str(v).lower() and 'operator' in str(v).lower() for v in r.values)), -1)
-                    if h_idx != -1: df_k = pd.DataFrame(temp_df.values[h_idx+1:], columns=[str(h).strip() for h in temp_df.iloc[h_idx]])
+                    # Memastikan tidak ada kolom duplikat yang membuat Pandas crash
+                    headers = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(raw_k[0])]
+                    df_k = pd.DataFrame(raw_k[1:], columns=headers)
                 break
     except: pass
     return df_k
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=15)
 def load_jadwal_izin_data():
     client = get_client()
     df_j, df_i = pd.DataFrame(), pd.DataFrame()
     if not client: return df_j, df_i
+    
+    # Load Jadwal
     try:
-        ws_j = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
-        if len(ws_j) > 1:
-            df_j = pd.DataFrame(ws_j[1:], columns=ws_j[0])
-            if 'Nama Operator' in df_j.columns: df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
-
-        ws_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
-        if len(ws_i) > 1:
-            df_i = pd.DataFrame(ws_i[1:], columns=ws_i[0])
-            # DIBUAT LEBIH LONGGAR AGAR TIDAK MENGHAPUS DATA SECARA TIDAK SENGAJA
+        ws_j_data = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
+        if len(ws_j_data) > 1:
+            headers_j = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_j_data[0])]
+            df_j = pd.DataFrame(ws_j_data[1:], columns=headers_j)
+            if 'Nama Operator' in df_j.columns:
+                df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
     except: pass
+
+    # Load Izin (ANTI CRASH)
+    try:
+        ws_i_data = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
+        if len(ws_i_data) > 1:
+            # Memaksa pemberian nama unik jika kolom dari Google Form kosong/duplikat
+            headers_i = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_i_data[0])]
+            df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
+            
+            col_nama = find_col(df_i, ['nama', 'lengkap', 'operator', 'pengaju'], None)
+            if col_nama:
+                df_i = df_i[df_i[col_nama].astype(str).str.strip() != '']
+                df_i = df_i[~df_i[col_nama].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+    except: pass
+    
     return df_j, df_i
 
 @st.cache_data(ttl=60)
@@ -207,7 +221,7 @@ def fetch_todo_from_sheet():
             elif target:
                 default_data["tasks"][target] = {"task": task, "comment": comment}
         return default_data
-    except Exception as e:
+    except:
         return default_data
 
 def push_todo_to_sheet(main_msg, tasks_dict):
@@ -267,7 +281,7 @@ def reply_todo_operator(nama_operator, komentar, user_name):
                 fetch_todo_from_sheet.clear()
                 return True
         return False
-    except Exception as e:
+    except:
         return False
 
 def load_all_data():
@@ -275,17 +289,17 @@ def load_all_data():
     df_k = load_kontak_data()
     return df_j, df_i, df_k
 
-def execute_database_action(idx, row, action_type, approver_name, df_j):
+def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
     client = get_client()
     if not client: return st.error("Gagal terhubung.")
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
         
-        col_status = find_col(row.to_frame().T, ['status', 'approval', 'appr'], None)
+        col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
         if col_status:
-            c_idx = row.index.get_loc(col_status) + 1
+            c_idx = list(df_i.columns).index(col_status) + 1
         else:
-            c_idx = len(row.index) + 1
+            c_idx = len(df_i.columns) + 1
             sh_izin.update_cell(1, c_idx, "Status Approval")
             
         status_text = f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else ""
@@ -390,31 +404,24 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN PUTIH SOLID (Memaksa background putih dengan spesifikasi tertinggi) */
+        /* KOTAK LOGIN PUTIH SOLID - MENGALAHKAN DARK MODE */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+            background-color: rgba(15, 23, 42, 0.4) !important;
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(15px) !important;
+            -webkit-backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 16px !important;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
             padding: 30px !important;
-            backdrop-filter: none !important; /* Mematikan efek kaca */
-            -webkit-backdrop-filter: none !important;
         }
         
-        /* WARNA SEMUA TEKS DALAM KOTAK LOGIN DIJADIKAN GELAP */
-        div[data-testid="stVerticalBlockBorderWrapper"] p, 
-        div[data-testid="stVerticalBlockBorderWrapper"] span,
-        div[data-testid="stVerticalBlockBorderWrapper"] label,
-        div[data-testid="stVerticalBlockBorderWrapper"] div { 
-            color: #0f172a !important; 
-            text-shadow: none !important;
-        }
+        /* TULISAN JUDUL (TERANG) */
+        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.5) !important; }
+        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
         
-        /* Judul Login */
-        .login-title { color: #004D95 !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; }
-        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
+        label p, .stMarkdown p { color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
         
         /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
@@ -427,28 +434,33 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         
         /* TEKS INPUT (HITAM PEKAT) */
         div[data-baseweb="input"] input, 
-        div[data-baseweb="select"] span { 
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div,
+        div[data-baseweb="select"] div[class*="singleValue"] { 
             color: #0f172a !important; 
-            font-weight: 700 !important; 
+            font-weight: 800 !important; 
             font-size: 14px !important; 
             -webkit-text-fill-color: #0f172a !important;
         }
         
-        /* TOMBOL MASUK KEMBALI WARNA PUTIH/BIRU */
-        div[data-testid="stVerticalBlockBorderWrapper"] button { 
+        /* TOMBOL MASUK */
+        div[data-testid="stVerticalBlockBorderWrapper"] button,
+        .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
-            border: none !important; 
+            border: 1px solid rgba(56, 189, 248, 0.4) !important; 
             border-radius: 10px !important; 
             width: 100% !important; 
             padding: 12px !important; 
             margin-top: 15px !important;
             transition: all 0.2s !important; 
         }
-        div[data-testid="stVerticalBlockBorderWrapper"] button p {
+        div[data-testid="stVerticalBlockBorderWrapper"] button p,
+        .stButton>button p {
             color: #ffffff !important;
-            font-weight: 700 !important; 
+            font-weight: 800 !important; 
+            text-shadow: none !important;
         }
-        div[data-testid="stVerticalBlockBorderWrapper"] button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
+        .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
         # ---------------- HALAMAN DASHBOARD ----------------
@@ -466,7 +478,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             transition: all 0.3s; 
         }
         
-        /* INPUT FORM DASHBOARD */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
@@ -479,7 +490,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
         .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
         
-        /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
         
@@ -577,7 +587,7 @@ def ui_login(df_j):
     if logo_base64:
         st.markdown(f"""
         <div style="display: flex; justify-content: center; margin-bottom: 25px;">
-            <img src="data:image/png;base64,{logo_base64}" style="max-height: 80px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+            <img src="data:image/png;base64,{logo_base64}" style="max-height: 80px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
         </div>
         """, unsafe_allow_html=True)
         
@@ -823,19 +833,28 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Tombol Tutup Anti-Lag dengan JS murni
+        # Tombol Tutup Anti Lag Murni
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
             body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+            button {
+                width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); 
+                color: #38bdf8; border-radius: 8px; padding: 8px 0; 
+                font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; 
+                cursor: pointer; transition: all 0.2s ease;
+            }
             button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
             button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.2); }
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            const mainExp = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
-            if(mainExp && mainExp.hasAttribute('open')) { mainExp.querySelector('summary').click(); }
+            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
+            if(expanders.length > 0) {
+                if(expanders[0].hasAttribute('open')) {
+                    expanders[0].querySelector('summary').click();
+                }
+            }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
@@ -998,10 +1017,9 @@ def ui_manager_panel(df_i, df_j):
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
-        # Deteksi Kolom Nama lebih longgar
         col_nama = find_col(df_i, ['nama', 'pengaju', 'operator', 'lengkap'], None)
         if not col_nama and not df_i.empty and len(df_i.columns) > 1:
-            col_nama = df_i.columns[1] # Asumsi kolom 1 adalah Timestamp, kolom 2 adalah Nama
+            col_nama = df_i.columns[1] 
             
         if df_i.empty or not col_nama: 
             st.warning("Data form izin kosong atau belum ada pengajuan terbaru.")
@@ -1026,8 +1044,8 @@ def ui_manager_panel(df_i, df_j):
                     with st.container(border=True):
                         st.markdown(generate_html_card(row, delay=i*0.1), unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
-                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j)
-                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j)
+                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
+                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
             history_df = df_valid[df_valid[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
@@ -1045,7 +1063,7 @@ def ui_manager_panel(df_i, df_j):
                     
                     with st.container(border=True):
                         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): execute_database_action(_, row, "UNDO", approver_name, df_j)
+                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
 
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
