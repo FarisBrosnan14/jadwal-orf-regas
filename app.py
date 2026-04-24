@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
@@ -58,7 +59,7 @@ if 'last_seen_todo' not in st.session_state:
 
 
 # =====================================================================
-# 2. UTILITIES & AI PARSER (ANTI-ERROR & ANTI-DUPLICATE)
+# 2. UTILITIES & AI PARSER (ANTI-ERROR & POSITIONAL FALLBACK)
 # =====================================================================
 @st.cache_data
 def get_base64_image(file_name):
@@ -67,7 +68,6 @@ def get_base64_image(file_name):
     except: return None
 
 def find_col(df, keywords, exclude=None, default=None):
-    """Mencari nama kolom berdasarkan kata kunci, mengabaikan kolom pengecualian"""
     if exclude is None: exclude = []
     if df.empty: return default
     for col in df.columns:
@@ -76,9 +76,15 @@ def find_col(df, keywords, exclude=None, default=None):
             return col
     return default
 
-def get_val(row, keywords, exclude=None, default='-'):
-    """Mengambil isi baris secara spesifik, melanjutkan pencarian jika kosong"""
+def get_val(row, keywords, exclude=None, default='-', fallback_idx=None):
+    """
+    SISTEM BACA KEBAN BANTE: 
+    1. Coba cari nama kolom pakai teks (Keywords).
+    2. Kalau gagal (karena nama kolom form aneh), paksa baca dari urutan posisi kolom di Excel (fallback_idx).
+    """
     if exclude is None: exclude = []
+    
+    # Cara 1: Cari lewat nama header
     for col in row.index:
         col_str = str(col).lower()
         if any(kw in col_str for kw in keywords) and not any(ex in col_str for ex in exclude):
@@ -87,18 +93,59 @@ def get_val(row, keywords, exclude=None, default='-'):
             val_str = str(val).strip()
             if val_str and val_str.lower() not in ['nan', 'none', 'null']:
                 return val_str
+                
+    # Cara 2: Paksa lewat indeks urutan kolom Excel (Jika header gagal terbaca)
+    if fallback_idx is not None and fallback_idx < len(row):
+        val = row.iloc[fallback_idx]
+        if isinstance(val, pd.Series): val = val.iloc[0]
+        val_str = str(val).strip()
+        if val_str and val_str.lower() not in ['nan', 'none', 'null']:
+            return val_str
+            
     return default
 
+def parse_natural_language_schedule(text, df_j):
+    text = text.lower()
+    today = datetime.now()
+    nama_ditemukan = None
+    if not df_j.empty and 'Nama Operator' in df_j.columns:
+        for nama in df_j['Nama Operator'].dropna().astype(str).tolist():
+            nama_bersih = nama.replace('*', '').strip().lower()
+            if nama_bersih in text or nama_bersih.split()[0] in text:
+                nama_ditemukan = nama
+                break
+    
+    status_baru = "SAKIT" if any(k in text for k in ["sakit"]) else "CUTI" if any(k in text for k in ["cuti", "libur"]) else "OFF" if "off" in text else "PD" if any(k in text for k in ["dinas", "pd"]) else "PG" if "pagi" in text else "MLM" if "malam" in text else None
+    tanggal_mulai, tanggal_selesai = None, None
+    
+    if "hari ini" in text: tanggal_mulai = tanggal_selesai = today
+    elif "besok" in text: tanggal_mulai = tanggal_selesai = today + timedelta(days=1)
+    elif "lusa" in text: tanggal_mulai = tanggal_selesai = today + timedelta(days=2)
+    else:
+        match_r = re.search(r'(\d{1,2})\s*(?:-|sampai|s/d)\s*(\d{1,2})', text)
+        match_t = re.search(r'(\d{1,2})', text)
+        b, t = today.month, today.year
+        try:
+            if match_r:
+                aw, ak = int(match_r.group(1)), int(match_r.group(2))
+                if 1<=aw<=31 and 1<=ak<=31: tanggal_mulai, tanggal_selesai = datetime(t, b, aw), datetime(t, b, ak)
+            elif match_t:
+                tgl = int(match_t.group(1))
+                if 1<=tgl<=31: tanggal_mulai = tanggal_selesai = datetime(t, b, tgl)
+        except: pass
+    return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
+
 def generate_izin_card_html(row, delay=0.0):
-    # Mengambil Nama (Secara ketat memastikan bukan kolom Pengganti)
-    nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti', 'ganti', 'backup'], default='Tidak Diketahui')
-    tgl_mulai = get_val(row, ['mulai', 'dari'], default='-')
-    tgl_selesai = get_val(row, ['selesai', 'sampai'], default='-')
-    shift = get_val(row, ['shift'], default='Pg')
-    alasan = get_val(row, ['alasan', 'keterangan'], default='Tidak ada keterangan')
-    bukti = get_val(row, ['bukti', 'upload', 'dokumen'], default='')
-    pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], default='-')
-    jenis = get_val(row, ['jenis', 'kategori', 'izin'], default='Izin')
+    # Mapping Indeks Fallback berdasarkan screenshot Excel:
+    # 0=Timestamp, 1=Nama, 2=Jenis, 3=Mulai, 4=Selesai, 5=Shift, 6=Bukti, 7=Pengganti, 8=Alasan
+    nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti', 'ganti', 'backup'], default='Tidak Diketahui', fallback_idx=1)
+    jenis = get_val(row, ['jenis', 'kategori', 'izin'], default='Izin', fallback_idx=2)
+    tgl_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
+    tgl_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
+    shift = get_val(row, ['shift'], default='Pg', fallback_idx=5)
+    bukti = get_val(row, ['bukti', 'upload', 'dokumen'], default='', fallback_idx=6)
+    pengganti = get_val(row, ['pengganti', 'backup', 'ganti'], default='-', fallback_idx=7)
+    alasan = get_val(row, ['alasan', 'keterangan'], default='Tidak ada keterangan', fallback_idx=8)
     
     bukti_html = f"<a href='{bukti}' target='_blank' style='color:#38bdf8;'>Buka Dokumen</a>" if bukti.startswith('http') else "<span style='color:#64748b;'>Tidak ada lampiran</span>"
     
@@ -153,8 +200,11 @@ def load_jadwal_izin_data():
         if len(ws_j_data) > 1:
             headers_j = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_j_data[0])]
             df_j = pd.DataFrame(ws_j_data[1:], columns=headers_j)
+            
+            df_j = df_j.map(lambda x: str(x).strip() if isinstance(x, str) else x)
             if 'Nama Operator' in df_j.columns:
-                df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
+                df_j = df_j[df_j['Nama Operator'] != '']
+                df_j = df_j[~df_j['Nama Operator'].str.lower().isin(['nan', 'none', 'null'])]
     except: pass
 
     # Load Izin dengan Pemusnah Baris Kosong (Ghost Row Killer)
@@ -164,11 +214,14 @@ def load_jadwal_izin_data():
             headers_i = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_i_data[0])]
             df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
             
-            # MEMUSNAHKAN BARIS HANTU: Buang baris yang Timestamp-nya (kolom paling kiri) kosong
+            df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
+            df_i = df_i.dropna(thresh=2) # Buang baris yang isinya cuma 1 kolom / kosong
+            df_i = df_i.fillna('')
+            
+            # Buang baris yang kolom pertamanya (Timestamp) tidak ada isinya
             if len(df_i.columns) > 0:
                 col_waktu = df_i.columns[0]
                 df_i = df_i[df_i[col_waktu].astype(str).str.strip() != '']
-                df_i = df_i[~df_i[col_waktu].astype(str).str.lower().isin(['nan', 'none', 'null'])]
     except: pass
     
     return df_j, df_i
@@ -286,8 +339,8 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
         if action_type == "APPROVE" or (action_type == "UNDO" and "APPROVED" in stat):
             sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
             
-            t_mulai = get_val(row, ['mulai', 'dari'])
-            t_selesai = get_val(row, ['selesai', 'sampai'])
+            t_mulai = get_val(row, ['mulai', 'dari'], fallback_idx=3)
+            t_selesai = get_val(row, ['selesai', 'sampai'], fallback_idx=4)
             
             try:
                 d_start = pd.to_datetime(t_mulai, dayfirst=True).date()
@@ -296,10 +349,10 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
                 st.error("Format tanggal tidak valid. Lewati integrasi jadwal.")
                 return
             
-            app = str(get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'])).strip().lower()
-            sub = str(get_val(row, ['pengganti', 'backup'])).strip().lower()
-            jenis = str(get_val(row, ['jenis', 'kategori'], default='IZIN')).upper()
-            shift = str(get_val(row, ['shift'], default='PG')).title()
+            app = str(get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'], fallback_idx=1)).strip().lower()
+            sub = str(get_val(row, ['pengganti', 'backup'], fallback_idx=7)).strip().lower()
+            jenis = str(get_val(row, ['jenis', 'kategori'], default='IZIN', fallback_idx=2)).upper()
+            shift = str(get_val(row, ['shift'], default='PG', fallback_idx=5)).title()
             
             updates = []
             for d in pd.date_range(d_start, d_end):
@@ -319,6 +372,24 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
         st.rerun()
     except Exception as e: st.error(f"Error API: {e}")
 
+def execute_smart_edit(nama, status, d_start, d_end, df_j):
+    client = get_client()
+    try:
+        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+        updates = []
+        match_p = df_j[df_j.iloc[:,0].astype(str).str.replace('*', '', regex=False).str.strip().str.lower() == nama.replace('*', '').strip().lower()]
+        if not match_p.empty:
+            r_idx = int(match_p.index[0]) + 2
+            for d in pd.date_range(d_start, d_end):
+                d_str = d.strftime('%Y-%m-%d')
+                if d_str in df_j.columns: updates.append(gspread.Cell(r_idx, list(df_j.columns).index(d_str) + 1, status.upper()))
+            if updates: 
+                sh_aktual.update_cells(updates)
+                load_jadwal_izin_data.clear()
+                time.sleep(1)
+                st.rerun()
+    except: pass
+
 def clear_pending_requests(df_i):
     client = get_client()
     try:
@@ -328,7 +399,6 @@ def clear_pending_requests(df_i):
             
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
         
-        # Cari baris yang statusnya benar-benar kosong
         pending_rows = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
         if pending_rows.empty: return st.info("Tidak ada antrean.")
         
@@ -362,29 +432,26 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN PUTIH SOLID */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] {
-            background-color: rgba(15, 23, 42, 0.4) !important;
-            background: rgba(15, 23, 42, 0.4) !important;
-            backdrop-filter: blur(15px) !important;
-            -webkit-backdrop-filter: blur(15px) !important;
+            background-color: rgba(15, 23, 42, 0.65) !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 16px !important;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
             padding: 30px !important;
         }
         
-        /* TULISAN JUDUL (PUTIH TERANG MUTLAK) */
-        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.5) !important; -webkit-text-fill-color: #ffffff !important;}
-        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; -webkit-text-fill-color: #e2e8f0 !important;}
+        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 34px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;}
+        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #e2e8f0 !important;}
         
         div[data-testid="stVerticalBlockBorderWrapper"] label p, 
         div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p { 
-            color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; -webkit-text-fill-color: #ffffff !important;
+            color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;
         }
         
-        /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
         div[data-baseweb="select"] > div {
             background-color: #f1f5f9 !important; 
@@ -393,7 +460,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             min-height: 42px !important;
         }
         
-        /* TEKS INPUT (HITAM PEKAT) */
         div[data-baseweb="input"] input, 
         div[data-baseweb="select"] span,
         div[data-baseweb="select"] div,
@@ -404,11 +470,10 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             -webkit-text-fill-color: #0f172a !important;
         }
         
-        /* TOMBOL MASUK */
         div[data-testid="stVerticalBlockBorderWrapper"] button,
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
-            border: 1px solid rgba(56, 189, 248, 0.4) !important; 
+            border: 1px solid rgba(56, 189, 248, 0.5) !important; 
             border-radius: 10px !important; 
             width: 100% !important; 
             padding: 12px !important; 
@@ -430,7 +495,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK DASHBOARD (KACA GELAP) */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] { 
             border-radius: 16px; 
@@ -476,19 +540,16 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
         .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
         
-        /* EXPANDER TO DO LIST (UTAMA) */
         div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
         div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
         div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
         div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
         
-        /* SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
         div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
         
-        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
         @keyframes todoGlow { 
             0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
             50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
@@ -496,7 +557,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
         .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
         
-        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
         div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
         div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
         
@@ -795,12 +855,16 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Tombol Tutup Anti Lag
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
             body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+            button {
+                width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); 
+                color: #38bdf8; border-radius: 8px; padding: 8px 0; 
+                font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; 
+                cursor: pointer; transition: all 0.2s ease;
+            }
             button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
             button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.2); }
         </style>
@@ -858,10 +922,10 @@ def ui_timeline(df_j, df_i):
             appr_df = df_i[df_i[col_status].astype(str).str.upper().str.contains('APPROVED', na=False)]
             for _, row in appr_df.iterrows():
                 try:
-                    sub = str(get_val(row, ['pengganti', 'backup'], default='')).strip().lower()
+                    sub = str(get_val(row, ['pengganti', 'backup'], fallback_idx=7)).strip().lower()
                     if sub and sub not in ['nan', '-']:
-                        tgl_m = get_val(row, ['mulai', 'dari'], default=today.strftime('%d/%m/%Y'))
-                        tgl_s = get_val(row, ['selesai', 'sampai'], default=today.strftime('%d/%m/%Y'))
+                        tgl_m = get_val(row, ['mulai', 'dari'], default=today.strftime('%d/%m/%Y'), fallback_idx=3)
+                        tgl_s = get_val(row, ['selesai', 'sampai'], default=today.strftime('%d/%m/%Y'), fallback_idx=4)
                         for d in pd.date_range(pd.to_datetime(tgl_m, dayfirst=True).date(), pd.to_datetime(tgl_s, dayfirst=True).date()):
                             subs_map.setdefault(d.strftime('%Y-%m-%d'), []).append(sub)
                 except Exception: pass
@@ -972,17 +1036,16 @@ def ui_manager_panel(df_i, df_j):
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
-        # PENCARIAN KOLOM STATUS
-        col_status = find_col(df_i, ['status', 'approval', 'appr'])
-        if not col_status and not df_i.empty:
-            df_i["Status Approval"] = ""
-            col_status = "Status Approval"
-            
         if df_i.empty: 
             st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
         else:
-            # FILTER HANYA BARIS YANG STATUSNYA KOSONG
-            pending_df = df_i[df_i[col_status].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+            col_status = find_col(df_i, ['status', 'approval', 'appr'])
+            if not col_status or col_status not in df_i.columns:
+                df_i["Status Approval"] = ""
+                col_status = "Status Approval"
+                
+            # Filter hanya baris yang statusnya kosong (belum diapprove/reject)
+            pending_df = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
             with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
@@ -1011,9 +1074,9 @@ def ui_manager_panel(df_i, df_j):
                     is_appr = "APPROVED" in status
                     c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
                     
-                    nama_pengaju = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'], default='Tidak Diketahui')
-                    t_mulai = get_val(row, ['mulai', 'dari'], default='-')
-                    t_selesai = get_val(row, ['selesai', 'sampai'], default='-')
+                    nama_pengaju = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'], default='Tidak Diketahui', fallback_idx=1)
+                    t_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
+                    t_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
                     
                     with st.container(border=True):
                         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
