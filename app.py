@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
@@ -42,7 +43,6 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
-    # FITUR SSO (AUTO-LOGIN VIA TOKEN DI URL)
     if "auth" in st.query_params:
         try:
             token = st.query_params["auth"]
@@ -74,12 +74,12 @@ def find_col(df, keywords, default_name):
     return default_name
 
 def get_val(row, keywords, default='-'):
-    """Mengambil nilai baris dengan pelindung anti-error (Tahan banting terhadap duplikasi/NaN)"""
+    """Fungsi tangguh pembaca baris anti-error duplikasi Google Sheets"""
     for col in row.index:
         if any(kw in str(col).lower() for kw in keywords):
             val = row[col]
             if isinstance(val, pd.Series): 
-                val = val.iloc[0] # Ambil data pertama jika kolom duplikat
+                val = val.iloc[0] # Ambil isi pertama jika kolom duplikat
             val_str = str(val).strip()
             if val_str.lower() in ['nan', 'none', 'null', '']:
                 return default
@@ -117,8 +117,7 @@ def parse_natural_language_schedule(text, df_j):
         except: pass
     return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
 
-def generate_izin_card_html(row, delay):
-    """Nama fungsi diganti agar terlepas dari konflik kode lama"""
+def generate_izin_card_html(row, delay=0.0):
     nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], 'Tidak Diketahui')
     tgl_mulai = get_val(row, ['mulai', 'dari'], '-')
     tgl_selesai = get_val(row, ['selesai', 'sampai'], '-')
@@ -144,7 +143,7 @@ def generate_izin_card_html(row, delay):
 
 
 # =====================================================================
-# 3. DATABASE (GSPREAD) - PEMBERSIHAN KETAT BARIS HANTU
+# 3. DATABASE (GSPREAD) - GHOST ROW KILLER (ANTI BARIS HANTU)
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -175,28 +174,33 @@ def load_jadwal_izin_data():
     df_j, df_i = pd.DataFrame(), pd.DataFrame()
     if not client: return df_j, df_i
     
+    # Load Jadwal
     try:
         ws_j_data = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
         if len(ws_j_data) > 1:
             headers_j = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_j_data[0])]
             df_j = pd.DataFrame(ws_j_data[1:], columns=headers_j)
-            df_j = df_j.dropna(how='all') # Hapus baris kosong absolut
+            
+            # Bersihkan spasi kosong
+            df_j = df_j.map(lambda x: str(x).strip() if isinstance(x, str) else x)
             if 'Nama Operator' in df_j.columns:
-                df_j = df_j[df_j['Nama Operator'].astype(str).str.strip() != '']
+                df_j = df_j[df_j['Nama Operator'] != '']
+                df_j = df_j[~df_j['Nama Operator'].str.lower().isin(['nan', 'none', 'null'])]
     except: pass
 
+    # Load Izin dengan GHOST ROW KILLER
     try:
         ws_i_data = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
         if len(ws_i_data) > 1:
             headers_i = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_i_data[0])]
             df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
-            df_i = df_i.dropna(how='all')
             
-            # PEMBUNUH BARIS HANTU: Hapus jika Timestamp kosong
-            if len(df_i.columns) > 0:
-                col_0 = df_i.columns[0]
-                df_i = df_i[df_i[col_0].astype(str).str.strip() != '']
-                df_i = df_i[~df_i[col_0].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+            # 1. Ubah semua string kosong atau spasi menjadi Not a Number (NaN)
+            df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
+            # 2. Buang secara mutlak baris yang minimal tidak memiliki 2 kolom terisi (Form asli minimal isi Timestamp & Nama)
+            df_i = df_i.dropna(thresh=2)
+            # 3. Kembalikan NaN menjadi string kosong agar aman ditampilkan
+            df_i = df_i.fillna('')
     except: pass
     
     return df_j, df_i
@@ -259,7 +263,7 @@ def push_todo_to_sheet(main_msg, tasks_dict):
                 
         fetch_todo_from_sheet.clear()
         return True
-    except Exception as e:
+    except:
         return False
 
 def reply_todo_operator(nama_operator, komentar, user_name):
@@ -373,13 +377,11 @@ def clear_pending_requests(df_i):
             return st.info("Tidak ada antrean yang harus dihapus.")
             
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        col_nama = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
-        if not col_nama: return
         
-        df_valid = df_i[~df_i[col_nama].astype(str).str.lower().isin(["", "nan", "none", "null"])]
-        pending_rows = df_valid[df_valid[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
-        
+        # Cari baris yang statusnya kosong
+        pending_rows = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
         if pending_rows.empty: return st.info("Tidak ada antrean.")
+        
         indices = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         for r in indices: sh_izin.delete_rows(r)
         load_jadwal_izin_data.clear()
@@ -410,29 +412,33 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        /* KOTAK LOGIN KACA GELAP */
+        /* KOTAK LOGIN PUTIH SOLID - MENGALAHKAN DARK MODE SECARA MUTLAK */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] {
-            background-color: rgba(15, 23, 42, 0.65) !important;
-            background: rgba(15, 23, 42, 0.65) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
             border-radius: 16px !important;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
             padding: 30px !important;
+            backdrop-filter: none !important; 
+            -webkit-backdrop-filter: none !important;
         }
         
-        /* TULISAN JUDUL (PUTIH TERANG MUTLAK) */
-        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 34px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;}
-        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #e2e8f0 !important;}
-        
-        div[data-testid="stVerticalBlockBorderWrapper"] label p, 
-        div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p { 
-            color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;
+        /* WARNA SEMUA TEKS DALAM KOTAK LOGIN DIJADIKAN GELAP MUTLAK */
+        div[data-testid="stVerticalBlockBorderWrapper"] p, 
+        div[data-testid="stVerticalBlockBorderWrapper"] span,
+        div[data-testid="stVerticalBlockBorderWrapper"] label,
+        div[data-testid="stVerticalBlockBorderWrapper"] div { 
+            color: #0f172a !important; 
+            text-shadow: none !important;
         }
         
-        /* ISIAN FORM (PUTIH ABU) */
+        /* Judul Login */
+        .login-title { color: #004D95 !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
+        
+        /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
         div[data-baseweb="select"] > div {
             background-color: #f1f5f9 !important; 
@@ -456,7 +462,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         div[data-testid="stVerticalBlockBorderWrapper"] button,
         .stButton>button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
-            border: 1px solid rgba(56, 189, 248, 0.5) !important; 
+            border: 1px solid rgba(56, 189, 248, 0.4) !important; 
             border-radius: 10px !important; 
             width: 100% !important; 
             padding: 12px !important; 
@@ -501,7 +507,6 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
         .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
         
-        /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
         
@@ -1036,9 +1041,8 @@ def ui_manager_panel(df_i, df_j):
                 df_i["Status Approval"] = ""
                 col_status = "Status Approval"
                 
-            # FILTER SUPER KETAT: Membuang baris kosong yang menjadi "nan"
-            df_valid = df_i[~df_i[col_nama].astype(str).str.lower().isin(["", "nan", "none", "null"])]
-            pending_df = df_valid[df_valid[col_status].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+            # Filter baris yang belum di-approve
+            pending_df = df_i[df_i[col_status].astype(str).str.lower().isin(["", "nan", "none", "null"])]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
             with col_hdr1: st.markdown("<br><h4 style='color:white; font-size:16px; margin-top:0; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#facc15;'>pending_actions</span> Antrean Persetujuan</h4>", unsafe_allow_html=True)
@@ -1046,17 +1050,25 @@ def ui_manager_panel(df_i, df_j):
                 if not pending_df.empty:
                     if st.button("🗑️ Hapus Semua Antrean"): clear_pending_requests(df_i)
 
-            if pending_df.empty: st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
-            else:
-                for i, (idx, row) in enumerate(pending_df.head(5).iterrows()):
-                    with st.container(border=True):
-                        st.markdown(generate_izin_card_html(row, delay=i*0.1), unsafe_allow_html=True)
-                        c1, c2 = st.columns(2)
-                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
-                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
+            # Iterasi & Render Kartu (Saring Baris Hantu yang mungkin lolos)
+            rendered_count = 0
+            for i, (idx, row) in enumerate(pending_df.iterrows()):
+                nama_pengaju = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], '')
+                if not nama_pengaju or str(nama_pengaju).strip().lower() in ['nan', 'none', 'null', 'tidak diketahui', '-']:
+                    continue # Skip baris hantu
+                
+                rendered_count += 1
+                with st.container(border=True):
+                    st.markdown(generate_izin_card_html(row, delay=rendered_count*0.1), unsafe_allow_html=True)
+                    c1, c2 = st.columns(2)
+                    if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
+                    if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
+            
+            if rendered_count == 0:
+                st.info("Tugas selesai. Tidak ada antrean izin saat ini.")
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
-            history_df = df_valid[df_valid[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
+            history_df = df_i[df_i[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
             
             if history_df.empty: st.info("Belum ada riwayat keputusan yang tercatat.")
             else:
@@ -1160,14 +1172,14 @@ if __name__ == "__main__":
     if is_login_page:
         ui_login(df_j)
     else:
-        # PENGHITUNGAN ANTREAN IZIN (ANTI-DUMMY ROW)
         col_status_global = find_col(df_i, ['status', 'approval', 'appr'], None)
-        col_nama_global = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
-        
         pending_count = 0
-        if not df_i.empty and col_nama_global and col_status_global and col_status_global in df_i.columns:
-            df_v = df_i[~df_i[col_nama_global].astype(str).str.lower().isin(["", "nan", "none", "null"])]
-            pending_count = len(df_v[df_v[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])])
+        if not df_i.empty and col_status_global and col_status_global in df_i.columns:
+            # Hitung antrean hanya untuk yang memiliki baris valid (non-dummy)
+            col_nama_global = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
+            if col_nama_global:
+                df_v = df_i[~df_i[col_nama_global].astype(str).str.lower().isin(["", "nan", "none", "null", "tidak diketahui"])]
+                pending_count = len(df_v[df_v[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])])
 
         ui_header(get_base64_image("pertamina.png"), pending_count)
         ui_live_hud_widget() 
