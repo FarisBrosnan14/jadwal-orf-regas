@@ -14,7 +14,7 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("logo-pertaminaregasv2.png")
+    favicon = Image.open("pertamina.png")
 except:
     favicon = "⚡"
 
@@ -77,14 +77,9 @@ def find_col(df, keywords, exclude=None, default=None):
     return default
 
 def get_val(row, keywords, exclude=None, default='-', fallback_idx=None):
-    """
-    SISTEM BACA KEBAN BANTE: 
-    1. Coba cari nama kolom pakai teks (Keywords).
-    2. Kalau gagal (karena nama kolom form aneh), paksa baca dari urutan posisi kolom di Excel (fallback_idx).
-    """
     if exclude is None: exclude = []
     
-    # Cara 1: Cari lewat nama header
+    # 1. Cari lewat nama header
     for col in row.index:
         col_str = str(col).lower()
         if any(kw in col_str for kw in keywords) and not any(ex in col_str for ex in exclude):
@@ -94,7 +89,7 @@ def get_val(row, keywords, exclude=None, default='-', fallback_idx=None):
             if val_str and val_str.lower() not in ['nan', 'none', 'null']:
                 return val_str
                 
-    # Cara 2: Paksa lewat indeks urutan kolom Excel (Jika header gagal terbaca)
+    # 2. Paksa lewat indeks urutan kolom Excel
     if fallback_idx is not None and fallback_idx < len(row):
         val = row.iloc[fallback_idx]
         if isinstance(val, pd.Series): val = val.iloc[0]
@@ -136,8 +131,6 @@ def parse_natural_language_schedule(text, df_j):
     return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
 
 def generate_izin_card_html(row, delay=0.0):
-    # Mapping Indeks Fallback berdasarkan screenshot Excel:
-    # 0=Timestamp, 1=Nama, 2=Jenis, 3=Mulai, 4=Selesai, 5=Shift, 6=Bukti, 7=Pengganti, 8=Alasan
     nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti', 'ganti', 'backup'], default='Tidak Diketahui', fallback_idx=1)
     jenis = get_val(row, ['jenis', 'kategori', 'izin'], default='Izin', fallback_idx=2)
     tgl_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
@@ -163,7 +156,7 @@ def generate_izin_card_html(row, delay=0.0):
 
 
 # =====================================================================
-# 3. DATABASE DENGAN GHOST ROW KILLER
+# 3. DATABASE DENGAN GHOST ROW KILLER & EXACT SYNC
 # =====================================================================
 @st.cache_resource
 def get_client():
@@ -194,7 +187,6 @@ def load_jadwal_izin_data():
     df_j, df_i = pd.DataFrame(), pd.DataFrame()
     if not client: return df_j, df_i
     
-    # Load Jadwal
     try:
         ws_j_data = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual").get_all_values()
         if len(ws_j_data) > 1:
@@ -207,7 +199,6 @@ def load_jadwal_izin_data():
                 df_j = df_j[~df_j['Nama Operator'].str.lower().isin(['nan', 'none', 'null'])]
     except: pass
 
-    # Load Izin dengan Pemusnah Baris Kosong (Ghost Row Killer)
     try:
         ws_i_data = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
         if len(ws_i_data) > 1:
@@ -215,10 +206,9 @@ def load_jadwal_izin_data():
             df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
             
             df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
-            df_i = df_i.dropna(thresh=2) # Buang baris yang isinya cuma 1 kolom / kosong
+            df_i = df_i.dropna(thresh=2)
             df_i = df_i.fillna('')
             
-            # Buang baris yang kolom pertamanya (Timestamp) tidak ada isinya
             if len(df_i.columns) > 0:
                 col_waktu = df_i.columns[0]
                 df_i = df_i[df_i[col_waktu].astype(str).str.strip() != '']
@@ -325,15 +315,20 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
         
-        col_status = find_col(df_i, ['status', 'approval', 'appr'])
-        if col_status:
-            c_idx = list(df_i.columns).index(col_status) + 1
-        else:
-            c_idx = len(df_i.columns) + 1
-            sh_izin.update_cell(1, c_idx, "Status Approval")
+        # Cari urutan kolom aktual di Google Sheet (Mencegah salah tulis kolom)
+        header_row = sh_izin.row_values(1)
+        col_status_idx = -1
+        for i, h in enumerate(header_row):
+            if any(kw in str(h).lower() for kw in ['status', 'approval', 'appr']):
+                col_status_idx = i + 1
+                break
+        
+        if col_status_idx == -1:
+            col_status_idx = len(header_row) + 1
+            sh_izin.update_cell(1, col_status_idx, "Status Approval")
             
         status_text = f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else ""
-        sh_izin.update_cell(int(idx)+2, c_idx, status_text)
+        sh_izin.update_cell(int(idx)+2, col_status_idx, status_text)
         
         stat = str(get_val(row, ['status', 'approval'], default='')).upper()
         if action_type == "APPROVE" or (action_type == "UNDO" and "APPROVED" in stat):
@@ -368,6 +363,9 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
                         m_s = df_j[df_j.iloc[:,0].astype(str).str.strip().str.lower() == sub]
                         if not m_s.empty: updates.append(gspread.Cell(int(m_s.index[0])+2, c_date, v_sub))
             if updates: sh_aktual.update_cells(updates)
+            
+        # JEDA 1.5 DETIK AGAR GOOGLE SHEETS SEMPAT MENYIMPAN SEBELUM HALAMAN DI-REFRESH
+        time.sleep(1.5)
         load_jadwal_izin_data.clear()
         st.rerun()
     except Exception as e: st.error(f"Error API: {e}")
@@ -1044,7 +1042,6 @@ def ui_manager_panel(df_i, df_j):
                 df_i["Status Approval"] = ""
                 col_status = "Status Approval"
                 
-            # Filter hanya baris yang statusnya kosong (belum diapprove/reject)
             pending_df = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
@@ -1061,8 +1058,12 @@ def ui_manager_panel(df_i, df_j):
                     with st.container(border=True):
                         st.markdown(generate_izin_card_html(row, delay=rendered_count*0.1), unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
-                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
-                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
+                        if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): 
+                            with st.spinner("Menyimpan & Mensinkronisasi..."):
+                                execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
+                        if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): 
+                            with st.spinner("Menyimpan Penolakan..."):
+                                execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
             history_df = df_i[df_i[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
@@ -1078,9 +1079,14 @@ def ui_manager_panel(df_i, df_j):
                     t_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
                     t_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
                     
+                    # FITUR TANDA CONTRENG (✅) DI SAMPING NAMA JIKA APPROVED
+                    mark = "✅" if is_appr else "❌"
+                    
                     with st.container(border=True):
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:14px; color:white;'>{nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
-                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:15px; color:white;'>{mark} {nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
+                        if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): 
+                            with st.spinner("Membatalkan Keputusan..."):
+                                execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
 
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
@@ -1169,15 +1175,12 @@ if __name__ == "__main__":
     if is_login_page:
         ui_login(df_j)
     else:
-        # PENGHITUNGAN NOTIFIKASI
+        col_status_global = find_col(df_i, ['status', 'approval', 'appr'])
         pending_count = 0
-        if not df_i.empty:
-            col_status_global = find_col(df_i, ['status', 'approval', 'appr'])
-            if col_status_global:
-                df_v = df_i[df_i[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])]
-                pending_count = len(df_v)
-            else:
-                pending_count = len(df_i)
+        if not df_i.empty and col_status_global and col_status_global in df_i.columns:
+            # Menghitung Antrean yang belum diapprove
+            df_v = df_i[df_i[col_status_global].astype(str).str.lower().isin(["", "nan", "none", "null"])]
+            pending_count = len(df_v)
 
         ui_header(get_base64_image("pertamina.png"), pending_count)
         ui_live_hud_widget() 
