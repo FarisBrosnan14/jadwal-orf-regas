@@ -42,6 +42,7 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
+    # FITUR SSO (AUTO-LOGIN VIA TOKEN DI URL)
     if "auth" in st.query_params:
         try:
             token = st.query_params["auth"]
@@ -58,7 +59,7 @@ if 'last_seen_todo' not in st.session_state:
 
 
 # =====================================================================
-# 2. UTILITIES & AI PARSER (SMART COLUMN DETECTION)
+# 2. UTILITIES & AI PARSER
 # =====================================================================
 @st.cache_data
 def get_base64_image(file_name):
@@ -73,7 +74,6 @@ def find_col(df, keywords, default_name):
     return default_name
 
 def get_val(row, keywords, default='-'):
-    """Mengambil nilai baris berdasarkan kata kunci kolom, kebal terhadap perubahan nama form"""
     for col in row.index:
         if any(kw in str(col).lower() for kw in keywords):
             return row[col]
@@ -111,7 +111,7 @@ def parse_natural_language_schedule(text, df_j):
     return {"nama": nama_ditemukan, "status": status_baru, "tgl_mulai": tanggal_mulai, "tgl_selesai": tanggal_selesai}
 
 def generate_html_card(row, delay):
-    nama = get_val(row, ['nama', 'pengaju', 'operator'], 'Tidak Diketahui')
+    nama = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], 'Tidak Diketahui')
     tgl_mulai = get_val(row, ['mulai', 'dari'], '-')
     tgl_selesai = get_val(row, ['selesai', 'sampai'], '-')
     shift = get_val(row, ['shift'], 'Pg')
@@ -177,12 +177,7 @@ def load_jadwal_izin_data():
         ws_i = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0).get_all_values()
         if len(ws_i) > 1:
             df_i = pd.DataFrame(ws_i[1:], columns=ws_i[0])
-            
-            # Dinamis mencari kolom nama
-            col_nama = find_col(df_i, ['nama', 'lengkap', 'operator'], None)
-            if col_nama:
-                df_i = df_i[df_i[col_nama].astype(str).str.strip() != '']
-                df_i = df_i[~df_i[col_nama].astype(str).str.lower().isin(['nan', 'none', 'null'])]
+            # DIBUAT LEBIH LONGGAR AGAR TIDAK MENGHAPUS DATA SECARA TIDAK SENGAJA
     except: pass
     return df_j, df_i
 
@@ -286,13 +281,12 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
         
-        # Cari lokasi kolom Status, buat jika tidak ada
         col_status = find_col(row.to_frame().T, ['status', 'approval', 'appr'], None)
         if col_status:
             c_idx = row.index.get_loc(col_status) + 1
         else:
             c_idx = len(row.index) + 1
-            sh_izin.update_cell(1, c_idx, "Status Approval") # Inject Header baru
+            sh_izin.update_cell(1, c_idx, "Status Approval")
             
         status_text = f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else ""
         sh_izin.update_cell(int(idx)+2, c_idx, status_text)
@@ -311,7 +305,7 @@ def execute_database_action(idx, row, action_type, approver_name, df_j):
                 st.error("Format tanggal tidak valid. Lewati integrasi jadwal.")
                 return
             
-            app = str(get_val(row, ['nama', 'pengaju', 'operator'], '')).strip().lower()
+            app = str(get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], '')).strip().lower()
             sub = str(get_val(row, ['pengganti', 'backup'], '')).strip().lower()
             jenis = str(get_val(row, ['jenis', 'kategori'], 'IZIN')).upper()
             shift = str(get_val(row, ['shift'], 'PG')).title()
@@ -360,7 +354,7 @@ def clear_pending_requests(df_i):
             return st.info("Tidak ada antrean (Kolom Status tidak ditemukan).")
             
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        col_nama = find_col(df_i, ['nama', 'operator'], None)
+        col_nama = find_col(df_i, ['nama', 'operator', 'lengkap', 'pengaju'], None)
         if not col_nama: return
         
         df_valid = df_i.dropna(subset=[col_nama])
@@ -396,20 +390,33 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
-        div[data-testid="stVerticalBlock"]:has(.login-title),
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.login-title) {
+        /* KOTAK LOGIN PUTIH SOLID (Memaksa background putih dengan spesifikasi tertinggi) */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"] {
             background-color: #ffffff !important;
             background: #ffffff !important;
             border: 1px solid #cbd5e1 !important;
             border-radius: 16px !important;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
             padding: 30px !important;
+            backdrop-filter: none !important; /* Mematikan efek kaca */
+            -webkit-backdrop-filter: none !important;
         }
         
-        label p, .stMarkdown p { color: #1e293b !important; font-weight: 700 !important; }
-        .login-title { color: #004D95 !important; font-weight: 900; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: none !important; }
+        /* WARNA SEMUA TEKS DALAM KOTAK LOGIN DIJADIKAN GELAP */
+        div[data-testid="stVerticalBlockBorderWrapper"] p, 
+        div[data-testid="stVerticalBlockBorderWrapper"] span,
+        div[data-testid="stVerticalBlockBorderWrapper"] label,
+        div[data-testid="stVerticalBlockBorderWrapper"] div { 
+            color: #0f172a !important; 
+            text-shadow: none !important;
+        }
+        
+        /* Judul Login */
+        .login-title { color: #004D95 !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; }
         .login-subtitle { color: #64748b !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
         
+        /* ISIAN FORM (ABU TERANG) */
         div[data-baseweb="input"] > div, 
         div[data-baseweb="select"] > div {
             background-color: #f1f5f9 !important; 
@@ -418,27 +425,30 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             min-height: 42px !important;
         }
         
+        /* TEKS INPUT (HITAM PEKAT) */
         div[data-baseweb="input"] input, 
-        div[data-baseweb="select"] span,
-        div[data-baseweb="select"] div,
-        div[data-baseweb="select"] div[class*="singleValue"] { 
+        div[data-baseweb="select"] span { 
             color: #0f172a !important; 
             font-weight: 700 !important; 
+            font-size: 14px !important; 
             -webkit-text-fill-color: #0f172a !important;
         }
         
-        .stButton>button { 
+        /* TOMBOL MASUK KEMBALI WARNA PUTIH/BIRU */
+        div[data-testid="stVerticalBlockBorderWrapper"] button { 
             background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
-            color: white !important; 
             border: none !important; 
             border-radius: 10px !important; 
-            font-weight: 700 !important; 
             width: 100% !important; 
             padding: 12px !important; 
             margin-top: 15px !important;
             transition: all 0.2s !important; 
         }
-        .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
+        div[data-testid="stVerticalBlockBorderWrapper"] button p {
+            color: #ffffff !important;
+            font-weight: 700 !important; 
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
         # ---------------- HALAMAN DASHBOARD ----------------
@@ -446,6 +456,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
         
         css += """
+        /* KOTAK DASHBOARD (KACA GELAP) */
         div[data-testid="stVerticalBlockBorderWrapper"],
         div[data-testid="stVerticalBlock"] > div[style*="border"] { 
             border-radius: 16px; 
@@ -455,6 +466,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
             transition: all 0.3s; 
         }
         
+        /* INPUT FORM DASHBOARD */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
         div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
         .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
@@ -467,6 +479,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
         .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
         
+        /* SCROLL CONTAINER TIMELINE */
         .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
         .scroll-container::-webkit-scrollbar { display: none; }
         
@@ -491,16 +504,19 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
         .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
         
+        /* EXPANDER TO DO LIST (UTAMA) */
         div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
         div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
         div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
         div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
         
+        /* SUB-EXPANDER (TANGGAPAN OPERATOR - NESTED) */
         div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
         div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
         
+        /* ANIMASI GLOW UPDATE TO DO LIST KUNING NEON */
         @keyframes todoGlow { 
             0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
             50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
@@ -508,6 +524,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
         .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
         .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
         
+        /* GAYA TAB STREAMLIT AGAR LEBIH KONTRAST */
         div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
         div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
         
@@ -806,27 +823,19 @@ def ui_todo_widget():
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
+        # Tombol Tutup Anti-Lag dengan JS murni
         components.html("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
             body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-            button {
-                width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); 
-                color: #38bdf8; border-radius: 8px; padding: 8px 0; 
-                font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; 
-                cursor: pointer; transition: all 0.2s ease;
-            }
+            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
             button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
             button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.2); }
         </style>
         <button onclick="
             const pDoc = window.parent.document;
-            const expanders = pDoc.querySelectorAll('div[data-testid=\\'stExpander\\'] details');
-            if(expanders.length > 0) {
-                if(expanders[0].hasAttribute('open')) {
-                    expanders[0].querySelector('summary').click();
-                }
-            }
+            const mainExp = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
+            if(mainExp && mainExp.hasAttribute('open')) { mainExp.querySelector('summary').click(); }
         ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
@@ -989,17 +998,20 @@ def ui_manager_panel(df_i, df_j):
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
     
     with tab_izin:
-        col_nama = find_col(df_i, ['nama', 'pengaju', 'operator'], None)
-        col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
-        
+        # Deteksi Kolom Nama lebih longgar
+        col_nama = find_col(df_i, ['nama', 'pengaju', 'operator', 'lengkap'], None)
+        if not col_nama and not df_i.empty and len(df_i.columns) > 1:
+            col_nama = df_i.columns[1] # Asumsi kolom 1 adalah Timestamp, kolom 2 adalah Nama
+            
         if df_i.empty or not col_nama: 
-            st.warning("Data form izin kosong atau belum ada pengajuan.")
+            st.warning("Data form izin kosong atau belum ada pengajuan terbaru.")
         else:
+            col_status = find_col(df_i, ['status', 'approval', 'appr'], None)
             if not col_status or col_status not in df_i.columns:
                 df_i["Status Approval"] = ""
                 col_status = "Status Approval"
                 
-            df_valid = df_i.dropna(subset=[col_nama])
+            df_valid = df_i[df_i[col_nama].astype(str).str.strip() != ""]
             pending_df = df_valid[df_valid[col_status].isna() | (df_valid[col_status].astype(str).str.strip() == "")]
 
             col_hdr1, col_hdr2 = st.columns([2, 1])
