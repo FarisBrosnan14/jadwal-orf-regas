@@ -14,11 +14,11 @@ from PIL import Image
 # 1. KONFIGURASI UTAMA
 # =====================================================================
 try:
-    favicon = Image.open("pertamina.png")
+    favicon = Image.open("logo-pertaminaregasv2.png")
 except:
     favicon = "⚡"
 
-st.set_page_config(page_title="NR ORF Command", page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Dashboard Distribusi Gas", page_icon=favicon, layout="wide", initial_sidebar_state="collapsed")
 
 ID_SHEET_JADWAL = "1HuIrvhzm7xzXXbX5Foy2XPms7NLzFyttgH58Ez31pj0"
 ID_SHEET_IZIN = "1mdr7InOGhuVwLCpgPW-fDVOMw38XvELlXK9sxJymMYU"
