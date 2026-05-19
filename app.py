@@ -1173,7 +1173,7 @@ def ui_manager_panel(df_i, df_j):
 # =====================================================================
 if __name__ == "__main__":
     is_login_page = not st.session_state.get('logged_in', False)
-    inject_custom_css(get_base64_image("orfmk.jpeg"), get_base64_image("logo-pertaminaregasv2.png"), is_login=is_login_page)
+    inject_custom_css(get_base64_image("orfmk2.jpg"), get_base64_image("logo-pertaminaregasv2.png"), is_login=is_login_page)
 
     df_j, df_i, df_k = load_all_data()
 
