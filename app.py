@@ -1,3 +1,14 @@
+Pembaruan yang sangat cerdas! Menambahkan masa tayang ( *expiration date* ) pada pengumuman adalah praktik standar *dashboard* operasional kelas atas. Ini memastikan layar utama operator selalu bersih dari informasi yang sudah kedaluwarsa tanpa harus dihapus secara manual setiap hari.
+
+Berikut adalah pembaruan yang telah diintegrasikan ke dalam sistem:
+
+1. **Pilihan Rentang Waktu:** Di Panel Manajer, pada saat mengedit pengumuman, sekarang terdapat kalender untuk memilih **Periode Tayang** (Mulai s/d Selesai).
+2. **Auto-Hide (Sembunyi Otomatis):** Sistem akan mengecek tanggal hari ini. Jika sudah melewati batas tanggal tayang, pesan tersebut akan otomatis "menghilang" dari layar operator.
+3. **Status Indikator Manajer:** Di panel manajer, Anda bisa melihat apakah pengumuman tersebut masih berstatus **🟢 AKTIF** atau sudah **🔴 EXPIRED** (Kedaluwarsa).
+
+Silakan salin dan timpa seluruh file `app.py` Anda dengan kode final yang sudah dibersihkan dari *bug* spasi ini:
+
+```python
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -219,7 +230,7 @@ def load_jadwal_izin_data():
 @st.cache_data(ttl=60)
 def fetch_todo_from_sheet():
     client = get_client()
-    default_data = {"main_msg": "", "tasks": {}, "last_updated": ""}
+    default_data = {"main_msg": "", "main_msg_date": "", "tasks": {}, "last_updated": ""}
     if not client: return default_data
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
@@ -237,6 +248,7 @@ def fetch_todo_from_sheet():
             
             if target == "PENGUMUMAN_UTAMA":
                 default_data["main_msg"] = task
+                default_data["main_msg_date"] = comment
             elif target == "LAST_UPDATED":
                 default_data["last_updated"] = task
             elif target:
@@ -245,7 +257,7 @@ def fetch_todo_from_sheet():
     except:
         return default_data
 
-def push_todo_to_sheet(main_msg, tasks_dict):
+def push_todo_to_sheet(main_msg, main_msg_date, tasks_dict):
     client = get_client()
     if not client: return False
     try:
@@ -260,7 +272,7 @@ def push_todo_to_sheet(main_msg, tasks_dict):
         time.sleep(0.5)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        rows = [["Target", "Task", "Comment"], ["PENGUMUMAN_UTAMA", main_msg, ""], ["LAST_UPDATED", timestamp, ""]]
+        rows = [["Target", "Task", "Comment"], ["PENGUMUMAN_UTAMA", main_msg, main_msg_date], ["LAST_UPDATED", timestamp, ""]]
         
         for op, task in tasks_dict.items():
             if task.strip():
@@ -649,11 +661,8 @@ def ui_login(df_j):
 def ui_header(logo_base64, pending_count, is_manager):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
     
-    # KLIK LONCENG HANYA UNTUK MANAJER
     if is_manager and pending_count > 0:
-        bell_click = "cursor:pointer; transition: transform 0.2s;"
-        bell_onclick = "onclick=\"const btns = Array.from(window.parent.document.querySelectorAll('button')); const mgrBtn = btns.find(b => b.innerText.includes('Panel Manajer')); if(mgrBtn) mgrBtn.click(); setTimeout(() => { const tabs = Array.from(window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']')); const izinTab = tabs.find(t => t.innerText.includes('Persetujuan Izin')); if(izinTab) izinTab.click(); }, 300);\""
-        notif = f'<div style="position:relative; {bell_click}" {bell_onclick} title="Klik untuk buka Antrean Izin!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
+        notif = f'<div id="bell-notif-btn" style="position:relative; cursor:pointer; transition: transform 0.2s;" title="Klik untuk buka Antrean Izin!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
     elif pending_count > 0:
         notif = f'<div style="position:relative;" title="Ada {pending_count} antrean!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
     else:
@@ -679,6 +688,30 @@ def ui_header(logo_base64, pending_count, is_manager):
         <div>{notif}</div>
     </div>
     """, unsafe_allow_html=True)
+
+    if is_manager and pending_count > 0:
+        components.html("""
+        <script>
+            setTimeout(() => {
+                const pDoc = window.parent.document;
+                const bell = pDoc.getElementById('bell-notif-btn');
+                if(bell) {
+                    bell.onclick = function() {
+                        const btns = Array.from(pDoc.querySelectorAll('button'));
+                        const mgrBtn = btns.find(b => b.innerText.includes('Panel Manajer'));
+                        if(mgrBtn) {
+                            mgrBtn.click();
+                            setTimeout(() => {
+                                const tabs = Array.from(pDoc.querySelectorAll('button[data-baseweb=\\'tab\\']'));
+                                const izinTab = tabs.find(t => t.innerText.includes('Persetujuan Izin'));
+                                if(izinTab) izinTab.click();
+                            }, 500);
+                        }
+                    };
+                }
+            }, 1000);
+        </script>
+        """, height=0, width=0)
 
 def ui_live_hud_widget():
     hari_ini = datetime.now().strftime("%m-%d")
@@ -817,11 +850,27 @@ def ui_todo_widget():
     
     expander_title = "📢 PENGUMUMAN & TO-DO LIST HARI INI ✨ BARU" if is_new else "📢 PENGUMUMAN & TO-DO LIST HARI INI"
     
+    show_main_msg = False
+    date_str = td.get('main_msg_date', '')
+    if td['main_msg'].strip():
+        if '|' in date_str:
+            try:
+                s, e = date_str.split('|')
+                d_s = datetime.strptime(s, "%Y-%m-%d").date()
+                d_e = datetime.strptime(e, "%Y-%m-%d").date()
+                today = datetime.now().date()
+                if d_s <= today <= d_e:
+                    show_main_msg = True
+            except:
+                show_main_msg = True
+        else:
+            show_main_msg = True
+    
     with st.expander(expander_title):
         if is_new:
             st.session_state.last_seen_todo = td['last_updated']
             
-        if td['main_msg'].strip():
+        if show_main_msg:
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
         has_task = False
@@ -854,7 +903,7 @@ def ui_todo_widget():
                                 
                 st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
         
-        if not has_task and not td['main_msg'].strip():
+        if not has_task and not show_main_msg:
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1084,7 +1133,6 @@ def ui_manager_panel(df_i, df_j):
                     t_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
                     t_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
                     
-                    # FITUR TANDA CONTRENG (✅) JIKA APPROVED
                     mark = "✅" if is_appr else "❌"
                     
                     with st.container(border=True):
@@ -1128,14 +1176,59 @@ def ui_manager_panel(df_i, df_j):
     with tab_todo:
         st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
         td = fetch_todo_from_sheet()
+        
+        is_active = False
+        date_str = td.get('main_msg_date', '')
         if td['main_msg'].strip():
-            st.info(td['main_msg'])
+            if '|' in date_str:
+                try:
+                    s, e = date_str.split('|')
+                    d_s = datetime.strptime(s, "%Y-%m-%d").date()
+                    d_e = datetime.strptime(e, "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    if d_s <= today <= d_e:
+                        is_active = True
+                except:
+                    is_active = True
+            else:
+                is_active = True
+
+        if td['main_msg'].strip():
+            if is_active:
+                st.info(f"🟢 AKTIF ({date_str.replace('|', ' s/d ')}):\n\n{td['main_msg']}")
+            else:
+                st.warning(f"🔴 EXPIRED ({date_str.replace('|', ' s/d ')}):\n\n{td['main_msg']}")
         else:
             st.write("Belum ada pengumuman umum.")
             
         with st.expander("✏️ Edit Pengumuman & Tugas Individu", expanded=True):
             st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
+            
             new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
+            
+            existing_dates = []
+            if '|' in date_str:
+                try:
+                    s, e = date_str.split('|')
+                    existing_dates = [datetime.strptime(s, "%Y-%m-%d").date(), datetime.strptime(e, "%Y-%m-%d").date()]
+                except: pass
+            if not existing_dates:
+                existing_dates = [datetime.now().date(), datetime.now().date() + timedelta(days=7)]
+                
+            new_dates = st.date_input("Periode Tayang Pengumuman:", value=existing_dates)
+            
+            if isinstance(new_dates, tuple):
+                if len(new_dates) == 2:
+                    date_to_save = f"{new_dates[0].strftime('%Y-%m-%d')}|{new_dates[1].strftime('%Y-%m-%d')}"
+                elif len(new_dates) == 1:
+                    date_to_save = f"{new_dates[0].strftime('%Y-%m-%d')}|{new_dates[0].strftime('%Y-%m-%d')}"
+                else:
+                    date_to_save = f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
+            else:
+                try:
+                    date_to_save = f"{new_dates.strftime('%Y-%m-%d')}|{new_dates.strftime('%Y-%m-%d')}"
+                except:
+                    date_to_save = f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
             
             st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
             operator_list = []
@@ -1157,12 +1250,12 @@ def ui_manager_panel(df_i, df_j):
             col_save, col_clear = st.columns(2)
             
             if col_save.button("💾 Simpan Perubahan ke Database", type="primary", use_container_width=True):
-                if push_todo_to_sheet(new_main_msg, new_tasks):
+                if push_todo_to_sheet(new_main_msg, date_to_save, new_tasks):
                     st.success("✅ Berhasil diperbarui!")
                     time.sleep(1)
                     st.rerun()
             if col_clear.button("🗑️ Bersihkan Semua", use_container_width=True):
-                if push_todo_to_sheet("", {}):
+                if push_todo_to_sheet("", "", {}):
                     st.success("✅ To-Do List berhasil dikosongkan!")
                     time.sleep(1)
                     st.rerun()
@@ -1218,3 +1311,5 @@ if __name__ == "__main__":
             ui_kalender_lengkap(df_j)
         elif st.session_state.menu == "Mgr" and st.session_state.user_role == "Manajer":
             ui_manager_panel(df_i, df_j)
+
+```
