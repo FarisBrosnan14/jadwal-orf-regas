@@ -1,14 +1,3 @@
-Pembaruan yang sangat cerdas! Menambahkan masa tayang ( *expiration date* ) pada pengumuman adalah praktik standar *dashboard* operasional kelas atas. Ini memastikan layar utama operator selalu bersih dari informasi yang sudah kedaluwarsa tanpa harus dihapus secara manual setiap hari.
-
-Berikut adalah pembaruan yang telah diintegrasikan ke dalam sistem:
-
-1. **Pilihan Rentang Waktu:** Di Panel Manajer, pada saat mengedit pengumuman, sekarang terdapat kalender untuk memilih **Periode Tayang** (Mulai s/d Selesai).
-2. **Auto-Hide (Sembunyi Otomatis):** Sistem akan mengecek tanggal hari ini. Jika sudah melewati batas tanggal tayang, pesan tersebut akan otomatis "menghilang" dari layar operator.
-3. **Status Indikator Manajer:** Di panel manajer, Anda bisa melihat apakah pengumuman tersebut masih berstatus **🟢 AKTIF** atau sudah **🔴 EXPIRED** (Kedaluwarsa).
-
-Silakan salin dan timpa seluruh file `app.py` Anda dengan kode final yang sudah dibersihkan dari *bug* spasi ini:
-
-```python
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -1311,5 +1300,3 @@ if __name__ == "__main__":
             ui_kalender_lengkap(df_j)
         elif st.session_state.menu == "Mgr" and st.session_state.user_role == "Manajer":
             ui_manager_panel(df_i, df_j)
-
-```
