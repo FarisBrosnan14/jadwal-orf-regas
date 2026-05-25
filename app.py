@@ -78,8 +78,6 @@ def find_col(df, keywords, exclude=None, default=None):
 
 def get_val(row, keywords, exclude=None, default='-', fallback_idx=None):
     if exclude is None: exclude = []
-    
-    # 1. Cari lewat nama header
     for col in row.index:
         col_str = str(col).lower()
         if any(kw in col_str for kw in keywords) and not any(ex in col_str for ex in exclude):
@@ -88,15 +86,12 @@ def get_val(row, keywords, exclude=None, default='-', fallback_idx=None):
             val_str = str(val).strip()
             if val_str and val_str.lower() not in ['nan', 'none', 'null']:
                 return val_str
-                
-    # 2. Paksa lewat indeks urutan kolom Excel
     if fallback_idx is not None and fallback_idx < len(row):
         val = row.iloc[fallback_idx]
         if isinstance(val, pd.Series): val = val.iloc[0]
         val_str = str(val).strip()
         if val_str and val_str.lower() not in ['nan', 'none', 'null']:
             return val_str
-            
     return default
 
 def parse_natural_language_schedule(text, df_j):
@@ -153,6 +148,32 @@ def generate_izin_card_html(row, delay=0.0):
         <div style='font-size:13px; color:#fca5a5; font-weight:600; margin-top:12px; margin-bottom:4px; background: rgba(239,68,68,0.15); padding: 6px 10px; border-radius: 6px; display:inline-block;'>🔄 Pengganti: {pengganti}</div>
     </div>
     """
+
+# FUNGSI PEMBANTU FORMAT WAKTU UNTUK TO-DO LIST
+def check_active_date(date_str):
+    if '|' in date_str:
+        try:
+            s, e = date_str.split('|')
+            d_s = datetime.strptime(s, "%Y-%m-%d").date()
+            d_e = datetime.strptime(e, "%Y-%m-%d").date()
+            return d_s <= datetime.now().date() <= d_e
+        except: return True
+    return True
+
+def get_date_tuple(date_str):
+    if '|' in date_str:
+        try:
+            s, e = date_str.split('|')
+            return [datetime.strptime(s, "%Y-%m-%d").date(), datetime.strptime(e, "%Y-%m-%d").date()]
+        except: pass
+    return [datetime.now().date(), datetime.now().date() + timedelta(days=7)]
+
+def format_date_output(date_input):
+    if isinstance(date_input, tuple) or isinstance(date_input, list):
+        if len(date_input) == 2: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[1].strftime('%Y-%m-%d')}"
+        elif len(date_input) == 1: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[0].strftime('%Y-%m-%d')}"
+    try: return f"{date_input.strftime('%Y-%m-%d')}|{date_input.strftime('%Y-%m-%d')}"
+    except: return f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
 
 
 # =====================================================================
@@ -219,7 +240,7 @@ def load_jadwal_izin_data():
 @st.cache_data(ttl=60)
 def fetch_todo_from_sheet():
     client = get_client()
-    default_data = {"main_msg": "", "main_msg_date": "", "tasks": {}, "last_updated": ""}
+    default_data = {"main_msg": "", "main_msg_date": "", "todo_date": "", "tasks": {}, "last_updated": ""}
     if not client: return default_data
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
@@ -238,6 +259,8 @@ def fetch_todo_from_sheet():
             if target == "PENGUMUMAN_UTAMA":
                 default_data["main_msg"] = task
                 default_data["main_msg_date"] = comment
+            elif target == "TODO_DATE":
+                default_data["todo_date"] = task
             elif target == "LAST_UPDATED":
                 default_data["last_updated"] = task
             elif target:
@@ -246,7 +269,7 @@ def fetch_todo_from_sheet():
     except:
         return default_data
 
-def push_todo_to_sheet(main_msg, main_msg_date, tasks_dict):
+def push_todo_to_sheet(main_msg, main_msg_date, todo_date, tasks_dict):
     client = get_client()
     if not client: return False
     try:
@@ -261,7 +284,12 @@ def push_todo_to_sheet(main_msg, main_msg_date, tasks_dict):
         time.sleep(0.5)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        rows = [["Target", "Task", "Comment"], ["PENGUMUMAN_UTAMA", main_msg, main_msg_date], ["LAST_UPDATED", timestamp, ""]]
+        rows = [
+            ["Target", "Task", "Comment"], 
+            ["PENGUMUMAN_UTAMA", main_msg, main_msg_date], 
+            ["TODO_DATE", todo_date, ""],
+            ["LAST_UPDATED", timestamp, ""]
+        ]
         
         for op, task in tasks_dict.items():
             if task.strip():
@@ -563,7 +591,7 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
 
     if 'splash_shown' not in st.session_state:
         st.session_state.splash_shown = True
-        logo_src_splash = f"data:image/png;base64,{get_base64_image('pertamina.png')}"
+        logo_src_splash = f"data:image/png;base64,{get_base64_image('logo-pertaminaregasv2.png')}"
         st.markdown(f"""
         <div id="splash-overlay">
             <div class="splash-content">
@@ -839,60 +867,59 @@ def ui_todo_widget():
     
     expander_title = "📢 PENGUMUMAN & TO-DO LIST HARI INI ✨ BARU" if is_new else "📢 PENGUMUMAN & TO-DO LIST HARI INI"
     
-    show_main_msg = False
-    date_str = td.get('main_msg_date', '')
-    if td['main_msg'].strip():
+    # CEK KEDALUWARSA TERPISAH
+    def check_active(date_str):
         if '|' in date_str:
             try:
                 s, e = date_str.split('|')
                 d_s = datetime.strptime(s, "%Y-%m-%d").date()
                 d_e = datetime.strptime(e, "%Y-%m-%d").date()
-                today = datetime.now().date()
-                if d_s <= today <= d_e:
-                    show_main_msg = True
-            except:
-                show_main_msg = True
-        else:
-            show_main_msg = True
+                return d_s <= datetime.now().date() <= d_e
+            except: return True
+        return True
+
+    is_msg_active = check_active(td.get('main_msg_date', ''))
+    is_todo_active = check_active(td.get('todo_date', ''))
     
     with st.expander(expander_title):
         if is_new:
             st.session_state.last_seen_todo = td['last_updated']
             
-        if show_main_msg:
+        if is_msg_active and td['main_msg'].strip():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
         
-        has_task = False
+        has_content_displayed = False
         
-        for op, data in td['tasks'].items():
-            task_text = data.get('task', '')
-            comment_text = data.get('comment', '')
-            
-            if task_text.strip():
-                has_task = True
+        if is_todo_active:
+            for op, data in td['tasks'].items():
+                task_text = data.get('task', '')
+                comment_text = data.get('comment', '')
                 
-                st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
-                
-                with st.expander(f"💬 Diskusi & Progress"):
-                    if comment_text:
-                        st.markdown(f"<div style='padding:10px 12px; border-left:3px solid #facc15; background:rgba(0, 0, 0, 0.2); margin-bottom:12px; border-radius:4px; max-height: 200px; overflow-y: auto;'>{comment_text}</div>", unsafe_allow_html=True)
+                if task_text.strip():
+                    has_content_displayed = True
                     
-                    c1, c2 = st.columns([3, 1])
-                    with c1:
-                        reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik pesan sebagai {st.session_state.user_name}...", label_visibility="collapsed", key=f"reply_msg_{op}")
-                    with c2:
-                        if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
-                            if reply_msg.strip():
-                                if reply_todo_operator(op, reply_msg, st.session_state.user_name):
-                                    st.success("Terkirim!")
-                                    time.sleep(1)
-                                    st.rerun()
-                            else:
-                                st.error("Isi pesan!")
-                                
-                st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
+                    
+                    with st.expander(f"💬 Diskusi & Progress"):
+                        if comment_text:
+                            st.markdown(f"<div style='padding:10px 12px; border-left:3px solid #facc15; background:rgba(0, 0, 0, 0.2); margin-bottom:12px; border-radius:4px; max-height: 200px; overflow-y: auto;'>{comment_text}</div>", unsafe_allow_html=True)
+                        
+                        c1, c2 = st.columns([3, 1])
+                        with c1:
+                            reply_msg = st.text_input(f"Balas {op}", placeholder=f"Ketik pesan sebagai {st.session_state.user_name}...", label_visibility="collapsed", key=f"reply_msg_{op}")
+                        with c2:
+                            if st.button("Kirim", key=f"btn_reply_{op}", use_container_width=True):
+                                if reply_msg.strip():
+                                    if reply_todo_operator(op, reply_msg, st.session_state.user_name):
+                                        st.success("Terkirim!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                else:
+                                    st.error("Isi pesan!")
+                                    
+                    st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
         
-        if not has_task and not show_main_msg:
+        if not has_content_displayed and not (is_msg_active and td['main_msg'].strip()):
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1163,63 +1190,67 @@ def ui_manager_panel(df_i, df_j):
                 st.rerun()
 
     with tab_todo:
-        st.markdown("<br><b style='color:#38bdf8;'>Pengumuman Saat Ini</b>", unsafe_allow_html=True)
         td = fetch_todo_from_sheet()
         
-        is_active = False
-        date_str = td.get('main_msg_date', '')
-        if td['main_msg'].strip():
+        # Fungsi pembantu untuk parsing tanggal
+        def get_date_tuple(date_str):
+            if '|' in date_str:
+                try:
+                    s, e = date_str.split('|')
+                    return [datetime.strptime(s, "%Y-%m-%d").date(), datetime.strptime(e, "%Y-%m-%d").date()]
+                except: pass
+            return [datetime.now().date(), datetime.now().date() + timedelta(days=7)]
+            
+        def format_date_output(date_input):
+            if isinstance(date_input, tuple) or isinstance(date_input, list):
+                if len(date_input) == 2: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[1].strftime('%Y-%m-%d')}"
+                elif len(date_input) == 1: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[0].strftime('%Y-%m-%d')}"
+            try: return f"{date_input.strftime('%Y-%m-%d')}|{date_input.strftime('%Y-%m-%d')}"
+            except: return f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
+            
+        def check_active(date_str):
             if '|' in date_str:
                 try:
                     s, e = date_str.split('|')
                     d_s = datetime.strptime(s, "%Y-%m-%d").date()
                     d_e = datetime.strptime(e, "%Y-%m-%d").date()
-                    today = datetime.now().date()
-                    if d_s <= today <= d_e:
-                        is_active = True
-                except:
-                    is_active = True
-            else:
-                is_active = True
+                    return d_s <= datetime.now().date() <= d_e
+                except: return True
+            return True
 
+        is_msg_active = check_active(td.get('main_msg_date', ''))
+        is_todo_active = check_active(td.get('todo_date', ''))
+        
+        st.markdown("<br><b style='color:#38bdf8;'>Status Penayangan Saat Ini</b>", unsafe_allow_html=True)
+        
+        # STATUS PENGUMUMAN
         if td['main_msg'].strip():
-            if is_active:
-                st.info(f"🟢 AKTIF ({date_str.replace('|', ' s/d ')}):\n\n{td['main_msg']}")
-            else:
-                st.warning(f"🔴 EXPIRED ({date_str.replace('|', ' s/d ')}):\n\n{td['main_msg']}")
-        else:
-            st.write("Belum ada pengumuman umum.")
+            status_lbl = "🟢 AKTIF" if is_msg_active else "🔴 EXPIRED"
+            date_disp = td.get('main_msg_date','').replace('|',' s/d ')
+            if is_msg_active: st.info(f"**{status_lbl} Pengumuman** ({date_disp}):\n\n{td['main_msg']}")
+            else: st.warning(f"**{status_lbl} Pengumuman** ({date_disp}):\n\n{td['main_msg']}")
+        
+        # STATUS TO-DO LIST
+        todo_count = len([t for t in td['tasks'].values() if t.get('task', '').strip()])
+        if todo_count > 0:
+            status_lbl_t = "🟢 AKTIF" if is_todo_active else "🔴 EXPIRED"
+            date_disp_t = td.get('todo_date','').replace('|',' s/d ')
+            if is_todo_active: st.success(f"**{status_lbl_t} To-Do List** ({date_disp_t}): Ada {todo_count} tugas berjalan.")
+            else: st.error(f"**{status_lbl_t} To-Do List** ({date_disp_t}): Ada {todo_count} tugas tersimpan.")
+            
+        if not td['main_msg'].strip() and todo_count == 0:
+            st.write("Belum ada data Pengumuman atau To-Do List.")
             
         with st.expander("✏️ Edit Pengumuman & Tugas Individu", expanded=True):
             st.warning("Perubahan di bawah ini akan langsung disimpan permanen ke dalam Google Sheets.")
             
-            new_main_msg = st.text_area("Pesan Utama / Briefing Umum:", value=td['main_msg'], placeholder="Tulis pengumuman umum di sini...")
+            st.markdown("<b style='color:#4ade80;'>1. Pengumuman Utama</b>", unsafe_allow_html=True)
+            new_main_msg = st.text_area("Isi Pengumuman / Briefing Umum:", value=td['main_msg'])
+            new_msg_dates = st.date_input("Periode Tayang Pengumuman:", value=get_date_tuple(td.get('main_msg_date', '')))
             
-            existing_dates = []
-            if '|' in date_str:
-                try:
-                    s, e = date_str.split('|')
-                    existing_dates = [datetime.strptime(s, "%Y-%m-%d").date(), datetime.strptime(e, "%Y-%m-%d").date()]
-                except: pass
-            if not existing_dates:
-                existing_dates = [datetime.now().date(), datetime.now().date() + timedelta(days=7)]
-                
-            new_dates = st.date_input("Periode Tayang Pengumuman:", value=existing_dates)
+            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>2. Tugas Spesifik Individu (To-Do List)</b>", unsafe_allow_html=True)
+            new_todo_dates = st.date_input("Periode Tayang To-Do List:", value=get_date_tuple(td.get('todo_date', '')))
             
-            if isinstance(new_dates, tuple):
-                if len(new_dates) == 2:
-                    date_to_save = f"{new_dates[0].strftime('%Y-%m-%d')}|{new_dates[1].strftime('%Y-%m-%d')}"
-                elif len(new_dates) == 1:
-                    date_to_save = f"{new_dates[0].strftime('%Y-%m-%d')}|{new_dates[0].strftime('%Y-%m-%d')}"
-                else:
-                    date_to_save = f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
-            else:
-                try:
-                    date_to_save = f"{new_dates.strftime('%Y-%m-%d')}|{new_dates.strftime('%Y-%m-%d')}"
-                except:
-                    date_to_save = f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
-            
-            st.markdown("<hr style='opacity:0.2;'><b style='color:#4ade80;'>Tugas Spesifik Individu</b>", unsafe_allow_html=True)
             operator_list = []
             if not df_j.empty and 'Nama Operator' in df_j.columns:
                 operator_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
@@ -1238,13 +1269,16 @@ def ui_manager_panel(df_i, df_j):
                 
             col_save, col_clear = st.columns(2)
             
+            date_to_save_msg = format_date_output(new_msg_dates)
+            date_to_save_todo = format_date_output(new_todo_dates)
+            
             if col_save.button("💾 Simpan Perubahan ke Database", type="primary", use_container_width=True):
-                if push_todo_to_sheet(new_main_msg, date_to_save, new_tasks):
+                if push_todo_to_sheet(new_main_msg, date_to_save_msg, date_to_save_todo, new_tasks):
                     st.success("✅ Berhasil diperbarui!")
                     time.sleep(1)
                     st.rerun()
             if col_clear.button("🗑️ Bersihkan Semua", use_container_width=True):
-                if push_todo_to_sheet("", "", {}):
+                if push_todo_to_sheet("", "", "", {}):
                     st.success("✅ To-Do List berhasil dikosongkan!")
                     time.sleep(1)
                     st.rerun()
