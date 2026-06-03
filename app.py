@@ -149,6 +149,7 @@ def generate_izin_card_html(row, delay=0.0):
     </div>
     """
 
+# FUNGSI PEMBANTU FORMAT WAKTU UNTUK TO-DO LIST
 def check_active_date(date_str):
     if '|' in date_str:
         try:
@@ -212,9 +213,11 @@ def load_jadwal_izin_data():
         if len(ws_j_data) > 1:
             headers_j = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_j_data[0])]
             df_j = pd.DataFrame(ws_j_data[1:], columns=headers_j)
+            
             df_j = df_j.map(lambda x: str(x).strip() if isinstance(x, str) else x)
             if 'Nama Operator' in df_j.columns:
                 df_j = df_j[df_j['Nama Operator'] != '']
+                df_j = df_j[~df_j['Nama Operator'].str.lower().isin(['nan', 'none', 'null'])]
     except: pass
 
     try:
@@ -222,11 +225,16 @@ def load_jadwal_izin_data():
         if len(ws_i_data) > 1:
             headers_i = [str(h).strip() if str(h).strip() else f"Col_{i}" for i, h in enumerate(ws_i_data[0])]
             df_i = pd.DataFrame(ws_i_data[1:], columns=headers_i)
-            df_i = df_i.replace(r'^\s*$', np.nan, regex=True).dropna(thresh=2).fillna('')
+            
+            df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
+            df_i = df_i.dropna(thresh=2)
+            df_i = df_i.fillna('')
+            
             if len(df_i.columns) > 0:
                 col_waktu = df_i.columns[0]
                 df_i = df_i[df_i[col_waktu].astype(str).str.strip() != '']
     except: pass
+    
     return df_j, df_i
 
 @st.cache_data(ttl=60)
@@ -236,42 +244,67 @@ def fetch_todo_from_sheet():
     if not client: return default_data
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
-        try: ws = sh.worksheet("To_Do_List")
-        except: ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+        try:
+            ws = sh.worksheet("To_Do_List")
+        except gspread.exceptions.WorksheetNotFound:
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+            ws.append_row(["Target", "Task", "Comment"])
+        
         records = ws.get_all_records()
         for r in records:
-            t = str(r.get("Target", ""))
-            if t == "PENGUMUMAN_UTAMA":
-                default_data["main_msg"] = str(r.get("Task", ""))
-                default_data["main_msg_date"] = str(r.get("Comment", ""))
-            elif t == "TODO_DATE":
-                default_data["todo_date"] = str(r.get("Task", ""))
-            elif t == "LAST_UPDATED":
-                default_data["last_updated"] = str(r.get("Task", ""))
-            elif t:
-                default_data["tasks"][t] = {"task": str(r.get("Task", "")), "comment": str(r.get("Comment", ""))}
+            target = str(r.get("Target", ""))
+            task = str(r.get("Task", ""))
+            comment = str(r.get("Comment", ""))
+            
+            if target == "PENGUMUMAN_UTAMA":
+                default_data["main_msg"] = task
+                default_data["main_msg_date"] = comment
+            elif target == "TODO_DATE":
+                default_data["todo_date"] = task
+            elif target == "LAST_UPDATED":
+                default_data["last_updated"] = task
+            elif target:
+                default_data["tasks"][target] = {"task": task, "comment": comment}
         return default_data
-    except: return default_data
+    except:
+        return default_data
 
-def push_todo_to_sheet(main_msg, msg_date, todo_date, tasks_dict):
+def push_todo_to_sheet(main_msg, main_msg_date, todo_date, tasks_dict):
     client = get_client()
     if not client: return False
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
-        try: ws = sh.worksheet("To_Do_List")
-        except: ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+        try:
+            ws = sh.worksheet("To_Do_List")
+        except:
+            ws = sh.add_worksheet(title="To_Do_List", rows=100, cols=3)
+        
         existing_data = fetch_todo_from_sheet()
         ws.clear()
         time.sleep(0.5)
+        
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        rows = [["Target", "Task", "Comment"], ["PENGUMUMAN_UTAMA", main_msg, msg_date], ["TODO_DATE", todo_date, ""], ["LAST_UPDATED", timestamp, ""]]
+        rows = [
+            ["Target", "Task", "Comment"], 
+            ["PENGUMUMAN_UTAMA", main_msg, main_msg_date], 
+            ["TODO_DATE", todo_date, ""],
+            ["LAST_UPDATED", timestamp, ""]
+        ]
+        
         for op, task in tasks_dict.items():
-            if task.strip(): rows.append([op, task.strip(), existing_data["tasks"].get(op, {}).get("comment", "")])
+            if task.strip():
+                old_comment = existing_data["tasks"].get(op, {}).get("comment", "")
+                rows.append([op, task.strip(), old_comment])
+        
         try: ws.update(values=rows, range_name="A1")
-        except: ws.update("A1", rows)
+        except:
+            try: ws.update("A1", rows)
+            except: ws.append_rows(rows)
+                
         fetch_todo_from_sheet.clear()
         return True
-    except: return False
+    except:
+        return False
 
 def reply_todo_operator(nama_operator, komentar, user_name):
     client = get_client()
@@ -279,17 +312,26 @@ def reply_todo_operator(nama_operator, komentar, user_name):
     try:
         sh = client.open_by_key(ID_SHEET_JADWAL)
         ws = sh.worksheet("To_Do_List")
+        
+        header = ws.row_values(1)
+        if len(header) < 3 or header[2] != "Comment":
+            ws.update_cell(1, 3, "Comment")
+        
         records = ws.get_all_records()
         for i, r in enumerate(records):
             if str(r.get("Target", "")) == nama_operator:
                 old_comment = str(r.get("Comment", ""))
                 time_str = datetime.now().strftime("%H:%M")
+                
                 new_chat = f"<div style='margin-bottom:4px;'><span style='color:#94a3b8; font-size:11px;'>[{time_str}]</span> <b style='color:#38bdf8;'>{user_name}:</b> <span style='color:#e2e8f0;'>{komentar}</span></div>"
-                ws.update_cell(i + 2, 3, f"{old_comment}{new_chat}" if old_comment else new_chat)
+                final_comment = f"{old_comment}{new_chat}" if old_comment else new_chat
+                
+                ws.update_cell(i + 2, 3, final_comment)
                 fetch_todo_from_sheet.clear()
                 return True
         return False
-    except: return False
+    except:
+        return False
 
 def load_all_data():
     df_j, df_i = load_jadwal_izin_data()
@@ -301,21 +343,35 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
     if not client: return st.error("Gagal terhubung.")
     try:
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
-        col_status = find_col(df_i, ['status', 'approval', 'appr'])
-        if col_status: c_idx = list(df_i.columns).index(col_status) + 1
-        else:
-            c_idx = len(df_i.columns) + 1
-            sh_izin.update_cell(1, c_idx, "Status Approval")
+        
+        header_row = sh_izin.row_values(1)
+        col_status_idx = -1
+        for i, h in enumerate(header_row):
+            if any(kw in str(h).lower() for kw in ['status', 'approval', 'appr']):
+                col_status_idx = i + 1
+                break
+        
+        if col_status_idx == -1:
+            col_status_idx = len(header_row) + 1
+            sh_izin.update_cell(1, col_status_idx, "Status Approval")
             
         status_text = f"APPROVED by {approver_name}" if action_type=="APPROVE" else f"REJECTED by {approver_name}" if action_type=="REJECT" else ""
-        sh_izin.update_cell(int(idx)+2, c_idx, status_text)
+        sh_izin.update_cell(int(idx)+2, col_status_idx, status_text)
         
-        if action_type == "APPROVE" or (action_type == "UNDO" and "APPROVED" in str(get_val(row, ['status', 'approval']))):
+        stat = str(get_val(row, ['status', 'approval'], default='')).upper()
+        if action_type == "APPROVE" or (action_type == "UNDO" and "APPROVED" in stat):
             sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+            
             t_mulai = get_val(row, ['mulai', 'dari'], fallback_idx=3)
             t_selesai = get_val(row, ['selesai', 'sampai'], fallback_idx=4)
-            d_start = pd.to_datetime(t_mulai, dayfirst=True).date()
-            d_end = pd.to_datetime(t_selesai, dayfirst=True).date()
+            
+            try:
+                d_start = pd.to_datetime(t_mulai, dayfirst=True).date()
+                d_end = pd.to_datetime(t_selesai, dayfirst=True).date()
+            except:
+                st.error("Format tanggal tidak valid. Lewati integrasi jadwal.")
+                return
+            
             app = str(get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'], fallback_idx=1)).strip().lower()
             sub = str(get_val(row, ['pengganti', 'backup'], fallback_idx=7)).strip().lower()
             jenis = str(get_val(row, ['jenis', 'kategori'], default='IZIN', fallback_idx=2)).upper()
@@ -326,33 +382,69 @@ def execute_database_action(idx, row, action_type, approver_name, df_j, df_i):
                 d_str = d.strftime('%Y-%m-%d')
                 if d_str in df_j.columns:
                     c_date = list(df_j.columns).index(d_str) + 1
+                    v_app = jenis if action_type == "APPROVE" else shift
+                    v_sub = shift if action_type == "APPROVE" else 'OFF'
+                    
                     m_p = df_j[df_j.iloc[:,0].astype(str).str.strip().str.lower() == app]
-                    if not m_p.empty: updates.append(gspread.Cell(int(m_p.index[0])+2, c_date, jenis if action_type == "APPROVE" else shift))
+                    if not m_p.empty: updates.append(gspread.Cell(int(m_p.index[0])+2, c_date, v_app))
                     if sub and sub not in ['nan', 'tidak ada', '-', '']:
                         m_s = df_j[df_j.iloc[:,0].astype(str).str.strip().str.lower() == sub]
-                        if not m_s.empty: updates.append(gspread.Cell(int(m_s.index[0])+2, c_date, shift if action_type == "APPROVE" else 'OFF'))
+                        if not m_s.empty: updates.append(gspread.Cell(int(m_s.index[0])+2, c_date, v_sub))
             if updates: sh_aktual.update_cells(updates)
+            
         time.sleep(1.5)
         load_jadwal_izin_data.clear()
         st.rerun()
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e: st.error(f"Error API: {e}")
+
+def execute_smart_edit(nama, status, d_start, d_end, df_j):
+    client = get_client()
+    try:
+        sh_aktual = client.open_by_key(ID_SHEET_JADWAL).worksheet("Jadwal_Aktual")
+        updates = []
+        match_p = df_j[df_j.iloc[:,0].astype(str).str.replace('*', '', regex=False).str.strip().str.lower() == nama.replace('*', '').strip().lower()]
+        if not match_p.empty:
+            r_idx = int(match_p.index[0]) + 2
+            for d in pd.date_range(d_start, d_end):
+                d_str = d.strftime('%Y-%m-%d')
+                if d_str in df_j.columns: updates.append(gspread.Cell(r_idx, list(df_j.columns).index(d_str) + 1, status.upper()))
+            if updates: 
+                sh_aktual.update_cells(updates)
+                load_jadwal_izin_data.clear()
+                time.sleep(1)
+                st.rerun()
+    except: pass
 
 def clear_pending_requests(df_i):
     client = get_client()
     try:
         col_status = find_col(df_i, ['status', 'approval', 'appr'])
-        if not col_status or col_status not in df_i.columns: return
+        if not col_status or col_status not in df_i.columns:
+            return st.info("Tidak ada antrean yang harus dihapus.")
+            
         sh_izin = client.open_by_key(ID_SHEET_IZIN).get_worksheet(0)
+        
         pending_rows = df_i[df_i[col_status].astype(str).str.strip().str.lower().isin(["", "nan", "none", "null"])]
+        if pending_rows.empty: return st.info("Tidak ada antrean.")
+        
         indices = sorted([int(idx) + 2 for idx in pending_rows.index], reverse=True)
         for r in indices: sh_izin.delete_rows(r)
         load_jadwal_izin_data.clear()
+        time.sleep(1)
         st.rerun()
-    except: pass
+    except Exception as e: st.error(f"Error: {e}")
 
+
+# =====================================================================
+# 4. CSS INJECTION KONDISIONAL (LOGIN VS DASHBOARD)
+# =====================================================================
 def inject_custom_css(bg_base64, logo_base64, is_login=False):
     bg_img = f"url('data:image/jpeg;base64,{bg_base64}')" if bg_base64 else ""
+    
     css = "<style>\n"
+    css += "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');\n"
+    css += "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');\n"
+    
     css += "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #f8fafc; }\n"
     css += "[data-testid=\"collapsedControl\"] { display: none; }\n"
     css += ".block-container { max-width: 1200px !important; padding-top: 2rem !important; }\n"
@@ -360,68 +452,232 @@ def inject_custom_css(bg_base64, logo_base64, is_login=False):
     css += ".stMarkdown a.header-anchor, svg.icon-link { display: none !important; }\n" 
     
     if is_login:
-        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)"
+        bg_overlay = "rgba(15,23,42,0.4), rgba(15,23,42,0.7)" 
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+        
         css += """
         div[data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="stVerticalBlock"] > div[style*="border"] { background-color: rgba(15, 23, 42, 0.65) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; border-radius: 16px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important; padding: 30px !important; }
-        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 32px; margin-bottom: 5px; letter-spacing: 1px; }
-        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 14px; }
-        label p, .stMarkdown p { color: #ffffff !important; font-weight: 700 !important; }
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f1f5f9 !important; border: 2px solid #cbd5e1 !important; border-radius: 8px !important; min-height: 42px !important; }
-        div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 800 !important; font-size: 14px !important; -webkit-text-fill-color: #0f172a !important; }
-        .stButton>button { background: linear-gradient(135deg, #0284c7, #0369a1) !important; border-radius: 10px !important; width: 100% !important; padding: 12px !important; color: #ffffff !important; font-weight: 800 !important; }
-        .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4); }
+        div[data-testid="stVerticalBlock"] > div[style*="border"] {
+            background-color: rgba(15, 23, 42, 0.65) !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
+            padding: 30px !important;
+        }
+        
+        .login-title { color: #ffffff !important; font-weight: 900 !important; text-align: center; font-size: 34px; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;}
+        .login-subtitle { color: #e2e8f0 !important; text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #e2e8f0 !important;}
+        
+        div[data-testid="stVerticalBlockBorderWrapper"] label p, 
+        div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p { 
+            color: #ffffff !important; font-weight: 700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; -webkit-text-fill-color: #ffffff !important;
+        }
+        
+        div[data-baseweb="input"] > div, 
+        div[data-baseweb="select"] > div {
+            background-color: #f1f5f9 !important; 
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            min-height: 42px !important;
+        }
+        
+        div[data-baseweb="input"] input, 
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div,
+        div[data-baseweb="select"] div[class*="singleValue"] { 
+            color: #0f172a !important; 
+            font-weight: 800 !important; 
+            font-size: 14px !important; 
+            -webkit-text-fill-color: #0f172a !important;
+        }
+        
+        div[data-testid="stVerticalBlockBorderWrapper"] button,
+        .stButton>button { 
+            background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
+            border: 1px solid rgba(56, 189, 248, 0.5) !important; 
+            border-radius: 10px !important; 
+            width: 100% !important; 
+            padding: 12px !important; 
+            margin-top: 15px !important;
+            transition: all 0.2s !important; 
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] button p,
+        .stButton>button p {
+            color: #ffffff !important;
+            font-weight: 800 !important; 
+            text-shadow: none !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.4) !important; }
         """
     else:
         bg_overlay = "rgba(15,23,42,0.88), rgba(15,23,42,0.88)"
         css += f".stApp {{ background-image: linear-gradient({bg_overlay}), {bg_img} !important; background-size: cover; background-attachment: fixed; background-position: center; }}\n"
+        
         css += """
-        div[data-testid="stVerticalBlockBorderWrapper"], div[data-testid="stVerticalBlock"] > div[style*="border"] { border-radius: 16px; background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; border: 1px solid rgba(255,255,255,0.1) !important; padding: 24px; }
-        .header-bar { background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border: 2px solid transparent; }
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"] { 
+            border-radius: 16px; 
+            background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)) !important; 
+            border: 1px solid rgba(255,255,255,0.1) !important; 
+            padding: 24px; 
+            transition: all 0.3s; 
+        }
+        
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div { background-color: #f8fafc !important; border-radius: 8px !important; min-height: 38px !important; border: 2px solid transparent !important; }
+        div[data-baseweb="input"] input, div[data-baseweb="select"] span { color: #0f172a !important; font-weight: 700 !important; font-size: 13px !important; }
+        .stButton>button { border-radius: 12px; font-weight: 700 !important; width: 100%; transition: all 0.2s; }
+        button[kind="primary"] { background: linear-gradient(135deg, #0284c7, #0369a1) !important; color: white !important; border: none !important; }
+        
+        @keyframes headerGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0,77,149,0.6); border-color: rgba(0,77,149,0.9); } 33% { box-shadow: 0 0 20px rgba(239,68,68,0.6); border-color: rgba(239,68,68,0.9); } 66% { box-shadow: 0 0 20px rgba(130,195,65,0.6); border-color: rgba(130,195,65,0.9); } }
+        .header-bar { background: #fff; border-radius: 16px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; animation: fadeIn 0.5s 1s both, headerGlow 6s infinite; border: 2px solid transparent; }
+        @keyframes bellFlash { 0%, 100% { color: #1e293b; transform: scale(1); } 50% { color: #ef4444; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); } }
         .bell-active { animation: bellFlash 1.5s infinite; }
-        @keyframes bellFlash { 0%, 100% { color: #1e293b; } 50% { color: #ef4444; } }
+        .home-btn { display: flex; background: rgba(30,41,59,0.1); color: #0f172a; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; transition: 0.2s; }
+        .home-btn:hover { background: rgba(56,189,248,0.2); color: #0284c7; transform: translateY(-2px); }
+        
+        .scroll-container { display: flex; overflow-x: auto; gap: 14px; padding-bottom: 20px; padding-top: 10px; scroll-behavior: smooth; scrollbar-width: none; }
+        .scroll-container::-webkit-scrollbar { display: none; }
+        
+        .scroll-card { flex: 0 0 220px; background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; scroll-snap-align: start; cursor: pointer; }
+        .scroll-card:hover { transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2); }
+        .scroll-card:active { transform: scale(0.97) translateY(0); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }
+        .today-card { border: 2px solid #38bdf8 !important; box-shadow: 0 0 15px rgba(56,189,248,0.3) !important; background: linear-gradient(145deg, rgba(20,50,85,0.9), rgba(15,23,42,0.95)) !important; transform: translateY(-2px); }
+        .today-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4) !important; }
+        .scroll-header { text-align: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 14px; font-size: 13px; color:#94a3b8; border-bottom:2px solid #38bdf8; transition: background 0.3s, color 0.3s; }
+        .scroll-card:hover .scroll-header { background: rgba(56, 189, 248, 0.15); color: #ffffff; }
+        .today-header { background: linear-gradient(135deg, #0284c7, #38bdf8) !important; color: #ffffff !important; border-bottom: none !important; box-shadow: 0 4px 10px rgba(2,132,199,0.5); }
+        .scroll-item { margin-bottom: 12px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, transform 0.2s; }
+        .scroll-item:hover { background: rgba(255,255,255,0.08); transform: translateX(3px); border-color: rgba(255,255,255,0.2); }
+        .status-badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; margin-top:6px; width: 100%; box-sizing: border-box; }
+        .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+        
+        details.off-personnel { background: rgba(255,255,255,0.03); border-left: 3px solid #38bdf8; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
+        details.off-personnel:hover { background: rgba(56,189,248,0.08); transform: translateX(4px); }
+        details.off-personnel summary { padding: 14px 16px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; list-style: none; }
+        details.off-personnel summary::-webkit-details-marker { display: none; }
+        .chevron-icon { transition: transform 0.3s; color: #94a3b8; margin-left:auto; }
+        details.off-personnel[open] .chevron-icon { transform: rotate(180deg); color: #38bdf8; }
+        .off-details-content { padding: 0 16px 16px 16px; font-size: 14px; color:#cbd5e1; }
+        
+        div[data-testid="stExpander"] { border: 1px solid rgba(56,189,248,0.4) !important; border-radius: 12px !important; background: linear-gradient(145deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)) !important; overflow: hidden; transition: all 0.3s; }
+        div[data-testid="stExpander"] summary { background: rgba(56,189,248,0.1) !important; padding: 15px 20px !important; }
+        div[data-testid="stExpander"] summary p { font-weight: 800 !important; color: #38bdf8 !important; font-size: 16px !important; letter-spacing: 0.5px; transition: all 0.3s; }
+        div[data-testid="stExpander"] summary svg { color: #38bdf8 !important; }
+        
+        div[data-testid="stExpander"] div[data-testid="stExpander"] { border: 1px solid rgba(255,255,255,0.1) !important; border-top: none !important; border-radius: 0 0 8px 8px !important; background: rgba(0,0,0,0.2) !important; margin-top: 0px !important; margin-bottom: 12px !important; box-shadow: none !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary { background: rgba(255,255,255,0.03) !important; padding: 10px 15px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary p { font-weight: 600 !important; color: #cbd5e1 !important; font-size: 13px !important; letter-spacing: 0px !important; }
+        div[data-testid="stExpander"] div[data-testid="stExpander"] summary svg { color: #cbd5e1 !important; }
+        
+        @keyframes todoGlow { 
+            0%, 100% { box-shadow: 0 0 0px transparent; border-color: rgba(56,189,248,0.4); } 
+            50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.85); border-color: #facc15; background-color: rgba(250, 204, 21, 0.05); } 
+        }
+        .todo-updated-animation { animation: todoGlow 1.5s infinite !important; }
+        .todo-updated-text { color: #facc15 !important; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
+        
+        div[data-testid="stTabs"] button { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 600 !important; font-size: 16px !important; color: #94a3b8 !important; }
+        div[data-testid="stTabs"] button[aria-selected="true"] { color: #38bdf8 !important; }
+        
+        @media (max-width: 768px) { .header-bar { flex-direction: column; gap: 16px; padding: 20px; align-items: center !important; } .header-title { font-size: 20px !important; text-align: center; } .stButton>button { padding: 16px 10px !important; font-size: 14px !important; } }
         """
+        
     css += "</style>"
     st.markdown(css, unsafe_allow_html=True)
 
+    if 'splash_shown' not in st.session_state:
+        st.session_state.splash_shown = True
+        logo_src_splash = f"data:image/png;base64,{get_base64_image('logo-pertaminaregasv2.png')}"
+        st.markdown(f"""
+        <div id="splash-overlay">
+            <div class="splash-content">
+                <img src="{logo_src_splash}" class="splash-logo" alt="Logo">
+                <h2 class="splash-title">DASHBOARD DISTRIBUSI GAS NR</h2>
+                <div class="splash-fade-early">
+                    <div class="splash-subtitle">SINKRONISASI DATABASE...</div>
+                    <div class="loading-bar-container"><div class="loading-bar"></div></div>
+                </div>
+            </div>
+        </div>
+        <style>
+        #splash-overlay {{ position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff !important; animation: overlayFade 2s forwards; margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden; }}
+        .splash-content {{ text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; animation: moveToHeader 2s forwards; }}
+        .splash-fade-early {{ animation: fadeOutEarly 2s forwards; display: flex; flex-direction: column; align-items: center; }}
+        .splash-logo {{ max-height: 70px; margin-bottom: 20px; animation: floatLogo 1.5s infinite alternate; }}
+        .splash-title {{ color: #000000 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 900 !important; font-size: 32px !important; letter-spacing: 2px !important; margin: 0 !important; line-height: 1.2 !important; text-align: center; }}
+        .splash-subtitle {{ color: #64748b; font-size: 14px; font-weight: 600; letter-spacing: 3px; margin-top: 15px; opacity: 0.8; text-align: center; }}
+        .loading-bar-container {{ width: 200px; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative; }}
+        .loading-bar {{ position: absolute; height: 100%; width: 40%; background: #38bdf8; animation: loadingSwipe 1s infinite; }}
+        @keyframes overlayFade {{ 0%, 70% {{ opacity: 1; visibility: visible; }} 99% {{ opacity: 0; visibility: visible; }} 100% {{ opacity: 0; visibility: hidden; display: none; }} }}
+        @keyframes moveToHeader {{ 0%, 70% {{ transform: translateY(0) scale(1); opacity: 1; }} 100% {{ transform: translateY(-40vh) scale(0.4); opacity: 0; }} }}
+        @keyframes fadeOutEarly {{ 0%, 50% {{ opacity: 1; transform: translateY(0); }} 70%, 100% {{ opacity: 0; transform: translateY(10px); }} }}
+        @keyframes floatLogo {{ 0% {{ transform: translateY(0px); filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); }} 100% {{ transform: translateY(-10px); filter: drop-shadow(0 15px 20px rgba(0,0,0,0.15)); }} }}
+        @keyframes loadingSwipe {{ 0% {{ left: -40%; }} 100% {{ left: 140%; }} }}
+        </style>
+        """, unsafe_allow_html=True)
+
+
 # =====================================================================
-# 5. HALAMAN LOGIN
+# 5. SISTEM LOGIN AWAL
 # =====================================================================
 def ui_login(df_j):
     logo_base64 = get_base64_image("logo-pertaminaregasv2.png")
-    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
-    if logo_base64:
-        st.markdown(f"<div style='display:flex; justify-content:center; margin-bottom:25px;'><img src='data:image/png;base64,{logo_base64}' style='max-height:80px; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.3));'></div>", unsafe_allow_html=True)
     
+    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
+    
+    if logo_base64:
+        st.markdown(f"""
+        <div style="display: flex; justify-content: center; margin-bottom: 25px;">
+            <img src="data:image/png;base64,{logo_base64}" style="max-height: 80px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        </div>
+        """, unsafe_allow_html=True)
+        
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         with st.container(border=True):
             st.markdown("<h2 class='login-title'>SISTEM LOGIN</h2>", unsafe_allow_html=True)
             st.markdown("<p class='login-subtitle'>Akses Terintegrasi Dashboard Distribusi Gas NR</p>", unsafe_allow_html=True)
+            
             role = st.selectbox("Masuk Sebagai:", ["Operator", "Manajer"])
+            
             if role == "Manajer":
                 nama = st.selectbox("Nama Manajer:", DAFTAR_MANAJER)
                 pin = st.text_input("PIN Keamanan:", type="password")
             else:
-                op_list = sorted(df_j['Nama Operator'].dropna().astype(str).unique()) if 'Nama Operator' in df_j.columns else []
+                op_list = []
+                if not df_j.empty and 'Nama Operator' in df_j.columns:
+                    op_list = sorted(df_j['Nama Operator'].dropna().astype(str).str.replace('*','', regex=False).str.strip().unique())
+                    op_list = [o for o in op_list if o.lower() not in ['nan', 'none', '']]
                 nama = st.selectbox("Nama Operator:", ["-- Pilih Nama Anda --"] + op_list)
                 pin = ""
+
+            st.markdown("<br>", unsafe_allow_html=True)
             if st.button("Masuk Aplikasi", type="primary", use_container_width=True):
-                if role == "Manajer" and pin != PIN_MANAGER: st.error("❌ PIN Salah!")
-                elif nama == "-- Pilih Nama Anda --": st.error("❌ Pilih Nama!")
+                if role == "Manajer" and pin != PIN_MANAGER:
+                    st.error("❌ PIN Keamanan Salah!")
+                elif not nama or nama == "-- Pilih Nama Anda --":
+                    st.error("❌ Silakan pilih nama Anda terlebih dahulu!")
                 else:
-                    st.query_params["auth"] = base64.b64encode(f"{role}::{nama}".encode()).decode()
+                    token_str = f"{role}::{nama}"
+                    token_b64 = base64.b64encode(token_str.encode("utf-8")).decode("utf-8")
+                    st.query_params["auth"] = token_b64
+                    
                     st.session_state.logged_in = True
                     st.session_state.user_role = role
                     st.session_state.user_name = nama
                     st.rerun()
 
+
 # =====================================================================
-# 6. HEADER & TO-DO WIDGET (LOGIKA ANIMASI CERDAS)
+# 6. HEADER, HUD, DAN TO-DO WIDGET
 # =====================================================================
 def ui_header(logo_base64, pending_count, is_manager):
     logo = f'<img src="data:image/png;base64,{logo_base64}" style="max-height: 50px;">' if logo_base64 else ''
+    
     if is_manager and pending_count > 0:
         notif = f'<div id="bell-notif-btn" style="position:relative; cursor:pointer; transition: transform 0.2s;" title="Klik untuk buka Antrean Izin!"><span class="material-symbols-rounded bell-active" style="font-size:28px;">notifications_active</span><span style="position:absolute; top:-6px; right:-8px; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:11px; font-weight:800;">{pending_count}</span></div>'
     elif pending_count > 0:
@@ -533,7 +789,20 @@ def ui_live_hud_widget():
                 let locName = data.locality || data.city || (lat.toFixed(2) + ", " + lon.toFixed(2));
                 document.getElementById('loc').innerText = locName;
             }}).catch(() => {{ document.getElementById('loc').innerText = "Titik Koordinat"; }});
+
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true')
+            .then(r => r.json())
+            .then(json => {{
+                var cw = json.current_weather;
+                document.getElementById('w-temp').innerText = cw.temperature + '°C'; 
+                document.getElementById('w-wind').innerText = cw.windspeed + ' km/h'; 
+                var i = 'partly_cloudy_day'; var desc = 'Berawan'; 
+                if(cw.weathercode === 0) {{ i = 'clear_day'; desc = 'Cerah'; }} 
+                else if(cw.weathercode > 50) {{ i = 'rainy'; desc = 'Hujan'; }}
+                document.getElementById('w-icon').innerText = i; document.getElementById('w-desc').innerText = desc;
+            }}).catch(e => console.log(e));
         }}
+
         if(navigator.geolocation) {{
             navigator.geolocation.watchPosition(
                 function(pos) {{ 
@@ -549,30 +818,36 @@ def ui_live_hud_widget():
                 {{ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }}
             );
         }} else {{ fetchWeather(-6.200000, 106.816666); }}
+        
+        function handleOrientation(e) {{
+            let heading = null;
+            if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {{ heading = e.webkitCompassHeading; }} 
+            else if(e.alpha !== null) {{ heading = 360 - e.alpha; }}
+            if(heading !== null) {{
+                document.getElementById('deg').innerText = Math.round(heading) + '°'; 
+                document.getElementById('compass').style.transform = 'rotate(-' + heading + 'deg)'; 
+            }}
+        }}
+
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+        window.addEventListener('deviceorientation', handleOrientation, true);
+
+        document.getElementById('compass-box').addEventListener('click', async function() {{
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {{
+                try {{
+                    const perm = await DeviceOrientationEvent.requestPermission();
+                    if (perm === 'granted') window.addEventListener('deviceorientation', handleOrientation, true);
+                }} catch (err) {{}}
+            }}
+        }});
     </script>
     """, height=90)
 
 def ui_todo_widget():
     td = fetch_todo_from_sheet()
     
-    # 1. EVALUASI APAKAH ADA KONTEN YANG VALID (TIDAK EXPIRED DAN TIDAK KOSONG)
-    is_msg_active = check_active_date(td.get('main_msg_date', ''))
-    is_todo_active = check_active_date(td.get('todo_date', ''))
-    
-    has_active_msg = is_msg_active and bool(td.get('main_msg', '').strip())
-    
-    has_active_tasks = False
-    if is_todo_active:
-        for op, data in td['tasks'].items():
-            if data.get('task', '').strip():
-                has_active_tasks = True
-                break
-                
-    has_visible_content = has_active_msg or has_active_tasks
-    
-    # 2. LOGIKA ANIMASI "BARU" CERDAS (Hanya nge-blink jika ada konten valid yang ditampilkan)
     is_new = False
-    if has_visible_content and td['last_updated'] and td['last_updated'] != st.session_state.last_seen_todo:
+    if td['last_updated'] and td['last_updated'] != st.session_state.last_seen_todo:
         is_new = True
         components.html("""
         <script>
@@ -589,14 +864,31 @@ def ui_todo_widget():
         """, height=0, width=0)
     
     st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
+    
     expander_title = "📢 PENGUMUMAN & TO-DO LIST HARI INI ✨ BARU" if is_new else "📢 PENGUMUMAN & TO-DO LIST HARI INI"
+    
+    # CEK KEDALUWARSA TERPISAH
+    def check_active(date_str):
+        if '|' in date_str:
+            try:
+                s, e = date_str.split('|')
+                d_s = datetime.strptime(s, "%Y-%m-%d").date()
+                d_e = datetime.strptime(e, "%Y-%m-%d").date()
+                return d_s <= datetime.now().date() <= d_e
+            except: return True
+        return True
+
+    is_msg_active = check_active(td.get('main_msg_date', ''))
+    is_todo_active = check_active(td.get('todo_date', ''))
     
     with st.expander(expander_title):
         if is_new:
             st.session_state.last_seen_todo = td['last_updated']
             
-        if has_active_msg:
+        if is_msg_active and td['main_msg'].strip():
             st.markdown(f"<div style='background:rgba(56,189,248,0.15); border-left:4px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:15px;'><b style='color:#38bdf8; font-size:15px;'><span class='material-symbols-rounded' style='font-size:18px; vertical-align:text-bottom;'>campaign</span> Pesan Utama:</b><br><span style='color:#f8fafc; line-height:1.5;'>{td['main_msg']}</span></div>", unsafe_allow_html=True)
+        
+        has_content_displayed = False
         
         if is_todo_active:
             for op, data in td['tasks'].items():
@@ -604,6 +896,8 @@ def ui_todo_widget():
                 comment_text = data.get('comment', '')
                 
                 if task_text.strip():
+                    has_content_displayed = True
+                    
                     st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:12px; border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,0.1); border-bottom:none; display:flex; gap:10px; position: relative; z-index: 1;'><span class='material-symbols-rounded' style='color:#4ade80;'>check_circle</span><div style='width:100%;'><b style='color:#4ade80;'>{op}</b><br><span style='color:#cbd5e1; font-size:14px; line-height:1.5;'>{task_text}</span></div></div>", unsafe_allow_html=True)
                     
                     with st.expander(f"💬 Diskusi & Progress"):
@@ -625,7 +919,7 @@ def ui_todo_widget():
                                     
                     st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
         
-        if not has_visible_content:
+        if not has_content_displayed and not (is_msg_active and td['main_msg'].strip()):
             st.info("Belum ada instruksi atau tugas spesifik dari Manajer untuk hari ini.")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -633,16 +927,25 @@ def ui_todo_widget():
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap');
             body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-            button { width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; padding: 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+            button {
+                width: 100%; background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); 
+                color: #38bdf8; border-radius: 8px; padding: 8px 0; 
+                font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; 
+                cursor: pointer; transition: all 0.2s ease;
+            }
             button:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; color: #ffffff; }
             button:active { transform: scale(0.95); background: rgba(56, 189, 248, 0.2); }
         </style>
-        <button onclick="const pDoc = window.parent.document; const mainExp = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details'); if(mainExp && mainExp.hasAttribute('open')) { mainExp.querySelector('summary').click(); }">⬆️ Tutup Daftar Tugas</button>
+        <button onclick="
+            const pDoc = window.parent.document;
+            const mainExp = pDoc.querySelector('div[data-testid=\\'stExpander\\'] details');
+            if(mainExp && mainExp.hasAttribute('open')) { mainExp.querySelector('summary').click(); }
+        ">⬆️ Tutup Daftar Tugas</button>
         """, height=40)
 
 
 # =====================================================================
-# 7. HALAMAN UTAMA & 8. PANEL MANAJER (Sama Seperti Sebelumnya)
+# 7. HALAMAN UTAMA (TIMELINE SCROLL) 
 # =====================================================================
 def ui_timeline(df_j, df_i):
     st.markdown("""
@@ -790,8 +1093,12 @@ def ui_kalender_lengkap(df_j):
                 else: st.write("Tidak ada data pada kategori ini.")
 
 
+# =====================================================================
+# 8. HALAMAN MANAJER (HANYA TERLIHAT OLEH MANAJER)
+# =====================================================================
 def ui_manager_panel(df_i, df_j):
     st.markdown("<h3 class='section-title'><span class='material-symbols-rounded' style='color:#38bdf8;'>admin_panel_settings</span> Panel Manajer</h3>", unsafe_allow_html=True)
+    
     approver_name = st.session_state.user_name
 
     tab_izin, tab_edit, tab_todo = st.tabs(["📋 Panel Persetujuan Izin", "⚙️ Panel Edit & AI", "📝 To-Do List Harian"])
@@ -822,9 +1129,11 @@ def ui_manager_panel(df_i, df_j):
                         st.markdown(generate_izin_card_html(row, delay=rendered_count*0.1), unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
                         if c1.button("✓ Setujui (Approve)", key=f"app_{idx}", type="primary", use_container_width=True): 
-                            with st.spinner("Menyimpan..."): execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
+                            with st.spinner("Menyimpan..."):
+                                execute_database_action(idx, row, "APPROVE", approver_name, df_j, df_i)
                         if c2.button("✕ Tolak (Reject)", key=f"rej_{idx}", use_container_width=True): 
-                            with st.spinner("Menolak..."): execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
+                            with st.spinner("Menolak..."):
+                                execute_database_action(idx, row, "REJECT", approver_name, df_j, df_i)
 
             st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#94a3b8;'>history</span> Riwayat Terakhir</h4>", unsafe_allow_html=True)
             history_df = df_i[df_i[col_status].astype(str).str.upper().str.contains('APPROVED|REJECTED', regex=True, na=False)]
@@ -835,15 +1144,18 @@ def ui_manager_panel(df_i, df_j):
                     status = str(row[col_status]).upper()
                     is_appr = "APPROVED" in status
                     c_text, c_bg, icon = ("#4ade80", "rgba(34,197,94,0.15)", "check_circle") if is_appr else ("#fca5a5", "rgba(239,68,68,0.15)", "cancel")
+                    
                     nama_pengaju = get_val(row, ['nama', 'pengaju', 'operator', 'lengkap'], exclude=['pengganti'], default='Tidak Diketahui', fallback_idx=1)
                     t_mulai = get_val(row, ['mulai', 'dari'], default='-', fallback_idx=3)
                     t_selesai = get_val(row, ['selesai', 'sampai'], default='-', fallback_idx=4)
+                    
                     mark = "✅" if is_appr else "❌"
                     
                     with st.container(border=True):
                         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;'><div><b style='font-size:15px; color:white;'>{mark} {nama_pengaju}</b><br><span style='font-size:12px; color:#94a3b8;'>{t_mulai} s/d {t_selesai}</span></div><div style='background:{c_bg}; color:{c_text}; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px;'><span class='material-symbols-rounded' style='font-size:14px;'>{icon}</span> {status}</div></div>", unsafe_allow_html=True)
                         if st.button("⟲ Batalkan Keputusan", key=f"undo_{_}", use_container_width=True): 
-                            with st.spinner("Membatalkan..."): execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
+                            with st.spinner("Membatalkan..."):
+                                execute_database_action(_, row, "UNDO", approver_name, df_j, df_i)
 
     with tab_edit:
         st.markdown("<br><div style='background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border-left:4px solid #38bdf8; margin-bottom:24px; display:flex; align-items:center; gap:10px;'><span class='material-symbols-rounded' style='color:#38bdf8;'>database</span> <b style='color:#f8fafc;'>Akses Database Utama</b></div>", unsafe_allow_html=True)
@@ -852,8 +1164,9 @@ def ui_manager_panel(df_i, df_j):
         with c_btn2: st.link_button("Edit Database Izin", URL_IZIN, use_container_width=True)
         
         st.markdown("<hr style='opacity:0.1; margin: 30px 0;'><h4 style='color:white; font-size:16px; display:flex; align-items:center; gap:6px;'><span class='material-symbols-rounded' style='font-size:20px; color:#38bdf8;'>smart_toy</span> Asisten Jadwal Pintar (BETA)</h4>", unsafe_allow_html=True)
-        st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px 12px 12px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;'><span style='background: #0ea5e9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-right: 6px;'>AI</span> Halo! Saya asisten jadwal. Anda bisa menyuruh saya mengubah jadwal tanpa harus repot membuka dropdown.<br><br><b>Contoh:</b> <i>'Ubah jadwal Hanif jadi cuti tanggal 18 sampai 20'</i> atau <i>'Besok Haerul off'</i></div>", unsafe_allow_html=True)
         
+        if 'ai_parsed_data' not in st.session_state: st.session_state.ai_parsed_data = None
         perintah = st.text_input("Ketik perintah Anda di sini:", placeholder="Tulis instruksi...")
         if st.button("Kirim Perintah", type="primary"):
             if not perintah: st.error("Silakan ketik perintah terlebih dahulu.")
@@ -864,7 +1177,7 @@ def ui_manager_panel(df_i, df_j):
                 elif not parsed['tgl_mulai']: st.error("❌ Saya tidak mengerti tanggalnya. Coba gunakan angka atau rentang.")
                 else: st.session_state.ai_parsed_data = parsed
 
-        if st.session_state.get('ai_parsed_data'):
+        if st.session_state.ai_parsed_data:
             p = st.session_state.ai_parsed_data
             tgl_str = p['tgl_mulai'].strftime('%d %b %Y') if p['tgl_mulai'] == p['tgl_selesai'] else f"{p['tgl_mulai'].strftime('%d %b')} - {p['tgl_selesai'].strftime('%d %b %Y')}"
             st.markdown(f"<div style='background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.5); padding:16px; border-radius:12px; margin-top:10px;'><b style='color:#facc15;'>Konfirmasi Tindakan:</b><br>Apakah Anda yakin ingin mengubah jadwal <b>{p['nama']}</b> menjadi <b style='color:#38bdf8;'>{p['status']}</b> untuk tanggal <b>{tgl_str}</b>?</div>", unsafe_allow_html=True)
@@ -878,17 +1191,46 @@ def ui_manager_panel(df_i, df_j):
 
     with tab_todo:
         td = fetch_todo_from_sheet()
-        is_msg_active = check_active_date(td.get('main_msg_date', ''))
-        is_todo_active = check_active_date(td.get('todo_date', ''))
+        
+        # Fungsi pembantu untuk parsing tanggal
+        def get_date_tuple(date_str):
+            if '|' in date_str:
+                try:
+                    s, e = date_str.split('|')
+                    return [datetime.strptime(s, "%Y-%m-%d").date(), datetime.strptime(e, "%Y-%m-%d").date()]
+                except: pass
+            return [datetime.now().date(), datetime.now().date() + timedelta(days=7)]
+            
+        def format_date_output(date_input):
+            if isinstance(date_input, tuple) or isinstance(date_input, list):
+                if len(date_input) == 2: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[1].strftime('%Y-%m-%d')}"
+                elif len(date_input) == 1: return f"{date_input[0].strftime('%Y-%m-%d')}|{date_input[0].strftime('%Y-%m-%d')}"
+            try: return f"{date_input.strftime('%Y-%m-%d')}|{date_input.strftime('%Y-%m-%d')}"
+            except: return f"{datetime.now().strftime('%Y-%m-%d')}|{datetime.now().strftime('%Y-%m-%d')}"
+            
+        def check_active(date_str):
+            if '|' in date_str:
+                try:
+                    s, e = date_str.split('|')
+                    d_s = datetime.strptime(s, "%Y-%m-%d").date()
+                    d_e = datetime.strptime(e, "%Y-%m-%d").date()
+                    return d_s <= datetime.now().date() <= d_e
+                except: return True
+            return True
+
+        is_msg_active = check_active(td.get('main_msg_date', ''))
+        is_todo_active = check_active(td.get('todo_date', ''))
         
         st.markdown("<br><b style='color:#38bdf8;'>Status Penayangan Saat Ini</b>", unsafe_allow_html=True)
         
+        # STATUS PENGUMUMAN
         if td['main_msg'].strip():
             status_lbl = "🟢 AKTIF" if is_msg_active else "🔴 EXPIRED"
             date_disp = td.get('main_msg_date','').replace('|',' s/d ')
             if is_msg_active: st.info(f"**{status_lbl} Pengumuman** ({date_disp}):\n\n{td['main_msg']}")
             else: st.warning(f"**{status_lbl} Pengumuman** ({date_disp}):\n\n{td['main_msg']}")
         
+        # STATUS TO-DO LIST
         todo_count = len([t for t in td['tasks'].values() if t.get('task', '').strip()])
         if todo_count > 0:
             status_lbl_t = "🟢 AKTIF" if is_todo_active else "🔴 EXPIRED"
@@ -941,8 +1283,9 @@ def ui_manager_panel(df_i, df_j):
                     time.sleep(1)
                     st.rerun()
 
+
 # =====================================================================
-# RUNNER UTAMA
+# MAIN RUNNER
 # =====================================================================
 if __name__ == "__main__":
     is_login_page = not st.session_state.get('logged_in', False)
@@ -983,7 +1326,11 @@ if __name__ == "__main__":
 
         if st.session_state.menu == "Dash":
             col_m, col_s = st.columns([2.5, 1.5])
-            with col_m: st.info("Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
-            with col_s: ui_off_tracker(df_j, df_k)
-        elif st.session_state.menu == "Kal": ui_kalender_lengkap(df_j)
-        elif st.session_state.menu == "Mgr" and st.session_state.user_role == "Manajer": ui_manager_panel(df_i, df_j)
+            with col_m: 
+                st.info("Pilih tab menu di atas untuk melakukan fungsi lebih lanjut.")
+            with col_s: 
+                ui_off_tracker(df_j, df_k)
+        elif st.session_state.menu == "Kal":
+            ui_kalender_lengkap(df_j)
+        elif st.session_state.menu == "Mgr" and st.session_state.user_role == "Manajer":
+            ui_manager_panel(df_i, df_j)
